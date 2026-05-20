@@ -1,0 +1,29 @@
+:root {
+  /* Surfaces */
+  --paper:   #ffffff;
+  --paper-2: #f7f7f5;
+  --paper-3: #ecece9;
+
+  /* Ink */
+  --ink:   #18181a;
+  --ink-2: #5b5b5d;
+  --ink-3: #8e8e8f;
+  --ink-4: #c2c2c1;
+
+  /* Hairlines */
+  --hair:   #ececea;
+  --hair-2: #d4d4d1;
+
+  /* Accent */
+  --accent:      #7e3a2c;
+  --accent-deep: #5a281d;
+  --accent-soft: #a86247;
+
+  /* Status */
+  --st-open:     #9c7218;
+  --st-progress: #3f5e7d;
+  --st-blocked:  #9a3a2b;
+  --st-done:     #4f6b48;
+  --st-draft:    #8e8e8f;
+  --st-stale:    #b15d28;
+}

@@ -1,0 +1,192 @@
+.activity-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.activity-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--hair);
+  flex-shrink: 0;
+}
+
+.activity-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.activity-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--hair-2);
+  border-radius: 4px;
+  background: transparent;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.activity-toggle--live {
+  color: var(--st-done);
+  border-color: var(--st-done);
+}
+
+.activity-toggle__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
+.activity-toggle__dot--live {
+  background: var(--st-done);
+  animation: activity-pulse 2s infinite;
+}
+
+@keyframes activity-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.activity-agent-count {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.activity-export-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  background: transparent;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.activity-export-btn:hover {
+  border-color: var(--hair-2);
+}
+
+.activity-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--hair);
+  flex-shrink: 0;
+}
+
+.activity-filter-bar__label {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.activity-filter-btn {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.activity-filter-btn:hover {
+  background: var(--paper-2);
+}
+
+.activity-filter-btn--active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.activity-stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.act-line {
+  display: grid;
+  grid-template-columns: 78px 100px 1fr;
+  align-items: baseline;
+  padding: 2px 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.act-line:hover {
+  background: var(--paper-2);
+}
+
+.act-line__t {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.act-line__a {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--st-progress);
+  flex-shrink: 0;
+}
+
+.act-line__m {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.act-line--note .act-line__m {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.act-line--err .act-line__m {
+  color: var(--st-blocked);
+  font-weight: 600;
+}
+
+.act-line--listening {
+  opacity: 0.5;
+}
+
+.act-caret {
+  display: inline-block;
+  width: 7px;
+  height: 12px;
+  background: var(--ink-3);
+  animation: activity-blink 1.2s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes activity-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.act-ref {
+  color: var(--accent-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}

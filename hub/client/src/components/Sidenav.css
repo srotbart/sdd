@@ -1,0 +1,345 @@
+.sidenav {
+  position: fixed;
+  left: 0;
+  top: 44px;
+  bottom: 0;
+  width: 252px;
+  border-right: 1px solid var(--hair);
+  background: var(--paper);
+  overflow: hidden;
+  z-index: 90;
+}
+
+.sidenav-scroll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidenav-hub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 22px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidenav-hub-row--active {
+  border-left-color: var(--accent);
+}
+
+.sidenav-hub-label {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.sidenav-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sidenav-dot--active {
+  background: var(--accent);
+}
+
+.sidenav-dot--idle {
+  background: var(--ink-4);
+}
+
+.sidenav-section {
+  margin-top: 4px;
+}
+
+.sidenav-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 22px 4px;
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.sidenav-eyebrow-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-4);
+  margin-left: 4px;
+  flex: 1;
+}
+
+.sidenav-add {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink-3);
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.sidenav-add:hover {
+  color: var(--ink);
+}
+
+.sidenav-ws-dropdown-wrap {
+  position: relative;
+}
+
+.sidenav-ws-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 24px);
+  margin: 0 12px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--hair-2);
+  border-radius: 2px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidenav-ws-trigger:hover {
+  background: var(--paper-2);
+}
+
+.sidenav-ws-trigger--open {
+  background: var(--paper-2);
+  border-color: var(--ink-4);
+}
+
+.sidenav-chevron {
+  font-size: 10px;
+  color: var(--ink-3);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sidenav-ws-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 12px;
+  right: 12px;
+  background: var(--paper);
+  border: 1px solid var(--hair-2);
+  border-radius: 2px;
+  z-index: 200;
+}
+
+.sidenav-ws-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid var(--hair);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidenav-ws-panel-row--active {
+  border-left-color: var(--accent);
+  background: var(--paper-2);
+}
+
+.sidenav-ws-panel-row:hover:not(.sidenav-ws-panel-row--active) {
+  background: var(--paper-2);
+}
+
+.sidenav-ws-panel-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidenav-ws-panel-name {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidenav-ws-panel-path {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.sidenav-ws-attach-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--paper-2);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidenav-ws-attach-label {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.sidenav-ws-attach-row:hover .sidenav-ws-attach-label {
+  color: var(--ink);
+}
+
+.sidenav-ws-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 22px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidenav-ws-row--active {
+  border-left-color: var(--accent);
+  background: var(--paper-2);
+}
+
+.sidenav-ws-row:hover:not(.sidenav-ws-row--active) {
+  background: var(--paper-2);
+}
+
+.sidenav-ws-name {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 12.5px;
+  color: var(--ink);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidenav-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--st-blocked);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sidenav-arrow {
+  font-size: 12px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.sidenav-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 22px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidenav-nav-row--active {
+  border-left-color: var(--accent);
+}
+
+.sidenav-nav-row:hover:not(.sidenav-nav-row--active) {
+  background: var(--paper-2);
+}
+
+.sidenav-nav-label {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.sidenav-nav-row--active .sidenav-nav-label {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.sidenav-plugin-ref-section {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--hair);
+  background: var(--paper);
+  padding: 4px 0;
+}
+
+.sidenav-plugin-ref-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  text-align: left;
+  transition: background 80ms;
+}
+
+.sidenav-plugin-ref-row:hover {
+  background: var(--paper-2);
+}
+
+.sidenav-plugin-ref-row--active {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.sidenav-plugin-ref-glyph {
+  font-size: 13px;
+  color: var(--ink-4);
+  flex-shrink: 0;
+}
+
+.sidenav-plugin-ref-label {
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.sidenav-plugin-ref-row--active .sidenav-plugin-ref-label {
+  color: var(--accent);
+}
+
+.sidenav-nav-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}

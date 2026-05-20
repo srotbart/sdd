@@ -1,0 +1,15 @@
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+}
+
+.app-main {
+  position: fixed;
+  top: 44px;
+  left: 252px;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--paper);
+}

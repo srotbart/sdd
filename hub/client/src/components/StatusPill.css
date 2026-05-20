@@ -1,0 +1,41 @@
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-variant: small-caps;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.status-pill__led {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-pill--open     { color: var(--st-open); }
+.status-pill--open     .status-pill__led { background: var(--st-open); }
+
+.status-pill--progress { color: var(--st-progress); }
+.status-pill--progress .status-pill__led { background: var(--st-progress); }
+
+.status-pill--blocked  { color: var(--st-blocked); }
+.status-pill--blocked  .status-pill__led { background: var(--st-blocked); }
+
+.status-pill--done     { color: var(--st-done); }
+.status-pill--done     .status-pill__led { background: var(--st-done); }
+
+.status-pill--draft    { color: var(--st-draft); }
+.status-pill--draft    .status-pill__led { background: var(--st-draft); }
+
+.status-pill--stale    { color: var(--st-stale); }
+.status-pill--stale    .status-pill__led { background: var(--st-stale); }
+
+.status-pill--phosphor { color: var(--accent); }
+.status-pill--phosphor .status-pill__led { background: var(--accent); }

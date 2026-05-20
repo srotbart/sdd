@@ -1,0 +1,9 @@
+{
+  "name": "sdd",
+  "version": "0.1.1",
+  "description": "Spec-driven development: declare what must be true, let agents find and close the gaps.",
+  "author": {
+    "name": "Sergey Rotbart",
+    "email": "srotbart@ebay.com"
+  }
+}
