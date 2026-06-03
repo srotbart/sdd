@@ -483,6 +483,11 @@ server.on("error", (err: NodeJS.ErrnoException) => {
   throw err;
 });
 
-server.listen(PORT, HOST, () => {
-  process.stderr.write(`SDD Hub server listening on http://${HOST}:${PORT}\n`);
-});
+// Skip auto-listen under Vitest: tests import { server } and manage the
+// listen/close lifecycle themselves (see designs.test.ts). VITEST is set
+// automatically by the test runner.
+if (!process.env.VITEST) {
+  server.listen(PORT, HOST, () => {
+    process.stderr.write(`SDD Hub server listening on http://${HOST}:${PORT}\n`);
+  });
+}

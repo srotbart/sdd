@@ -7,6 +7,13 @@ vi.mock("./db/index.js", () => ({
   getAllAgents: () => [],
 }));
 
+// ws-ui.ts builds its snapshot via getWorkspacesEnriched(); mock it so the
+// connection handler doesn't reach into the partial db mock (which would throw
+// on the missing getAgentIdsByWorkspace export).
+vi.mock("./workspace-data.js", () => ({
+  getWorkspacesEnriched: () => [],
+}));
+
 describe("broadcastSddChanged debug", () => {
   it("server starts and accepts connection", async () => {
     const { attachUiWebSocketServer, broadcastSddChanged } = await import("./ws-ui.js");

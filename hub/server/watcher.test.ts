@@ -22,6 +22,10 @@ describe("startWatcher — sdd directory changes", () => {
     const workspace = makeTmpWorkspace();
     const changed: string[] = [];
     const stop = startWatcher(workspace, (p) => changed.push(p));
+    // chokidar starts watching asynchronously; on Windows its startup is slower,
+    // so give it time to become ready before writing (matches the other tests
+    // here, which all wait before their first write).
+    await wait(300);
 
     const targetFile = path.join(workspace, ".sdd", "targets", "TGT-001.md");
     fs.writeFileSync(targetFile, "# Target");
