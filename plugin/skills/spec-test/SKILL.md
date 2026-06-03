@@ -1,5 +1,5 @@
 ---
-name: SDD Spec Test
+name: spec-test
 description: This skill should be used when the user invokes `/sdd:spec-test`, says "write tests for the spec", "add spec tests for authentication", "cover SPEC-auth-001 with a test", "generate integration tests for the spec", "which spec items have no tests", or wants to add automated test coverage to spec items. Generates integration or e2e tests in the project's existing test infrastructure, then links them back into the spec item.
 version: 0.1.0
 ---

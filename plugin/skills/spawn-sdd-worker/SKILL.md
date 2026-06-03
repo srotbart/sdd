@@ -52,8 +52,14 @@ Then use the Agent tool with the following parameters:
 
 - `name`: `"sdd-worker"`
 - `subagent_type`: `"general-purpose"`
+- `model`: `"sonnet"`
 - `run_in_background`: `true`
 - `team_name`: `"{team_name}"`
+
+The `model` is pinned to `sonnet` rather than inheriting the session model: the
+execution pipeline (audit → decompose → close) is deterministic given a clear spec,
+so sonnet is sufficient and avoids running the mechanical work on the more expensive
+model.
 
 Pass this prompt to the agent (substituting `{domain}`, `{project_root}`, and `{team_name}`):
 
