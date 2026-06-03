@@ -8,6 +8,8 @@ export default defineConfig({
     proxy: {
       '/workspaces': 'http://127.0.0.1:22351',
       '/browse-folder': 'http://127.0.0.1:22351',
+      '/recent-workspaces': 'http://127.0.0.1:22351',
+      '/check-sdd': 'http://127.0.0.1:22351',
     },
     // note: /workspaces proxy above covers /workspaces/:id/specs too
   },

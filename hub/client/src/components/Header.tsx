@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import './Header.css';
 
 interface HeaderProps {
@@ -7,7 +8,13 @@ interface HeaderProps {
 }
 
 export function Header({ breadcrumb, agentCount, hubAddress }: HeaderProps) {
-  const now = new Date();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const dateStr = now.toISOString().slice(0, 10);
   const timeStr = now.toISOString().slice(11, 16) + ' UTC';
 

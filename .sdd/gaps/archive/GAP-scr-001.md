@@ -1,15 +1,16 @@
 ---
 id: GAP-scr-001
-spec-item: SPEC-scr-009
+spec-item: SPEC-scr-038
+domain: ui-screens
 status: closed
-discovered: "2026-05-17T00:00:00Z"
-audit-spec-version: fac28ba6
-closed-by: WI-scr-001
+discovered: "2026-06-01T00:00:00Z"
+audit-spec-version: "3e4fd6e3"
+closed-by: WI-scr-035
 deferred-reason: null
 ---
 
-# Targets live fetch: API fields not mapped to frontend Target type
+# Gap: Kanban does not fill full width of its containing panel
 
-**Location:** `hub/client/src/App.tsx:153`
+**Location:** `hub/client/src/screens/WorkItems.css:22`
 
-**Reasoning:** `fetch(/workspaces/${activeWorkspaceId}/targets)` stores raw API response directly into `liveTargets` via `setLiveTargets(data)` without mapping API fields (`id`, `status`, `created`, `domain`, `statement`) to the frontend `Target` type as required by the spec.
+**Reasoning:** `.kanban` has `align-self: start` which collapses the grid to content width along the cross axis of its flex-column parent `.wi-main`, preventing it from stretching to fill the full panel width as required by SPEC-scr-038.

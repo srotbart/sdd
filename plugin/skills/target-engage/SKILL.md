@@ -78,7 +78,7 @@ This is the authoritative statement of intent. Ignore the Dialog for reconciliat
 
 ### 2. Identify the relevant spec file
 
-Use the target's `domain` frontmatter field to locate `.sdd/specs/SPEC-{domain}.md`. If no spec file exists for this domain, go to the **New domain** outcome below.
+Use the target's `domain` frontmatter field to locate `.sdd/specs/{domain}/`. If no subdirectory exists for this domain, go to the **New domain** outcome below. Enumerate active spec items by globbing `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` (skip `archive/` at either level).
 
 ### 3. Reason about the relationship
 
@@ -101,13 +101,20 @@ Compare the Current statement against every active spec item in the domain. Clas
 - Move the target file to `.sdd/targets/archive/`
 - Report: which spec items already cover it
 
+---
+Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
+
 #### Extension
-- Write new spec items to the domain's spec file using the schema in `references/schemas.md`
-- Assign the next available `SPEC-{abbrev}-{seq}` IDs
-- Update the spec file's `version` field using the hash command in `references/schemas.md` (Specs section)
+- Create each new spec item as `.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md` using the schema in `references/schemas.md`
+- Assign the next available `SPEC-{abbrev}-{seq}` IDs by scanning existing files in the domain subdirectory
+- Each spec item body must follow this structure in order: `# {id} — {title}` heading, then `## Invariant` (concise statement of the rule or behavior), then `## Acceptance criteria` (plain bullet list of verifiable conditions). The optional `**Tests:**` block follows `## Acceptance criteria` when present.
+- Compute and set `version` in each new item file's frontmatter using the hash command in `references/schemas.md` (Specs section)
 - Flip the target's status to `accepted` in frontmatter
 - Move the target file to `.sdd/targets/archive/`
 - Report: which new spec items were added and their IDs
+
+---
+Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
 
 #### Conflict
 - Create a conflict file at `.sdd/targets/TGT-{id}.conflict.md` using the schema in `references/schemas.md` (Conflict Files section), with `conflict-type: contradiction`
@@ -121,12 +128,16 @@ Compare the Current statement against every active spec item in the domain. Clas
 - Report: the overlap and why it needs a human decision
 
 #### New domain
-- Create `.sdd/specs/SPEC-{domain}.md` using the spec schema in `references/schemas.md`
+- Create `.sdd/specs/{domain}/` and `.sdd/specs/{domain}/archive/`
 - Choose a short `abbrev` (3–6 chars, lowercase) derived from the domain name
-- Write the initial spec items derived from the Current statement
-- Compute and set the `version` field using the command above
+- Write the initial spec items as individual files `.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md` using the schema in `references/schemas.md`
+- Each spec item body must follow this structure: `# {id} — {title}` heading, then `## Invariant`, then `## Acceptance criteria` (bullet list), then optional `**Tests:**` block.
+- Compute and set `version` in each item file's frontmatter
 - Flip the target to `accepted` and archive it
-- Report: new spec file created, domain abbreviation chosen, items added
+- Report: new domain subdirectory created, abbreviation chosen, items added
+
+---
+Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
 
 ---
 
@@ -136,7 +147,7 @@ Compare the Current statement against every active spec item in the domain. Clas
 - **Current statement is editable.** Both agent and user may propose rewrites. The agent always quotes the full proposed text explicitly in the dialog entry.
 - **Never auto-merge conflicts.** If any part of the reconciliation is a conflict, stop and surface it. Do not write partial spec changes when a conflict exists.
 - **One conflict file per blocking item.** If a target conflicts with multiple spec items, create one conflict file per conflicting pair.
-- **Spec version must be updated on every spec write.** Compute and set the `version` field immediately after each write to a spec file.
+- **Item version must be set on every write.** Compute and set the `version` field in each spec item file's frontmatter immediately after writing it.
 
 ## Schema Reference
 

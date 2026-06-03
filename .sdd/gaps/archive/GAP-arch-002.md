@@ -1,16 +1,16 @@
 ---
 id: GAP-arch-002
-spec-item: SPEC-arch-002
+spec-item: SPEC-arch-019
 domain: architecture
 status: closed
-discovered: "2026-05-15T00:00:00Z"
-audit-spec-version: "1d0b7d02"
-closed-by: WI-arch-002
+discovered: "2026-05-18T00:00:00Z"
+audit-spec-version: "651d284b"
+closed-by: WI-arch-020
 deferred-reason: null
 ---
 
-# Gap: React + TypeScript + Vite frontend does not exist
+# Gap: Per-spec test mapping file (.tests.json) not implemented
 
-**Location:** not yet implemented — no frontend source files or Vite config found in codebase
+**Location:** `hub/server/sdd-parser.ts:384`
 
-**Reasoning:** No code paths found for this item; the React/TypeScript frontend has not been scaffolded.
+**Reasoning:** `parseSpecs` does not read or process any `SPEC-{abbrev}.tests.json` companion file; there is no code anywhere in the server that handles the runner/report/items mapping schema required by SPEC-arch-019.

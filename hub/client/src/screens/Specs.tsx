@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import './Specs.css';
-import { StatusPill } from '../components/StatusPill';
+import { useSpecSearch } from './useSpecSearch';
+import { SpecItemList } from './SpecItemList';
+import { SpecItemDetail } from './SpecItemDetail';
 import type { Spec, Gap, WorkItem } from '../types';
 
 interface SpecsProps {
@@ -12,13 +14,45 @@ interface SpecsProps {
 }
 
 export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsProps) {
-  const [activeSpecId, setActiveSpecId] = useState<string>(
-    initialSpecId ?? specs[0]?.id ?? ''
+  const initialItem = initialSpecId
+    ? specs.flatMap((s) => s.items).find((i) => i.id === initialSpecId)
+    : undefined;
+
+  const initialDomain = initialItem
+    ? (specs.find((s) => s.items.some((i) => i.id === initialSpecId))?.id ?? specs[0]?.id ?? '')
+    : (specs[0]?.id ?? '');
+
+  const [activeSpecId, setActiveSpecId] = useState<string>(initialDomain);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(
+    initialSpecId ?? null
   );
 
   const activeSpec = specs.find((s) => s.id === activeSpecId);
+  const selectedItem = selectedItemId
+    ? specs.flatMap((s) => s.items).find((i) => i.id === selectedItemId) ?? null
+    : null;
 
   const totalItems = specs.reduce((n, s) => n + s.items.length, 0);
+
+  const filteredItems = useSpecSearch(activeSpec?.items ?? [], searchQuery);
+
+  function handleSelectDomain(id: string) {
+    setActiveSpecId(id);
+    setSearchQuery('');
+    setSelectedItemId(null);
+    onNav('specs');
+  }
+
+  function handleSelectItem(id: string) {
+    setSelectedItemId(id);
+    onNav('specs', id);
+  }
+
+  function handleBack() {
+    setSelectedItemId(null);
+    onNav('specs');
+  }
 
   return (
     <div className="specs-root">
@@ -38,7 +72,7 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
           <div
             key={spec.id}
             className={`specs-domain-row${activeSpecId === spec.id ? ' specs-domain-row--active' : ''}`}
-            onClick={() => setActiveSpecId(spec.id)}
+            onClick={() => handleSelectDomain(spec.id)}
           >
             <div className="specs-domain-row__inner">
               <div className="specs-domain-row__name">{spec.domain}</div>
@@ -52,7 +86,15 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
       </div>
 
       <div className="specs-content">
-        {activeSpec && (
+        {activeSpec && selectedItem ? (
+          <SpecItemDetail
+            item={selectedItem}
+            gaps={gaps}
+            workItems={workItems}
+            onBack={handleBack}
+            onNav={onNav}
+          />
+        ) : activeSpec ? (
           <>
             <div className="specs-file-header">
               <div className="specs-eyebrow">spec file</div>
@@ -67,71 +109,25 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
               </div>
             </div>
 
-            <div className="specs-items">
-              {activeSpec.items.map((item) => {
-                const itemGaps = gaps.filter((g) => g.specItem === item.id);
-                const openGaps = itemGaps.filter((g) => g.status === 'open');
-                const itemWIs = workItems.filter((w) =>
-                  itemGaps.some((g) => g.id === w.gapId)
-                );
-
-                return (
-                  <div key={item.id} id={item.id} className="specs-item">
-                    <div className="specs-item__id-line">
-                      <span className="specs-item__id">{item.id}</span>
-                      <StatusPill status="active" />
-                      {openGaps.length > 0 && (
-                        <span className="specs-item__gap-pill">
-                          <span className="specs-item__gap-led" />
-                          {openGaps.length} open gap{openGaps.length === 1 ? '' : 's'}
-                        </span>
-                      )}
-                      <span className="specs-item__aliases">aliases: none</span>
-                    </div>
-                    <h3 className="specs-item__title">{item.title}</h3>
-                    <p className="specs-item__body">{item.body}</p>
-
-                    {(itemGaps.length > 0 || itemWIs.length > 0) && (
-                      <div className="specs-item__refs">
-                        {itemGaps.map((g) => (
-                          <button
-                            key={g.id}
-                            className="specs-ref-pill"
-                            onClick={() => onNav('gaps', g.id)}
-                          >
-                            <span
-                              className="specs-ref-pill__led"
-                              style={{
-                                background:
-                                  g.status === 'open'
-                                    ? 'var(--st-open)'
-                                    : 'var(--st-done)',
-                              }}
-                            />
-                            {g.id}
-                          </button>
-                        ))}
-                        {itemWIs.map((w) => (
-                          <button
-                            key={w.id}
-                            className="specs-ref-pill"
-                            onClick={() => onNav('work items', w.id)}
-                          >
-                            <span
-                              className="specs-ref-pill__led"
-                              style={{ background: 'var(--st-progress)' }}
-                            />
-                            {w.id}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="specs-search-bar">
+              <input
+                className="specs-search-input"
+                type="text"
+                placeholder="Search items…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
+
+            <SpecItemList
+              items={filteredItems}
+              gaps={gaps}
+              workItems={workItems}
+              onSelectItem={handleSelectItem}
+              onNav={onNav}
+            />
           </>
-        )}
+        ) : null}
       </div>
     </div>
     </div>

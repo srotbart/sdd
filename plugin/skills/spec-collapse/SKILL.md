@@ -24,7 +24,8 @@ Accept one of:
 
 ### 1. Read the spec file(s)
 
-Load all active spec items (`*Status: active*`). Note current version hashes.
+Glob `.sdd/specs/{domain}/SPEC-*.md` (skip `archive/`) for each domain being analysed.
+Load all active spec items — parse frontmatter `id`, `status`, `version`, and the body.
 
 ### 2. Identify consolidation candidates
 
@@ -73,10 +74,8 @@ item also cite the other. No audit has ever distinguished between them.
 Existing gaps referencing SPEC-auth-002 remain valid via alias resolution.
 
 **To apply:**
-1. Replace the SPEC-auth-001 item with the unified statement
-2. Add `Aliases: SPEC-auth-002` to its status line
-3. Delete the SPEC-auth-002 item
-4. Update the spec version hash
+1. Replace the body of `.sdd/specs/authentication/SPEC-auth-001.md` with the unified statement; add `SPEC-auth-002` to its `aliases:` frontmatter field; recompute and update its `version` field
+2. Move `.sdd/specs/authentication/SPEC-auth-002.md` to `.sdd/specs/authentication/archive/`
 
 ---
 
@@ -94,10 +93,9 @@ Split produces cleaner gap-to-spec traceability.
 > Session tokens MUST be immediately invalidated on explicit logout.
 
 **To apply:**
-1. Replace SPEC-auth-005 with item A
-2. Add SPEC-auth-007 as a new item
+1. Rewrite the body of `.sdd/specs/authentication/SPEC-auth-005.md` with item A; recompute and update its `version` field
+2. Create `.sdd/specs/authentication/SPEC-auth-007.md` as a new item file with its own frontmatter and computed `version`
 3. Update any open gaps referencing SPEC-auth-005 to reference the correct item
-4. Update the spec version hash
 
 ---
 

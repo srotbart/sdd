@@ -15,7 +15,10 @@ immediately, preserving provenance via frontmatter references in the spec.
 │   ├── TGT-007.md
 │   └── archive/
 ├── specs/
-│   └── SPEC-authentication.md   ← never archived
+│   └── authentication/          ← one subdirectory per domain
+│       ├── SPEC-auth-001.md
+│       ├── SPEC-auth-002.md
+│       └── archive/             ← removed/obsolete items move here
 ├── gaps/
 │   ├── GAP-auth-001.md
 │   └── archive/
@@ -64,40 +67,45 @@ agent commits to a best-effort Current statement rather than infinite clarificat
 
 ---
 
-## Specs — `.sdd/specs/SPEC-{domain}.md`
+## Specs — `.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md`
 
-One file per domain. Durable — never archived. New targets fold into existing
-specs when relevant; new spec files only when a target opens a genuinely new domain.
+One file per spec item, inside a domain subdirectory. Durable — active items are never
+archived, but removed or obsolete items move to `.sdd/specs/{domain}/archive/`. New
+targets fold into an existing domain subdirectory; a new subdirectory is created only
+when a target opens a genuinely new domain. There is no domain-level manifest file.
 
 ```markdown
 ---
-id: SPEC-auth
+id: SPEC-auth-001
 domain: authentication
 abbrev: auth
-version: "a3f9c812"   # SHA-256[:8] of this file's content; recompute on every write
+status: active        # active | deprecated | aliased
 aliases: []           # former spec IDs, populated by spec-collapse
+version: "a3f9c812"  # SHA-256[:8] of this file's content; recompute on every write
 ---
 
-# Spec: Authentication
+# SPEC-auth-001 — Admin actions require two-factor verification
 
-## SPEC-auth-001 — Admin actions require two-factor verification
-*Status: active | Aliases: none*
+## Invariant
 
 All admin-privileged operations MUST verify a second factor before proceeding.
 The factor must be validated within the current session; cross-session caching
 is not permitted.
 
+## Acceptance criteria
+
+- Every admin action handler verifies MFA before executing
+- MFA check rejects calls where the second factor is absent or expired
+- MFA check permits calls where the second factor is verified in the current session
+
 **Tests:**
 - `tests/integration/test_admin.py::test_SPEC_auth_001_admin_rejected_without_mfa` — "admin action rejected when second factor is absent or expired"
 - `tests/integration/test_admin.py::test_SPEC_auth_001_admin_proceeds_with_valid_mfa` — "admin action proceeds when second factor is verified in current session"
-
-## SPEC-auth-002 — Session tokens must not persist beyond logout
-*Status: active | Aliases: none*
-
-...
 ```
 
 **Item ID convention:** `SPEC-{abbrev}-{seq}` — sequential within domain, globally stable.
+All domain metadata (`domain`, `abbrev`) is in each item's own frontmatter; the domain
+name is also derivable from the subdirectory name.
 
 **Tests block:** Optional per-item section linking the spec item to its verification
 tests in the project's regular test suite. Added by the `spec-test` skill; updated
@@ -116,17 +124,13 @@ spec→test coverage is grep-able without parsing the spec file.
 Items without a `**Tests:**` block are considered uncovered and surfaced by
 `session-start`.
 
-**Version field:** SHA-256 first 8 hex chars of the spec file's content, excluding the
-`version:` line itself. Recompute and update on every write. Used for stale-audit
-detection.
+**Version field:** SHA-256 first 8 hex chars of the item file's own content. Recompute
+and update on every write. Used for per-item stale-audit detection.
 
 To compute:
 ```bash
-grep -v "^version:" .sdd/specs/SPEC-{domain}.md | shasum -a 256 | cut -c1-8
+shasum -a 256 .sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md | cut -c1-8
 ```
-
-Stripping the `version:` line before hashing avoids a circular dependency: the hash
-covers all meaningful content regardless of what the version field currently holds.
 
 **Status values per item:** `active | deprecated | aliased`
 
@@ -162,8 +166,9 @@ deferred-reason: null
 **Terminal states → archive:** `closed`, `accepted`, `deferred`
 **Active states:** `open`
 
-**Stale detection:** compare `audit-spec-version` against current SHA-256[:8] of
-the corresponding spec file. If they differ, the gap is stale.
+**Stale detection:** compare `audit-spec-version` against the `version` field in the
+referenced spec item file (`.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md`). If they
+differ, the gap is stale and the audit should be re-run.
 
 ---
 
@@ -253,7 +258,7 @@ create one file per pair.
 | Artifact | Pattern | Example |
 |---|---|---|
 | Target | `TGT-{seq}` | `TGT-007` |
-| Spec file | `SPEC-{domain}` | `SPEC-authentication` |
+| Spec domain dir | `specs/{domain}/` | `specs/authentication/` |
 | Spec item | `SPEC-{abbrev}-{seq}` | `SPEC-auth-001` |
 | Gap | `GAP-{abbrev}-{seq}` | `GAP-auth-001` |
 | Work item | `WI-{abbrev}-{seq}` | `WI-auth-001` |

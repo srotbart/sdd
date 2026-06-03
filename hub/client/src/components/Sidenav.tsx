@@ -9,7 +9,7 @@ export interface Workspace {
   alertCount?: number;
 }
 
-const NAV_TABS = ['session', 'targets', 'specs', 'gaps', 'work items', 'activity', 'settings'] as const;
+const NAV_TABS = ['session', 'targets', 'specs', 'projections', 'designs', 'gaps', 'work items', 'activity', 'settings'] as const;
 
 interface SidenavProps {
   workspaces: Workspace[];
@@ -88,7 +88,7 @@ export function Sidenav({
 
             <div className="sidenav-ws-dropdown-wrap" ref={dropdownRef}>
               <button
-                className={`sidenav-ws-trigger${dropdownOpen ? ' sidenav-ws-trigger--open' : ''}`}
+                className={`sidenav-ws-trigger${activeWorkspaceId ? ' sidenav-ws-trigger--active' : ''}${dropdownOpen ? ' sidenav-ws-trigger--open' : ''}`}
                 onClick={() => setDropdownOpen((o) => !o)}
               >
                 <span className={`sidenav-dot${activeWorkspace ? ' sidenav-dot--active' : ' sidenav-dot--idle'}`} />

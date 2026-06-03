@@ -1,12 +1,15 @@
 import http from "node:http";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { getDb, getAllWorkspaces, getWorkspaceById, updateWorkspace, insertWorkspace } from "./db/index.js";
+import { getDb, getAllWorkspaces, getRecentWorkspaces, getWorkspaceById, updateWorkspace, insertWorkspace } from "./db/index.js";
 import { parseSpecs, parseTargets, parseGaps, parseWorkItems } from "./sdd-parser.js";
 import { attachUiWebSocketServer, broadcastUpdate, broadcastSddChanged } from "./ws-ui.js";
+import { getWorkspacesEnriched } from "./workspace-data.js";
+export type { WorkspaceCounts, WorkspaceData } from "./workspace-data.js";
 import { resolveArtifact } from "./sdd-artifact.js";
 import { attachAgentWebSocketServer } from "./ws-agent.js";
 import { startWatcher } from "./watcher.js";
@@ -29,6 +32,20 @@ const MIME_TYPES: Record<string, string> = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
 };
+
+export const watcherRegistry = new Map<string, () => void>();
+
+export function swapWatcher(
+  workspaceId: string,
+  newPath: string,
+  onChange: (changedPath: string) => void,
+  onSpecsChanged: () => void
+): void {
+  const oldCleanup = watcherRegistry.get(workspaceId);
+  if (oldCleanup) { oldCleanup(); }
+  const cleanup = startWatcher(newPath, onChange, onSpecsChanged);
+  watcherRegistry.set(workspaceId, cleanup);
+}
 
 function serveStatic(
   req: http.IncomingMessage,
@@ -85,6 +102,61 @@ function browseFolder(): Promise<string | null> {
     });
     proc.on("error", (err) => reject(new Error(`osascript unavailable: ${err.message}`)));
   });
+}
+
+function semverCompare(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) { return diff; }
+  }
+  return 0;
+}
+
+function parseFrontmatterField(content: string, field: string): string {
+  const match = new RegExp(`^${field}:\\s*(.+)$`, "m").exec(content);
+  if (!match) { return ""; }
+  return match[1].trim().replace(/^["']|["']$/g, "");
+}
+
+export function getPluginSkills(): { name: string; description: string }[] {
+  const cacheBase = path.join(os.homedir(), ".claude", "plugins", "cache", "sdd", "sdd");
+  let versions: string[];
+  try {
+    versions = fs.readdirSync(cacheBase).filter((v) => /^\d+\.\d+/.test(v));
+  } catch {
+    return [];
+  }
+  if (versions.length === 0) { return []; }
+  versions.sort(semverCompare);
+  const latest = versions[versions.length - 1];
+  const skillsDir = path.join(cacheBase, latest, "skills");
+  let skillDirs: string[];
+  try {
+    skillDirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+  } catch {
+    return [];
+  }
+  const skills: { name: string; description: string }[] = [];
+  for (const dir of skillDirs) {
+    const skillFile = path.join(skillsDir, dir, "SKILL.md");
+    let content: string;
+    try {
+      content = fs.readFileSync(skillFile, "utf-8");
+    } catch {
+      continue;
+    }
+    const name = parseFrontmatterField(content, "name");
+    const description = parseFrontmatterField(content, "description");
+    if (name) {
+      skills.push({ name, description });
+    }
+  }
+  skills.sort((a, b) => a.name.localeCompare(b.name));
+  return skills;
 }
 
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -163,8 +235,110 @@ async function handleApi(
     return true;
   }
 
+  const projectionsListMatch = /^\/workspaces\/([^/?]+)\/projections$/.exec(url);
+  if (method === "GET" && projectionsListMatch) {
+    const ws = getWorkspaceById(projectionsListMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    const projectionsDir = path.join(ws.path, ".sdd", "projections");
+    const result: { name: string; lastModified: string }[] = [];
+    if (fs.existsSync(projectionsDir)) {
+      const files = fs.readdirSync(projectionsDir).filter((f) => f.endsWith(".md"));
+      for (const file of files) {
+        const stat = fs.statSync(path.join(projectionsDir, file));
+        result.push({ name: file.replace(/\.md$/, ""), lastModified: stat.mtime.toISOString() });
+      }
+    }
+    json(res, 200, result);
+    return true;
+  }
+
+  const projectionsItemMatch = /^\/workspaces\/([^/?]+)\/projections\/([^/?]+)$/.exec(url);
+  if (method === "GET" && projectionsItemMatch) {
+    const ws = getWorkspaceById(projectionsItemMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    const filePath = path.join(ws.path, ".sdd", "projections", `${projectionsItemMatch[2]}.md`);
+    if (!fs.existsSync(filePath)) {
+      json(res, 404, { error: "projection not found" });
+      return true;
+    }
+    const content = fs.readFileSync(filePath, "utf-8");
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(content);
+    return true;
+  }
+
+  const designsListMatch = /^\/workspaces\/([^/?]+)\/designs$/.exec(url);
+  if (method === "GET" && designsListMatch) {
+    const ws = getWorkspaceById(designsListMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    const designsDir = path.join(ws.path, ".sdd", "design");
+    const result: { name: string; lastModified: string }[] = [];
+    if (fs.existsSync(designsDir)) {
+      const entries = fs.readdirSync(designsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) { continue; }
+        const designFile = path.join(designsDir, entry.name, "design.md");
+        if (!fs.existsSync(designFile)) { continue; }
+        const stat = fs.statSync(designFile);
+        result.push({ name: entry.name, lastModified: stat.mtime.toISOString() });
+      }
+    }
+    json(res, 200, result);
+    return true;
+  }
+
+  const designsItemMatch = /^\/workspaces\/([^/?]+)\/designs\/([^/?]+)$/.exec(url);
+  if (method === "GET" && designsItemMatch) {
+    const ws = getWorkspaceById(designsItemMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    const filePath = path.join(ws.path, ".sdd", "design", designsItemMatch[2], "design.md");
+    if (!fs.existsSync(filePath)) {
+      json(res, 404, { error: "design not found" });
+      return true;
+    }
+    const content = fs.readFileSync(filePath, "utf-8");
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(content);
+    return true;
+  }
+
+  if (method === "GET" && url === "/plugin-skills") {
+    json(res, 200, getPluginSkills());
+    return true;
+  }
+
+  if (method === "GET" && url === "/recent-workspaces") {
+    const recent = getRecentWorkspaces(5).map((ws) => ({
+      id: ws.id,
+      name: ws.name,
+      path: ws.path,
+      hasSdd: fs.existsSync(path.join(ws.path, ".sdd")),
+    }));
+    json(res, 200, recent);
+    return true;
+  }
+
+  if (method === "GET" && url.startsWith("/check-sdd?")) {
+    const qs = new URLSearchParams(url.slice("/check-sdd?".length));
+    const checkPath = qs.get("path") ?? "";
+    json(res, 200, { hasSdd: checkPath.length > 0 && fs.existsSync(path.join(checkPath, ".sdd")) });
+    return true;
+  }
+
   if (method === "GET" && url === "/workspaces") {
-    json(res, 200, getAllWorkspaces());
+    json(res, 200, getWorkspacesEnriched());
     return true;
   }
 
@@ -186,14 +360,28 @@ async function handleApi(
       return true;
     }
     const id = randomUUID();
-    insertWorkspace({ id, name, path: wsPath, description: null });
-    startWatcher(wsPath, (changedPath) => {
-      broadcastUpdate(changedPath);
-      const artifact = resolveArtifact(changedPath);
-      if (artifact !== null) {
-        broadcastSddChanged(id, artifact);
+    try {
+      insertWorkspace({ id, name, path: wsPath, description: null });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("UNIQUE constraint failed")) {
+        json(res, 409, { error: "workspace with this path already exists" });
+        return true;
       }
-    });
+      throw err;
+    }
+    const cleanup = startWatcher(
+      wsPath,
+      (changedPath) => {
+        broadcastUpdate(changedPath);
+        const artifact = resolveArtifact(changedPath);
+        if (artifact !== null) {
+          broadcastSddChanged(id, artifact);
+        }
+      },
+      () => broadcastSddChanged(id, "specs")
+    );
+    watcherRegistry.set(id, cleanup);
     json(res, 201, getWorkspaceById(id));
     return true;
   }
@@ -230,6 +418,22 @@ async function handleApi(
       return true;
     }
     updateWorkspace(id, updates);
+
+    if (updates.path !== undefined && updates.path !== existing.path) {
+      swapWatcher(
+        id,
+        updates.path,
+        (changedPath) => {
+          broadcastUpdate(changedPath);
+          const artifact = resolveArtifact(changedPath);
+          if (artifact !== null) {
+            broadcastSddChanged(id, artifact);
+          }
+        },
+        () => broadcastSddChanged(id, "specs")
+      );
+    }
+
     json(res, 200, getWorkspaceById(id));
     return true;
   }
@@ -252,13 +456,18 @@ getDb();
 function startWatchers(): void {
   const workspaces = getAllWorkspaces();
   for (const workspace of workspaces) {
-    startWatcher(workspace.path, (changedPath) => {
-      broadcastUpdate(changedPath);
-      const artifact = resolveArtifact(changedPath);
-      if (artifact !== null) {
-        broadcastSddChanged(workspace.id, artifact);
-      }
-    });
+    const cleanup = startWatcher(
+      workspace.path,
+      (changedPath) => {
+        broadcastUpdate(changedPath);
+        const artifact = resolveArtifact(changedPath);
+        if (artifact !== null) {
+          broadcastSddChanged(workspace.id, artifact);
+        }
+      },
+      () => broadcastSddChanged(workspace.id, "specs")
+    );
+    watcherRegistry.set(workspace.id, cleanup);
   }
 }
 

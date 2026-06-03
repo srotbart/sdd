@@ -9,7 +9,7 @@ interface SessionProps {
   gaps: Gap[];
   workItems: WorkItem[];
   staleDomains: string[];
-  agents: Record<string, Agent>;
+  agents: Agent[];
   runTimestamp?: string;
   specVersion?: string;
   onNav: (section: string, id?: string) => void;
@@ -398,8 +398,8 @@ export function Session({
             id={w.id}
             title={w.title}
             meta={
-              w.agent && agents[w.agent] ? (
-                <AgentChip agent={agents[w.agent]} />
+              w.agent && agents.find((a) => a.id === w.agent) ? (
+                <AgentChip agent={agents.find((a) => a.id === w.agent)!} />
               ) : null
             }
             status={w.status}

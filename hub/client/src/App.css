@@ -13,3 +13,13 @@
   overflow-x: hidden;
   background: var(--paper);
 }
+
+.app-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--ink-3);
+}

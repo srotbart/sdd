@@ -1,19 +1,23 @@
 ---
 id: GAP-wf-001
-spec-item: SPEC-wf-007
+spec-item: SPEC-wf-017
 domain: workflow
 status: closed
-discovered: "2026-05-18T00:00:00Z"
-audit-spec-version: "6198c4b2"
-closed-by: WI-wf-007
+discovered: "2026-06-01T17:18:22Z"
+audit-spec-version: "3b75790b"
+closed-by: WI-wf-001
 deferred-reason: null
 ---
 
-# Gap: spawn-sdd-worker uses hardcoded team name "sdd-execution" instead of deriving from project root
+# Gap: Spec item files lack required Invariant and Acceptance Criteria sections
 
 **Locations:**
-- `plugin/skills/spawn-sdd-worker/SKILL.md:37` — `TeamCreate({ name: "sdd-execution" })` hardcodes the team name
-- `plugin/skills/spawn-sdd-worker/SKILL.md:45` — `team_name: "sdd-execution"` hardcodes the Agent tool parameter
-- `plugin/skills/spawn-sdd-worker/SKILL.md:104` — `TeamDelete({ name: "sdd-execution" })` hardcodes cleanup name
+- `.sdd/specs/workflow/SPEC-wf-001.md` through `.sdd/specs/workflow/SPEC-wf-016.md` and `.sdd/specs/workflow/SPEC-wf-018.md` — 17 of 18 workflow spec item files have no `## Invariant` or `## Acceptance criteria` sections
+- `plugin/skills/spec-audit/SKILL.md:27` — spec-audit skill does not instruct writing `## Invariant` and `## Acceptance criteria` when creating spec items
+- `plugin/skills/target-engage/SKILL.md` — no instruction to produce the required sections when writing spec items
+- `plugin/skills/gap-to-work-items/SKILL.md` — no instruction to produce the required sections when writing spec items
+- `plugin/skills/work-item-close/SKILL.md` — no instruction to produce the required sections when writing spec items
+- `plugin/references/schemas.md:87` — spec item template in schemas.md does not document `## Invariant` or `## Acceptance criteria` sections
+- `hub/server/sdd-parser.ts:8` — `SpecItem` interface has no `invariant` or `criteria` fields; Hub API does not extract or expose these sections
 
-**Reasoning:** All three locations use the literal string `"sdd-execution"` rather than deriving `sdd-{last-path-segment-of-project-root}`, causing cross-session collisions when two Claude sessions in different projects run the skill concurrently.
+**Reasoning:** SPEC-wf-017 requires every spec item to contain `## Invariant` and `## Acceptance criteria` sections and requires all writing skills, schemas.md, and the Hub API parser to produce and expose them; none of these locations implement the requirement.

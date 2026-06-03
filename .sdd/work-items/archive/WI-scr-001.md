@@ -1,17 +1,20 @@
 ---
 id: WI-scr-001
 gap-id: GAP-scr-001
+domain: ui-screens
 status: done
-created: "2026-05-17T00:00:00Z"
+created: "2026-05-29T00:00:00Z"
 abandoned-reason: null
 ---
 
-# Map API response fields to frontend Target type after live fetch
+# Work Item: Install fuse.js and create useSpecSearch hook
 
-**Scope:** `hub/client/src/App.tsx` — after `fetch(/workspaces/${activeWorkspaceId}/targets)` resolves, map the raw API fields (`id`, `status`, `created`, `domain`, `statement`) to the frontend `Target` type before calling `setLiveTargets`.
+**Scope:** `hub/client/package.json` and `hub/client/src/screens/useSpecSearch.ts` — add `fuse.js` as a dependency and implement a `useSpecSearch(items, query)` hook that wraps Fuse with `threshold: 0.4`, keys `['id', 'title']`, and returns the filtered list (all items when query is empty).
 
 **Acceptance criteria:**
-- API response is mapped to `Target` type (all required fields populated: `id`, `status`, `created`, `domain`, `statement`, `title`, `dialog`, `foldedInto`, `domainAbbrev`)
-- Missing optional API fields default gracefully (empty `dialog: []`, `foldedInto: null`, `title` from statement or empty string)
-- Test: render `<Targets>` with a live-fetched payload and confirm target rows display without TypeScript errors
-- Test: confirm that a target with only API-required fields (`id`, `status`, `created`, `domain`, `statement`) renders without crashing
+- `fuse.js` appears in `package.json` `dependencies`
+- `useSpecSearch.ts` exists and exports a `useSpecSearch` hook
+- Hook returns all items unchanged when `query` is empty string
+- Hook returns Fuse-filtered items when `query` is non-empty, using keys `id` and `title` with `threshold: 0.4`
+- Unit test: empty query returns full item list
+- Unit test: matching query returns subset; non-matching query returns empty array

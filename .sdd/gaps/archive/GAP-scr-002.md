@@ -1,15 +1,18 @@
 ---
 id: GAP-scr-002
-spec-item: SPEC-scr-010
+spec-item: SPEC-scr-037
+domain: ui-screens
 status: closed
-discovered: "2026-05-17T00:00:00Z"
-audit-spec-version: fac28ba6
-closed-by: WI-scr-002
+discovered: "2026-05-29T00:00:00Z"
+audit-spec-version: "43004038"
+closed-by: WI-scr-004
 deferred-reason: null
 ---
 
-# Targets archived divider missing eyebrow-divider visual treatment
+# Gap: Specs screen has no item detail view with back button and markdown rendering
 
-**Location:** `hub/client/src/screens/Targets.css:496`
+**Locations:**
+- `hub/client/src/screens/Specs.tsx:1`
+- `hub/client/package.json:1`
 
-**Reasoning:** `.targets-archived-divider` uses a flex layout with inline `<hr>` rules and a plain uppercase label, but the label has only `letter-spacing: 0.08em` and no eyebrow-divider class — spec requires the centred `· ARCHIVED N ·` label flanked by full-width HR lines using the eyebrow-divider visual treatment (muted colour, small caps/uppercase tracking, ruled lines).
+**Reasoning:** `Specs.tsx` has no `selectedItemId` state, no `← items` back button, no `SpecItemList`/`SpecItemDetail`/`useSpecSearch` split, and `react-markdown` is absent from `package.json` — spec requires clicking an item to replace the list with a detail view that renders the item body via `react-markdown`.

@@ -1,16 +1,16 @@
 ---
 id: GAP-wf-005
-spec-item: SPEC-wf-005
+spec-item: SPEC-wf-015
 domain: workflow
 status: closed
-discovered: "2026-05-18T00:00:00Z"
-audit-spec-version: "968a43a5"
+discovered: "2026-05-28T00:00:00Z"
+audit-spec-version: "982d6354"
 closed-by: WI-wf-005
 deferred-reason: null
 ---
 
-# Gap: spawn-sdd-worker does not use TeamCreate before spawning the worker agent
+# Gap: session-start procedure says stale gaps are reported grouped by domain instead of per gap
 
-**Location:** `plugin/skills/spawn-sdd-worker/SKILL.md:34`
+**Location:** `plugin/skills/session-start/SKILL.md:45`
 
-**Reasoning:** Step 2 instructs using the Agent tool with `name`, `subagent_type`, and `run_in_background` but omits `TeamCreate` and the `team_name` parameter; agents spawned without a team context lack Skill tool access and cannot invoke SDD skills.
+**Reasoning:** The procedure text says "Report stale gaps grouped by domain" but the spec requires each warning to name the specific gap ID and spec item ID — not the whole domain.

@@ -16,7 +16,8 @@ export const CREATE_AGENTS = `
     host           TEXT NOT NULL,
     status         TEXT NOT NULL CHECK(status IN ('idle', 'busy')) DEFAULT 'idle',
     last_heartbeat TEXT NOT NULL DEFAULT (datetime('now')),
-    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    name           TEXT NOT NULL DEFAULT ''
   )
 `;
 

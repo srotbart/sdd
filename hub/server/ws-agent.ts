@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage, Server } from "node:http";
-import { upsertAgent, updateAgentHeartbeat, deleteAgent, type Agent } from "./db/index.js";
-import { broadcastRaw } from "./ws-ui.js";
+import { upsertAgent, updateAgentHeartbeat, updateAgentStatus, deleteAgent, type Agent } from "./db/index.js";
+import { broadcastAgentRegistered, broadcastActivity } from "./ws-ui.js";
 import { randomUUID } from "node:crypto";
 
 const AGENT_WS_PATH = "/agents";
@@ -11,6 +11,7 @@ interface RegisterMessage {
   workspace: string;
   pid: number;
   host: string;
+  name?: string;
 }
 
 interface HeartbeatMessage {
@@ -19,8 +20,8 @@ interface HeartbeatMessage {
 
 interface ActivityMessage {
   type: "activity";
-  event: string;
-  detail: unknown;
+  kind: "in" | "note" | "err";
+  msg: string;
 }
 
 type AgentMessage = RegisterMessage | HeartbeatMessage | ActivityMessage;
@@ -64,16 +65,18 @@ export function attachAgentWebSocketServer(httpServer: Server): void {
         const workspaceId = message.workspace;
         session = { agentId, workspaceId };
 
-        const agentRecord: Omit<Agent, "created_at" | "last_heartbeat"> = {
+        const resolvedName = message.name ?? `${message.pid}@${message.host}`;
+        const agentRecord: Omit<Agent, "created_at" | "last_heartbeat" | "initials"> = {
           id: agentId,
           workspace_id: workspaceId,
           pid: message.pid,
           host: message.host,
           status: "idle",
+          name: resolvedName,
         };
         upsertAgent(agentRecord);
 
-        broadcastRaw({ type: "agent-registered", agentId, workspaceId });
+        broadcastAgentRegistered(agentId, workspaceId);
         return;
       }
 
@@ -83,16 +86,13 @@ export function attachAgentWebSocketServer(httpServer: Server): void {
 
       if (message.type === "heartbeat") {
         updateAgentHeartbeat(session.agentId);
+        updateAgentStatus(session.agentId, "idle");
         return;
       }
 
       if (message.type === "activity") {
-        broadcastRaw({
-          type: "activity",
-          agentId: session.agentId,
-          event: message.event,
-          detail: message.detail,
-        });
+        updateAgentStatus(session.agentId, "busy");
+        broadcastActivity(session.agentId, session.workspaceId, message.kind, message.msg);
       }
     });
 

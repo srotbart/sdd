@@ -4,16 +4,19 @@ export type ArtifactStatus =
   | 'ready'
   | 'draft'
   | 'accepted'
+  | 'archived'
   | 'open'
   | 'pending'
   | 'in-progress'
   | 'blocked'
   | 'done'
   | 'closed'
+  | 'deferred'
+  | 'abandoned'
   | 'active'
   | 'stale';
 
-export type TargetStatus = 'awaiting-user' | 'awaiting-agent' | 'ready' | 'draft' | 'accepted';
+export type TargetStatus = 'awaiting-user' | 'awaiting-agent' | 'ready' | 'draft' | 'accepted' | 'archived';
 
 export interface DialogTurn {
   who: 'user' | 'agent';
@@ -85,12 +88,18 @@ export interface CodeContext {
   lines: CodeLine[];
 }
 
+export interface TestStatus {
+  status: 'passing' | 'failing' | 'missing' | 'not-run';
+  lastRun?: string;
+}
+
 export interface SpecItem {
   id: string;
   title: string;
   status: ArtifactStatus;
   body: string;
   refs: Array<{ kind: 'gap' | 'wi'; id: string }>;
+  testStatus: TestStatus;
 }
 
 export interface Spec {
@@ -136,4 +145,14 @@ export interface ActivityLine {
   agent: string;
   kind: 'in' | 'note' | 'err';
   msg: string;
+}
+
+export interface Projection {
+  name: string;
+  lastModified: string;
+}
+
+export interface Design {
+  name: string;
+  lastModified: string;
 }

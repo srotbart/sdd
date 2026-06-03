@@ -1,16 +1,18 @@
 ---
 id: GAP-wf-003
-spec-item: SPEC-wf-004
+spec-item: SPEC-wf-010
 domain: workflow
 status: closed
-discovered: "2026-05-17T00:00:00Z"
-audit-spec-version: "b002e112"
+discovered: "2026-05-28T00:00:00Z"
+audit-spec-version: "d4cdbe33"
 closed-by: WI-wf-003
 deferred-reason: null
 ---
 
-# Gap: sdd:init skill has no mention of the two-phase workflow or sdd-worker
+# Gap: install-statusline uses wrong token names for current-dir and context tokens
 
-**Location:** /Users/srotbart/.claude/plugins/cache/sdd/sdd/0.1.0/skills/init/SKILL.md — no reference to sdd-worker or execution phase
+**Locations:**
+- `plugin/skills/install-statusline/SKILL.md:30`
+- `plugin/skills/install-statusline/SKILL.md:35`
 
-**Reasoning:** The init skill describes directory structure and target scaffolding but contains no description of the two-phase workflow (intent vs execution) or instruction to spawn sdd-worker after the spec is established.
+**Reasoning:** The skill config writes `{basename}` and `{context_bar}`/`{context_pct}` (underscores), but the spec mandates `{current-dir}` and `{context-bar}`/`{context-pct}` (dashes) as the canonical token names.

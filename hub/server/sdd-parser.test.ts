@@ -148,6 +148,83 @@ describe("parseGaps", () => {
     expect(gaps).toHaveLength(1);
     expect(gaps[0]?.id).toBe("GAP-arch-018");
   });
+
+  it("derives domain from spec-item when domain frontmatter is absent — arch → architecture", () => {
+    const root = makeGapsSddDir();
+    const gapNoDomain = `---
+id: GAP-arch-099
+spec-item: SPEC-arch-001
+status: open
+discovered: "2026-05-28T00:00:00Z"
+audit-spec-version: "abc123"
+closed-by: null
+deferred-reason: null
+---
+
+# Gap: Missing domain field
+
+**Location:** hub/server/index.ts:1
+
+**Reasoning:** Test gap without domain field.
+`;
+    fs.writeFileSync(path.join(root, "gaps", "GAP-arch-099.md"), gapNoDomain);
+    const gaps = parseGaps(root);
+    expect(gaps[0]?.domain).toBe("architecture");
+  });
+
+  it("derives domain from spec-item when domain frontmatter is absent — scr → ui-screens", () => {
+    const root = makeGapsSddDir();
+    const gapNoDomain = `---
+id: GAP-scr-099
+spec-item: SPEC-scr-023
+status: open
+discovered: "2026-05-28T00:00:00Z"
+audit-spec-version: "abc123"
+closed-by: null
+deferred-reason: null
+---
+
+# Gap: Missing domain field
+
+**Location:** hub/client/src/screens/Foo.tsx:1
+
+**Reasoning:** Test gap without domain field.
+`;
+    fs.writeFileSync(path.join(root, "gaps", "GAP-scr-099.md"), gapNoDomain);
+    const gaps = parseGaps(root);
+    expect(gaps[0]?.domain).toBe("ui-screens");
+  });
+
+  it("uses explicit domain field when present, ignoring spec-item derivation", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(path.join(root, "gaps", "GAP-arch-018.md"), OPEN_GAP);
+    const gaps = parseGaps(root);
+    expect(gaps[0]?.domain).toBe("architecture");
+  });
+
+  it("domain is never empty string — falls back to abbrev when abbrev is unrecognised", () => {
+    const root = makeGapsSddDir();
+    const gapUnknownAbbrev = `---
+id: GAP-xyz-001
+spec-item: SPEC-xyz-001
+status: open
+discovered: "2026-05-28T00:00:00Z"
+audit-spec-version: "abc123"
+closed-by: null
+deferred-reason: null
+---
+
+# Gap: Unknown abbrev
+
+**Location:** somewhere.ts:1
+
+**Reasoning:** Test gap with unknown abbrev.
+`;
+    fs.writeFileSync(path.join(root, "gaps", "GAP-xyz-001.md"), gapUnknownAbbrev);
+    const gaps = parseGaps(root);
+    expect(gaps[0]?.domain).not.toBe("");
+    expect(gaps[0]?.domain).toBe("xyz");
+  });
 });
 
 function makeWorkItemsSddDir(): string {
@@ -307,7 +384,7 @@ describe("parseTargets", () => {
     expect(targets[0]?.id).toBe("TGT-001");
   });
 
-  it("parses archived target fields correctly", () => {
+  it("target in archive directory has status overridden to 'archived' regardless of frontmatter", () => {
     const root = makeSddDir();
     fs.writeFileSync(path.join(root, "targets", "archive", "TGT-002.md"), ARCHIVED_TARGET);
 
@@ -315,10 +392,28 @@ describe("parseTargets", () => {
     expect(targets).toHaveLength(1);
     expect(targets[0]).toMatchObject({
       id: "TGT-002",
-      status: "accepted",
+      status: "archived",
       created: "2026-05-10",
       domain: "architecture",
       statement: "This was accepted long ago.",
     });
+  });
+
+  it("target in active directory retains its frontmatter status unchanged", () => {
+    const root = makeSddDir();
+    fs.writeFileSync(path.join(root, "targets", "TGT-001.md"), ACTIVE_TARGET);
+
+    const targets = parseTargets(root);
+    expect(targets).toHaveLength(1);
+    expect(targets[0]?.status).toBe("awaiting-agent");
+  });
+
+  it("archive directory target with any frontmatter status is returned as 'archived'", () => {
+    const root = makeSddDir();
+    const readyTarget = ARCHIVED_TARGET.replace("status: accepted", "status: ready").replace("TGT-002", "TGT-009");
+    fs.writeFileSync(path.join(root, "targets", "archive", "TGT-009.md"), readyTarget);
+
+    const targets = parseTargets(root);
+    expect(targets[0]?.status).toBe("archived");
   });
 });

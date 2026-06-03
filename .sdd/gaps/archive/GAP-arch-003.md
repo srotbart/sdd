@@ -1,16 +1,16 @@
 ---
 id: GAP-arch-003
-spec-item: SPEC-arch-003
+spec-item: SPEC-arch-020
 domain: architecture
 status: closed
-discovered: "2026-05-15T00:00:00Z"
-audit-spec-version: "1d0b7d02"
-closed-by: WI-arch-003
+discovered: "2026-05-18T00:00:00Z"
+audit-spec-version: "651d284b"
+closed-by: WI-arch-020
 deferred-reason: null
 ---
 
-# Gap: SQLite persistence layer does not exist
+# Gap: Vitest JSON report parser not implemented
 
-**Location:** not yet implemented — no SQLite schema, migrations, or better-sqlite3 usage found
+**Location:** `hub/server/sdd-parser.ts:384`
 
-**Reasoning:** No code paths found for this item; the SQLite database and better-sqlite3 driver have not been set up.
+**Reasoning:** No code in the server reads a Vitest JSON report file, walks `testResults[*].assertionResults`, or extracts `fullName`/`status`/`startTime` as required by SPEC-arch-020.

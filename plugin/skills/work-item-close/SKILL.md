@@ -29,6 +29,10 @@ Parse `.sdd/work-items/WI-{abbrev}-{seq}.md`. Extract:
 For each gap ID referenced, read `.sdd/gaps/GAP-{abbrev}-{seq}.md`. Confirm `status: open`.
 The gap's `**Location:**` and `**Reasoning:**` are the ground truth for what needs fixing.
 
+When resolving the gap's `spec-item` field to read the spec item file, search both
+`.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md`, excluding
+`archive/` at either level.
+
 ### 3. Flip work item to in-progress
 
 Update `status: in-progress` in the work item frontmatter before making any code changes.
@@ -100,8 +104,13 @@ If the work item referenced multiple gaps (many-to-one), close and archive all o
 **Gap closed:** GAP-auth-001 → archived
 **Work item:** WI-auth-001 → archived
 
-Run `/sdd:session-start` to see updated state.
+---
+Next: Continue with the next work item or verify the domain. Run `/sdd:work-item-close WI-{next-id}` to proceed.
 ```
+
+The final line after `---` is conditional on remaining work in the domain:
+- **Work items remain:** `Run \`/sdd:work-item-close WI-{next-id}\` to continue.` (substitute the next pending/in-progress WI ID)
+- **All work items closed:** `Run \`/sdd:spec-audit {domain}\` to verify the spec holds.` (substitute the domain name)
 
 ## Constraints
 
@@ -117,6 +126,9 @@ Run `/sdd:session-start` to see updated state.
 - **Blocked work items need a resolution first.** If the work item is `blocked`,
   report the blocking reason and ask the user how to proceed. Do not attempt to
   implement around the blocker.
+- **Spec items require Invariant and Acceptance criteria sections.** If this skill
+  ever writes a spec item file, the body must contain `## Invariant` and
+  `## Acceptance criteria` sections in order after the title heading.
 
 ## Schema Reference
 

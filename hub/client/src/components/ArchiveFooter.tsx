@@ -6,7 +6,7 @@ import type { WorkItem, Agent } from '../types';
 
 interface ArchiveFooterProps {
   items: WorkItem[];
-  agents: Record<string, Agent>;
+  agents: Agent[];
   onOpenItem: (id: string) => void;
   activeId: string | null;
 }
@@ -166,7 +166,7 @@ export function ArchiveFooter({ items, agents, onOpenItem, activeId }: ArchiveFo
             <div key={group.label} className="archive-footer__day-col">
               <div className="archive-footer__day-label">{group.label}</div>
               {group.items.map((w) => {
-                const agent = w.agent ? agents[w.agent] : null;
+                const agent = w.agent ? (agents.find((a) => a.id === w.agent) ?? null) : null;
                 return (
                   <div
                     key={w.id}
@@ -180,11 +180,7 @@ export function ArchiveFooter({ items, agents, onOpenItem, activeId }: ArchiveFo
                     <StatusPill status={w.status as any} />
                     <div className="arch-card__title">{w.title}</div>
                     <div className="arch-card__foot">
-                      {agent ? (
-                        <AgentChip agent={agent} />
-                      ) : (
-                        <span className="arch-card__unassigned">unassigned</span>
-                      )}
+                      <AgentChip agent={agent} />
                       {w.gapId && <span className="arch-card__gap">{w.gapId}</span>}
                     </div>
                   </div>

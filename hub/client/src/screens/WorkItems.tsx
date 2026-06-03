@@ -16,17 +16,10 @@ interface WorkItemsProps {
   workItems: WorkItem[];
   gaps: Gap[];
   specs: Spec[];
-  agents: Record<string, Agent>;
+  agents: Agent[];
   initialWiId?: string;
   onNav: (tab: string, id?: string) => void;
 }
-
-const STATUS_BORDER: Record<string, string> = {
-  'pending':     'var(--ink-4)',
-  'in-progress': 'var(--st-progress)',
-  'blocked':     'var(--st-blocked)',
-  'done':        'var(--st-done)',
-};
 
 function fmtAgo(dateStr: string): string {
   const sec = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -44,10 +37,10 @@ export function WorkItems({ workItems, gaps, specs, agents, initialWiId, onNav }
   );
 
   const cols = [
-    { id: 'pending',     label: 'pending',      items: workItems.filter((w) => w.status === 'pending') },
-    { id: 'in-progress', label: 'in progress',  items: workItems.filter((w) => w.status === 'in-progress') },
-    { id: 'blocked',     label: 'blocked',      items: workItems.filter((w) => w.status === 'blocked') },
-    { id: 'done',        label: 'done · today', items: workItems.filter((w) => w.status === 'done' && closedWithin24h(w)) },
+    { id: 'pending',     label: 'pending',      color: 'var(--ink-4)',       items: workItems.filter((w) => w.status === 'pending') },
+    { id: 'in-progress', label: 'in progress',  color: 'var(--st-progress)', items: workItems.filter((w) => w.status === 'in-progress') },
+    { id: 'blocked',     label: 'blocked',      color: 'var(--st-blocked)',  items: workItems.filter((w) => w.status === 'blocked') },
+    { id: 'done',        label: 'done · today', color: 'var(--st-done)',     items: workItems.filter((w) => w.status === 'done' && closedWithin24h(w)) },
   ];
 
   const active = workItems.find((w) => w.id === drawerId);
@@ -61,7 +54,7 @@ export function WorkItems({ workItems, gaps, specs, agents, initialWiId, onNav }
               <div className="kanban-col__head">
                 <span
                   className="kanban-col__dot"
-                  style={{ background: STATUS_BORDER[col.id] ?? 'var(--ink-4)' }}
+                  style={{ background: col.color }}
                 />
                 {col.label}
                 <span className="kanban-col__count">{col.items.length}</span>
@@ -75,7 +68,7 @@ export function WorkItems({ workItems, gaps, specs, agents, initialWiId, onNav }
                       key={w.id}
                       workItem={w}
                       agents={agents}
-                      borderColor={STATUS_BORDER[w.status] ?? 'var(--ink-4)'}
+                      borderColor={col.color}
                       fmtAgo={fmtAgo}
                       onClick={() => setDrawerId(w.id)}
                     />
@@ -109,14 +102,14 @@ export function WorkItems({ workItems, gaps, specs, agents, initialWiId, onNav }
 
 interface KanbanCardProps {
   workItem: WorkItem;
-  agents: Record<string, Agent>;
+  agents: Agent[];
   borderColor: string;
   fmtAgo: (d: string) => string;
   onClick: () => void;
 }
 
 function KanbanCard({ workItem: w, agents, borderColor, fmtAgo, onClick }: KanbanCardProps) {
-  const agent = w.agent ? agents[w.agent] : null;
+  const agent = w.agent ? (agents.find((a) => a.id === w.agent) ?? null) : null;
   return (
     <div
       className="kcard"
@@ -157,7 +150,7 @@ interface WorkItemDrawerProps {
   workItem: WorkItem;
   gaps: Gap[];
   specs: Spec[];
-  agents: Record<string, Agent>;
+  agents: Agent[];
   onClose: () => void;
   onNav: (tab: string, id?: string) => void;
 }
@@ -170,7 +163,7 @@ function WorkItemDrawer({ workItem: wi, gaps, specs, agents, onClose, onNav }: W
   const specParent = specItem
     ? specs.find((s) => s.items.some((i) => i.id === specItem.id))
     : undefined;
-  const agent = wi.agent ? agents[wi.agent] : null;
+  const agent = wi.agent ? (agents.find((a) => a.id === wi.agent) ?? null) : null;
 
   function renderScope(scope: string) {
     return scope

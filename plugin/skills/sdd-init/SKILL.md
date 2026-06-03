@@ -28,6 +28,8 @@ mkdir -p .sdd/gaps/archive
 mkdir -p .sdd/work-items/archive
 ```
 
+No domain subdirectories are created up front — `.sdd/specs/{domain}/` and `.sdd/specs/{domain}/archive/` are created on demand by `target-engage` when the first spec item is written for a domain.
+
 ### 3. Scaffold a first target (if argument provided)
 
 If the user supplied a topic or intent (e.g., `/sdd:sdd-init add authentication`),

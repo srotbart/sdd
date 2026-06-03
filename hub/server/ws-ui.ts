@@ -1,19 +1,20 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage, Server } from "node:http";
-import { getAllWorkspaces, getAllAgents, type Workspace, type Agent } from "./db/index.js";
+import { getAllAgents, type Agent } from "./db/index.js";
+import { getWorkspacesEnriched, type WorkspaceData } from "./workspace-data.js";
 
-export type SddArtifact = "targets" | "specs" | "gaps" | "work-items";
+export type SddArtifact = "targets" | "specs" | "gaps" | "work-items" | "projections" | "designs";
 
 export interface StateSnapshot {
   type: "snapshot";
-  workspaces: Workspace[];
+  workspaces: WorkspaceData[];
   agents: Agent[];
 }
 
 export interface UpdateMessage {
   type: "update";
   changedPath: string;
-  workspaces: Workspace[];
+  workspaces: WorkspaceData[];
   agents: Agent[];
 }
 
@@ -23,14 +24,29 @@ export interface SddChangedMessage {
   artifact: SddArtifact;
 }
 
-export type UiMessage = StateSnapshot | UpdateMessage | SddChangedMessage;
+export interface AgentRegisteredMessage {
+  type: "agent-registered";
+  agentId: string;
+  workspaceId: string;
+}
+
+export interface ActivityMessage {
+  type: "activity";
+  agentId: string;
+  workspaceId: string;
+  kind: "in" | "note" | "err";
+  msg: string;
+  t: string;
+}
+
+export type UiMessage = StateSnapshot | UpdateMessage | SddChangedMessage | AgentRegisteredMessage | ActivityMessage;
 
 const connectedClients = new Set<WebSocket>();
 
 function buildSnapshot(): StateSnapshot {
   return {
     type: "snapshot",
-    workspaces: getAllWorkspaces(),
+    workspaces: getWorkspacesEnriched(),
     agents: getAllAgents(),
   };
 }
@@ -45,7 +61,7 @@ export function broadcastUpdate(changedPath: string): void {
   const message: UpdateMessage = {
     type: "update",
     changedPath,
-    workspaces: getAllWorkspaces(),
+    workspaces: getWorkspacesEnriched(),
     agents: getAllAgents(),
   };
   for (const client of connectedClients) {
@@ -57,8 +73,28 @@ export function broadcastUpdate(changedPath: string): void {
   }
 }
 
-export function broadcastRaw(payload: Record<string, unknown>): void {
-  const serialized = JSON.stringify(payload);
+export function broadcastAgentRegistered(agentId: string, workspaceId: string): void {
+  const message: AgentRegisteredMessage = { type: "agent-registered", agentId, workspaceId };
+  const serialized = JSON.stringify(message);
+  for (const client of connectedClients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(serialized);
+    } else {
+      connectedClients.delete(client);
+    }
+  }
+}
+
+export function broadcastActivity(agentId: string, workspaceId: string, kind: "in" | "note" | "err", msg: string): void {
+  const message: ActivityMessage = {
+    type: "activity",
+    agentId,
+    workspaceId,
+    kind,
+    msg,
+    t: new Date().toISOString(),
+  };
+  const serialized = JSON.stringify(message);
   for (const client of connectedClients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(serialized);

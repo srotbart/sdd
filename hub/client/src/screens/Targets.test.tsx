@@ -24,7 +24,7 @@ const TARGET: Target = {
 
 const ARCHIVED_TARGET: Target = {
   id: 'TGT-002',
-  status: 'accepted',
+  status: 'archived',
   domain: 'architecture',
   domainAbbrev: 'arch',
   title: 'Old feature',
@@ -62,9 +62,9 @@ describe('Targets title bar', () => {
 describe('Targets archived tab and section', () => {
   it('archived tab appears in the filter bar with accepted target count', () => {
     render(<Targets targets={[TARGET, ARCHIVED_TARGET]} />);
-    const archivedBtn = screen.getByText('archived', { selector: '.filter-btn' });
+    const archivedBtn = screen.getByText('archived', { selector: '.artifact-list-filter-btn' });
     expect(archivedBtn).toBeTruthy();
-    const count = archivedBtn.querySelector('.filter-btn__count');
+    const count = archivedBtn.querySelector('.artifact-list-filter-count');
     expect(count?.textContent).toBe('1');
   });
 
@@ -79,7 +79,7 @@ describe('Targets archived tab and section', () => {
 
   it('clicking archived shows only accepted targets in the list', async () => {
     render(<Targets targets={[TARGET, ARCHIVED_TARGET]} />);
-    const archivedBtn = screen.getByText('archived', { selector: '.filter-btn' });
+    const archivedBtn = screen.getByText('archived', { selector: '.artifact-list-filter-btn' });
     await userEvent.click(archivedBtn);
     const listTitles = Array.from(
       document.querySelectorAll('.target-row__title'),
@@ -266,7 +266,7 @@ describe('Targets list uses ArtifactList for all filter tabs (WI-scr-023)', () =
 
   it('non-all filter tab renders rows without a bare map — no divider when no archived items', async () => {
     render(<Targets targets={[TARGET, READY_TARGET, ARCHIVED_TARGET]} />);
-    const readyBtn = screen.getByText('ready', { selector: '.filter-btn' });
+    const readyBtn = screen.getByText('ready', { selector: '.artifact-list-filter-btn' });
     await userEvent.click(readyBtn);
     expect(document.querySelector('.artifact-list-divider')).toBeNull();
     const rows = document.querySelectorAll('.target-row');
@@ -276,7 +276,7 @@ describe('Targets list uses ArtifactList for all filter tabs (WI-scr-023)', () =
 
   it('awaiting-you filter renders only awaiting-user rows via ArtifactList', async () => {
     render(<Targets targets={[TARGET, READY_TARGET, ARCHIVED_TARGET]} />);
-    const awaitingBtn = screen.getByText('awaiting you', { selector: '.filter-btn' });
+    const awaitingBtn = screen.getByText('awaiting you', { selector: '.artifact-list-filter-btn' });
     await userEvent.click(awaitingBtn);
     const rows = document.querySelectorAll('.target-row');
     expect(rows.length).toBe(1);
@@ -285,12 +285,70 @@ describe('Targets list uses ArtifactList for all filter tabs (WI-scr-023)', () =
 
   it('archived filter tab renders accepted rows without a divider', async () => {
     render(<Targets targets={[TARGET, ARCHIVED_TARGET]} />);
-    const archivedBtn = screen.getByText('archived', { selector: '.filter-btn' });
+    const archivedBtn = screen.getByText('archived', { selector: '.artifact-list-filter-btn' });
     await userEvent.click(archivedBtn);
     expect(document.querySelector('.artifact-list-divider')).toBeNull();
     const rows = document.querySelectorAll('.target-row');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Old feature');
+  });
+});
+
+describe("TargetStatus 'archived' routes to archived section (WI-scr-029)", () => {
+  const TRULY_ARCHIVED: Target = {
+    id: 'TGT-003',
+    status: 'archived',
+    domain: 'architecture',
+    domainAbbrev: 'arch',
+    title: 'Archived target',
+    created: '2026-05-01T00:00:00Z',
+    statement: 'This target is archived.',
+    dialog: [],
+  };
+
+  it('target with status archived appears in the archived section, not the active list', () => {
+    render(<Targets targets={[TARGET, TRULY_ARCHIVED]} />);
+    const archivedWrapper = document.querySelector('.artifact-list-archived-row');
+    expect(archivedWrapper).not.toBeNull();
+    expect(archivedWrapper?.textContent).toContain('TGT-003');
+    const nonArchivedRows = Array.from(document.querySelectorAll('.targets-list-scroll .target-row')).filter(
+      (r) => !r.closest('.artifact-list-archived-row'),
+    );
+    const nonArchivedIds = nonArchivedRows.map((r) => r.querySelector('.target-row__id')?.textContent);
+    expect(nonArchivedIds).toContain('TGT-001');
+    expect(nonArchivedIds).not.toContain('TGT-003');
+  });
+
+  it('target with status archived is included in archivedTargets count on the archived filter tab', () => {
+    render(<Targets targets={[TARGET, TRULY_ARCHIVED]} />);
+    const archivedBtn = Array.from(document.querySelectorAll('.artifact-list-filter-btn')).find(
+      (b) => b.textContent?.includes('archived'),
+    );
+    expect(archivedBtn).toBeTruthy();
+    const countSpan = archivedBtn!.querySelector('.artifact-list-filter-count');
+    expect(countSpan?.textContent).toBe('1');
+  });
+});
+
+describe('Targets uses ArtifactList filterKey API — no inline filter state (WI-scr-033)', () => {
+  it('renders artifact-list-filter-bar instead of targets-filter-bar', () => {
+    render(<Targets targets={[TARGET, ARCHIVED_TARGET]} />);
+    expect(document.querySelector('.artifact-list-filter-bar')).not.toBeNull();
+    expect(document.querySelector('.targets-filter-bar')).toBeNull();
+  });
+
+  it('filter buttons use artifact-list-filter-btn class, not filter-btn', () => {
+    render(<Targets targets={[TARGET, ARCHIVED_TARGET]} />);
+    expect(document.querySelectorAll('.artifact-list-filter-btn').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.filter-btn').length).toBe(0);
+  });
+
+  it('all targets (active + archived) are passed to ArtifactList — both render in the DOM', () => {
+    render(<Targets targets={[TARGET, ARCHIVED_TARGET]} />);
+    const rows = document.querySelectorAll('.target-row');
+    const ids = Array.from(rows).map((r) => r.querySelector('.target-row__id')?.textContent);
+    expect(ids).toContain('TGT-001');
+    expect(ids).toContain('TGT-002');
   });
 });
 

@@ -29,22 +29,25 @@ Then write your first target at .sdd/targets/TGT-001.md and run
 
 Read the following, skipping any `archive/` subdirectory:
 
-- `.sdd/targets/*.md` — parse `id`, `status`, `domain`, first `# Target:` heading
-- `.sdd/specs/*.md` — parse `id`, `domain`, `abbrev`, `version`; count `## SPEC-` headings; count items with a `**Tests:**` block
+- `.sdd/targets/*.md` — parse `id`, `status`, `domain`, first `# Target:` heading, and optional `design:` frontmatter field
+- `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` — for each domain subdirectory, glob both patterns (skip `archive/` at either level); parse `id`, `domain`, `abbrev`, `version`; count items with a `**Tests:**` block
 - `.sdd/gaps/*.md` — parse `id`, `spec-item`, `domain`, `status`, `audit-spec-version`
 - `.sdd/work-items/*.md` — parse `id`, `gap-id`, `domain`, `status`
+- `.sdd/design/*/design.md` — for each design directory, extract the design name (the directory component between `design/` and `/design.md`); collect the set of design names referenced by any target's `design:` frontmatter field; a design is "in progress without a target" when its name does not appear in any target's `design:` field
 
 ### 3. Detect stale gap audits
 
-For each spec domain that has active gaps, compute the current spec file's content hash:
+For each open gap, look up the referenced spec item file and read its `version` field from frontmatter:
 
 ```bash
-shasum -a 256 .sdd/specs/SPEC-{domain}.md | cut -c1-8
+# spec items may live at domain root or one level deeper in a subject subdirectory
+grep "^version:" .sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md 2>/dev/null | head -1 || \
+  grep "^version:" .sdd/specs/{domain}/*/SPEC-{abbrev}-{seq}.md 2>/dev/null | head -1
 ```
 
-Mark a domain's audit as stale when any of its active gaps has an `audit-spec-version` that does not match the current hash (the hash is read from the file as-is on disk; no pre-processing). Collect the list of stale domains.
+Mark a gap as stale when its `audit-spec-version` does not match the `version` field of the spec item file it references. For each stale gap, emit one warning naming the specific gap ID and the specific spec item ID it was generated against (e.g. `⚠ GAP-auth-001 is stale: audit-spec-version a3f9c812 ≠ SPEC-auth-001 version c4e1f205`). Collect the list of stale domains for the next-action footer.
 
-If the Bash tool is unavailable, compare each gap's `discovered` timestamp against the spec file's modification time as a fallback indicator.
+If the Bash tool is unavailable, compare each gap's `discovered` timestamp against the spec item file's modification time as a fallback indicator.
 
 ### 4. Render the status report
 
@@ -55,12 +58,13 @@ Print sections in this order, omitting any section with no entries:
 3. Targets awaiting agent (`awaiting-agent`)
 4. Ready targets (`ready`) — settled, pending reconciliation with spec
 5. Draft targets (`draft`) — in progress, not yet submitted
-6. Specs summary — one line per domain: name, item count, version hash, coverage fraction
-7. Stale audit warnings — `⚠` prefix, domain name, old vs current hash
-8. Uncovered spec items — items with no `**Tests:**` block
-9. Open gaps — grouped by domain, one line each
-10. Active work items — ordered: `in-progress`, `blocked`, `pending`
-11. Footer — one concrete next-action suggestion
+6. **Designs in progress** — designs in `.sdd/design/` with no corresponding target referencing them via `design:` frontmatter; each entry shows design name and path (`.sdd/design/{name}/design.md`)
+7. Specs summary — one line per domain: name, item count, coverage fraction
+8. Stale audit warnings — `⚠` prefix, gap ID, spec item ID, old vs current hash
+9. Uncovered spec items — items with no `**Tests:**` block
+10. Open gaps — grouped by domain, one line each
+11. Active work items — ordered: `in-progress`, `blocked`, `pending`
+12. Footer — one concrete next-action suggestion
 
 Keep each entry to a single line: `ID: title excerpt  [metadata]`
 
@@ -103,11 +107,14 @@ execution condition and suggest SendMessage instead of spawning.
 ### Ready targets (1)
 - TGT-010: Admin audit logging  [authentication]
 
-### Specs (2 domains)
-- SPEC-auth: Authentication — 3 items, 2/3 covered  [a3f9c812]
-- SPEC-api: API — 5 items, 0/5 covered  [b7d2e941]
+### Designs in progress (1)
+- sdd-explain: .sdd/design/sdd-explain/design.md  [no target yet]
 
-⚠ Stale audits: authentication (gaps at a3f9c812, spec now c4e1f205)
+### Specs (2 domains)
+- SPEC-auth: Authentication — 3 items, 2/3 covered
+- SPEC-api: API — 5 items, 0/5 covered
+
+⚠ GAP-auth-001 is stale: audit-spec-version a3f9c812 ≠ SPEC-auth-001 version c4e1f205
 
 ### Uncovered spec items (6)
 - SPEC-auth-003: Password complexity requirements  [authentication]
@@ -127,7 +134,8 @@ execution condition and suggest SendMessage instead of spawning.
 - WI-api-001: Apply rate limiting to /search  [pending]
 
 ---
-2 targets need your input. Run `/sdd:target-engage TGT-007` or `TGT-009` to continue.
+2 targets need your input.
+Next: Engage the highest-priority target. Run `/sdd:target-engage TGT-007` to proceed.
 ```
 
 ## Edge Cases
@@ -136,7 +144,7 @@ execution condition and suggest SendMessage instead of spawning.
 
 **Orphaned work item** — work item references a `gap-id` not found in the active or archive gaps directory. Flag with: `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
 
-**Multiple spec files for same domain** — this should not happen; flag it: `⚠ Multiple spec files found for domain 'authentication'. Expected one SPEC-authentication.md.`
+**Multiple domain directories** — each domain should have exactly one subdirectory under `.sdd/specs/`. Multiple directories for the same domain cannot occur under the naming scheme.
 
 **Empty archive dirs are fine** — `archive/` subdirectories may not exist yet; skip gracefully without error.
 

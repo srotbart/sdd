@@ -27,6 +27,10 @@ Read all active `.sdd/gaps/GAP-{abbrev}-*.md` for the target scope. Filter to
 `status: open`. Skip gaps that already have work items — check by scanning
 `.sdd/work-items/WI-{abbrev}-*.md` for entries referencing each gap ID.
 
+When resolving a gap's linked `spec-item` to read its title or invariant, search
+both `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md`,
+excluding `archive/` at either level.
+
 ### 2. Determine decomposition strategy per gap
 
 For each open gap without existing work items, decide on decomposition:
@@ -91,7 +95,8 @@ at least one test criterion. Example:
   Reason: both gaps are fixed by the same helper extraction
 
 ---
-4 work items created. Run `/sdd:work-item-close WI-auth-001` to start.
+4 work items created.
+Next: Close the first work item. Run `/sdd:work-item-close WI-auth-001` to proceed.
 ```
 
 ## Constraints
@@ -106,6 +111,9 @@ at least one test criterion. Example:
   skip that gap and note it in the report.
 - **Many-to-one requires explicit justification.** State why the same change closes
   multiple gaps before grouping them.
+- **Spec items require Invariant and Acceptance criteria sections.** If this skill
+  ever writes a spec item file, the body must contain `## Invariant` and
+  `## Acceptance criteria` sections in order after the title heading.
 
 ## Schema Reference
 

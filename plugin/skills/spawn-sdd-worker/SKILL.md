@@ -85,6 +85,7 @@ If you encounter a blocker (a work item that cannot proceed without human input)
 
 Rules:
 - Never engage targets or modify specs — that is the human + Claude phase.
+- Never invoke intent-phase skills: do not run `sdd:session-start`, `sdd:target-engage`, or any skill that reads or writes targets or specs outside the audit/decompose/close pipeline.
 - Only run the execution pipeline: audit → decompose → close.
 - Work autonomously. Do not ask clarifying questions.
 ```
@@ -101,7 +102,7 @@ The worker will run:
   2. /sdd:gap-to-work-items {domain}
   3. /sdd:work-item-close — for each open work item
 
-You will be notified when the worker completes or hits a blocker.
+Worker running. You will be notified on completion.
 
 To send additional domains to the same worker:
   SendMessage to "sdd-worker" with the domain name.

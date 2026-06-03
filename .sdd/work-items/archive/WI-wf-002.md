@@ -1,18 +1,21 @@
 ---
 id: WI-wf-002
-gap-id: GAP-wf-002
+gap-id: GAP-wf-001
 domain: workflow
 status: done
-created: "2026-05-17T00:00:00Z"
+created: "2026-06-01T17:18:22Z"
 abandoned-reason: null
 ---
 
-# Work Item: Update session-start next-action table to reference sdd-worker
+# Work Item: Add Invariant and Acceptance Criteria section instructions to writing skills and Hub parser
 
-**Scope:** `plugin/skills/session-start/SKILL.md:79-81` — replace the three execution-phase rows (stale audits, open gaps, pending work items) with rows that suggest `/sdd:spawn-sdd-worker {domain}` as the entry point for all execution work.
+**Scope:** `plugin/skills/spec-audit/SKILL.md`, `plugin/skills/target-engage/SKILL.md`, `plugin/skills/gap-to-work-items/SKILL.md`, `plugin/skills/work-item-close/SKILL.md`, `hub/server/sdd-parser.ts` — add explicit instructions in each writing skill to produce `## Invariant` and `## Acceptance criteria` sections; add `invariant` and `criteria` fields to the `SpecItem` interface and extraction logic in the Hub parser
 
 **Acceptance criteria:**
-- Lines referencing `/sdd:spec-audit`, `/sdd:gap-to-work-items`, and `/sdd:work-item-close` in the next-action table are replaced
-- New rows suggest `/sdd:spawn-sdd-worker {domain}` when stale audits, open gaps, or pending work items exist
-- The table retains existing rows for targets awaiting user, ready targets, uncovered spec items, and all-clear
-- Verification: grep confirms `/sdd:spawn-sdd-worker` appears in the next-action table and the three individual pipeline skill suggestions are removed
+- `spec-audit/SKILL.md` contains instruction to write `## Invariant` and `## Acceptance criteria` sections when creating or updating spec items
+- `target-engage/SKILL.md` contains instruction to write `## Invariant` and `## Acceptance criteria` sections when writing spec items
+- `gap-to-work-items/SKILL.md` contains instruction to write `## Invariant` and `## Acceptance criteria` sections when writing spec items
+- `work-item-close/SKILL.md` contains instruction to write `## Invariant` and `## Acceptance criteria` sections when writing spec items
+- `hub/server/sdd-parser.ts` `SpecItem` interface gains `invariant: string` and `criteria: string[]` fields
+- `hub/server/sdd-parser.ts` `parseSpecItemFile()` extracts the `## Invariant` section body into `invariant` and the `## Acceptance criteria` bullet list into `criteria`
+- Test: existing `sdd-parser.test.ts` or `sdd-parse-specs.test.ts` covers extraction of `invariant` and `criteria` from a spec item file containing those sections

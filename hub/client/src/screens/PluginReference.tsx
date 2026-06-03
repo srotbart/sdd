@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import './PluginReference.css';
 
+interface SkillEntry {
+  name: string;
+  description: string;
+}
+
 const SECTIONS = [
   { id: 'overview', label: 'Overview' },
   { id: 'pipeline', label: 'Pipeline' },
@@ -27,15 +32,6 @@ const ARTIFACTS = [
   { id: 'WI', name: 'Work item', path: '.sdd/work-items/', desc: 'Scoped implementation task that closes one or more gaps.' },
 ];
 
-const SKILLS = [
-  { name: 'sdd:session-start', desc: 'Show urgency-ordered state of all active SDD artifacts.' },
-  { name: 'sdd:target-engage', desc: 'Respond to a target, negotiate to ready, fold into spec.' },
-  { name: 'sdd:spec-audit', desc: 'Enumerate code paths, find divergences, write gap files.' },
-  { name: 'sdd:gap-to-work-items', desc: 'Decompose open gaps into concrete scoped work items.' },
-  { name: 'sdd:work-item-close', desc: 'Implement a work item, verify tests, close the gap.' },
-  { name: 'sdd:spec-test', desc: 'Generate integration tests linked back to spec items.' },
-  { name: 'sdd:spec-collapse', desc: 'Propose consolidation of redundant spec items.' },
-];
 
 const TARGET_SCHEMA = `---
 id: TGT-001
@@ -88,8 +84,22 @@ const DESIGN_DECISIONS = [
 
 export function PluginReference() {
   const [activeSection, setActiveSection] = useState<string>('overview');
+  const [skills, setSkills] = useState<SkillEntry[] | null>(null);
+  const [skillsError, setSkillsError] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    fetch('/plugin-skills')
+      .then((r) => r.json())
+      .then((data: SkillEntry[]) => {
+        setSkills(data);
+        setSkillsError(false);
+      })
+      .catch(() => {
+        setSkillsError(true);
+      });
+  }, []);
 
   useEffect(() => {
     const el = contentRef.current;
@@ -207,14 +217,20 @@ export function PluginReference() {
 
           <section ref={setRef('skills')} className="pr-section" id="pr-skills">
             <h2 className="pr-section__title">Skills</h2>
-            <div className="pr-skill-list">
-              {SKILLS.map((s) => (
-                <div key={s.name} className="pr-skill-row">
-                  <code className="pr-skill-row__name">/{s.name}</code>
-                  <span className="pr-skill-row__desc">{s.desc}</span>
-                </div>
-              ))}
-            </div>
+            {skillsError || (skills !== null && skills.length === 0) ? (
+              <p className="pr-skills-fallback">No skills found — ensure the SDD plugin is installed.</p>
+            ) : skills === null ? (
+              <p className="pr-skills-fallback">Loading skills…</p>
+            ) : (
+              <div className="pr-skill-list">
+                {skills.map((s) => (
+                  <div key={s.name} className="pr-skill-row">
+                    <code className="pr-skill-row__name">/{s.name}</code>
+                    <span className="pr-skill-row__desc">{s.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section ref={setRef('schemas')} className="pr-section" id="pr-schemas">

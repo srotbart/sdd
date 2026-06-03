@@ -1,18 +1,21 @@
 ---
 id: WI-scr-003
-gap-id: GAP-scr-003
+gap-id: GAP-scr-002
+domain: ui-screens
 status: done
-created: "2026-05-17T00:00:00Z"
+created: "2026-05-29T00:00:00Z"
 abandoned-reason: null
 ---
 
-# Targets composer: correct "mark ready" visibility and hint text
+# Work Item: Install react-markdown and create SpecItemList/SpecItemDetail components
 
-**Scope:** `hub/client/src/screens/Targets.tsx` — update `TargetDetail` composer section: move "mark ready" ghost button outside the `awaiting-user`-only guard so it renders for all applicable statuses; update `actionMap` `hint` for `awaiting-user` to `"sets status → awaiting-agent"` as required.
+**Scope:** `hub/client/package.json`, `hub/client/src/screens/SpecItemList.tsx`, `hub/client/src/screens/SpecItemDetail.tsx` — add `react-markdown` dependency; extract the item list rendering into `SpecItemList` and create `SpecItemDetail` with a `← items` back button, item header (mono-accent ID, StatusPill, open-gap pill, TestStatusDot), Newsreader serif title, `react-markdown`-rendered body in `.spec-item-detail__body`, and gap/WI ref pills.
 
 **Acceptance criteria:**
-- "mark ready" ghost button is present in the toolbar row when `target.status === 'awaiting-user'` (verify it was already conditional — spec says it should be in the toolbar row)
-- Muted one-line hint beneath toolbar reads `"sets status → awaiting-agent"` for `awaiting-user` status
-- `⌘ + ↵ to send` hint is left-aligned; action buttons are right-aligned in the toolbar row
-- Test: render `<TargetDetail>` with `status='awaiting-user'` and assert hint text equals `"sets status → awaiting-agent"`
-- Test: render with `status='awaiting-agent'` and assert "mark ready" button is not present
+- `react-markdown` appears in `package.json` `dependencies`
+- `SpecItemList.tsx` exists and renders the list of spec items for a domain
+- `SpecItemDetail.tsx` exists with a `← items` back button, item header, title, markdown body, and ref pills
+- Item body is rendered via `react-markdown` wrapped in `.spec-item-detail__body`
+- Domain sidebar remains visible in the detail view
+- Unit test: `SpecItemDetail` renders the back button
+- Unit test: `SpecItemDetail` renders the item body as markdown (e.g., `**bold**` → `<strong>`)

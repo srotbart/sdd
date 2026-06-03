@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { PluginReference } from './PluginReference';
+
+beforeEach(() => {
+  global.fetch = vi.fn(() =>
+    Promise.resolve({ json: () => Promise.resolve([]) } as Response)
+  ) as unknown as typeof fetch;
+});
 
 const EXPECTED_SECTIONS = [
   'Overview',
@@ -52,5 +58,52 @@ describe('PluginReference screen (WI-scr-008)', () => {
     render(<PluginReference />);
     const toc = document.querySelector('.pr-toc');
     expect(toc).not.toBeNull();
+  });
+});
+
+describe('PluginReference skill list (SPEC-scr-044)', () => {
+  it('fetches /plugin-skills on mount and renders returned skill names', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve([
+          { name: 'sdd:spec-audit', description: 'Audit the spec.' },
+          { name: 'sdd:work-item-close', description: 'Close a work item.' },
+        ]),
+      } as Response)
+    ) as unknown as typeof fetch;
+
+    render(<PluginReference />);
+
+    await waitFor(() => {
+      expect(screen.getByText('/sdd:spec-audit')).toBeInTheDocument();
+    });
+    expect(screen.getByText('/sdd:work-item-close')).toBeInTheDocument();
+    expect(screen.getByText('Audit the spec.')).toBeInTheDocument();
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map(
+      (c: unknown[]) => c[0] as string
+    );
+    expect(calls).toContain('/plugin-skills');
+  });
+
+  it('shows fallback message when /plugin-skills fetch fails', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('network error'))) as unknown as typeof fetch;
+
+    render(<PluginReference />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No skills found/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows fallback message when /plugin-skills returns empty array', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ json: () => Promise.resolve([]) } as Response)
+    ) as unknown as typeof fetch;
+
+    render(<PluginReference />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No skills found/)).toBeInTheDocument();
+    });
   });
 });

@@ -168,6 +168,108 @@ describe('ArtifactList — archived section', () => {
   });
 });
 
+describe('ArtifactList — filterKey pipeline (SPEC-uic-009)', () => {
+  interface Item {
+    id: string;
+    status: string;
+  }
+
+  const filteredItems: Item[] = [
+    { id: 'a', status: 'open' },
+    { id: 'b', status: 'open' },
+    { id: 'c', status: 'closed' },
+  ];
+
+  function renderItem(item: Item) {
+    return <div data-testid={`item-${item.id}`}>{item.id}</div>;
+  }
+
+  it('renders a filter bar when filterKey is provided', () => {
+    render(
+      <ArtifactList
+        items={filteredItems}
+        renderRow={renderItem}
+        getKey={(i) => i.id}
+        filterKey="status"
+        archivedValues={['closed']}
+      />,
+    );
+    expect(document.querySelector('.artifact-list-filter-bar')).not.toBeNull();
+  });
+
+  it('clicking a tab hides items not matching that filter value', async () => {
+    render(
+      <ArtifactList
+        items={filteredItems}
+        renderRow={renderItem}
+        getKey={(i) => i.id}
+        filterKey="status"
+        archivedValues={['closed']}
+      />,
+    );
+    const buttons = document.querySelectorAll('.artifact-list-filter-btn');
+    const openBtn = Array.from(buttons).find((b) => b.textContent?.includes('open'));
+    await userEvent.click(openBtn!);
+    expect(document.querySelector('[data-testid="item-a"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="item-c"]')).toBeNull();
+  });
+
+  it('does not render a filter bar when filterKey is absent', () => {
+    render(
+      <ArtifactList
+        items={ITEMS}
+        archivedItems={[]}
+        renderRow={renderRow}
+        getKey={getKey}
+      />,
+    );
+    expect(document.querySelector('.artifact-list-filter-bar')).toBeNull();
+  });
+});
+
+describe('ArtifactList — empty-string filterKey values excluded from tabs (WI-uic-017)', () => {
+  interface DomainItem {
+    id: string;
+    domain: string;
+  }
+
+  const itemsWithEmptyDomain: DomainItem[] = [
+    { id: 'a', domain: 'architecture' },
+    { id: 'b', domain: '' },
+    { id: 'c', domain: 'workflow' },
+  ];
+
+  function renderItem(item: DomainItem) {
+    return <div data-testid={`item-${item.id}`}>{item.id}</div>;
+  }
+
+  it('items with empty domain string do not produce a blank filter tab', () => {
+    render(
+      <ArtifactList
+        items={itemsWithEmptyDomain}
+        renderRow={renderItem}
+        getKey={(i) => i.id}
+        filterKey="domain"
+      />,
+    );
+    const buttons = Array.from(document.querySelectorAll('.artifact-list-filter-btn'));
+    const blankBtn = buttons.find((b) => b.textContent?.trim() === '' || /^\d+$/.test(b.textContent?.trim() ?? ''));
+    expect(blankBtn).toBeUndefined();
+  });
+
+  it('items with empty domain still appear when "all" tab is active', () => {
+    render(
+      <ArtifactList
+        items={itemsWithEmptyDomain}
+        renderRow={renderItem}
+        getKey={(i) => i.id}
+        filterKey="domain"
+      />,
+    );
+    expect(document.querySelector('[data-testid="item-b"]')).not.toBeNull();
+  });
+});
+
 describe('ArtifactList — CSS', () => {
   const css = readFileSync(join(__dirname, 'ArtifactList.css'), 'utf-8');
 

@@ -16,16 +16,6 @@ export function Gaps({ gaps, specs, workItems, initialGapId, onNav }: GapsProps)
   const [activeId, setActiveId] = useState<string>(
     initialGapId ?? gaps[0]?.id ?? ''
   );
-  const [filterDomain, setFilterDomain] = useState<string>('all');
-
-  const domains = ['all', ...Array.from(new Set(gaps.map((g) => g.domain)))];
-
-  const domainFiltered =
-    filterDomain === 'all' ? gaps : gaps.filter((g) => g.domain === filterDomain);
-
-  const TERMINAL_STATUSES = new Set(['closed', 'deferred', 'accepted']);
-  const activeGaps = domainFiltered.filter((g) => !TERMINAL_STATUSES.has(g.status));
-  const archivedGaps = domainFiltered.filter((g) => TERMINAL_STATUSES.has(g.status));
 
   const active = gaps.find((g) => g.id === activeId);
 
@@ -40,22 +30,12 @@ export function Gaps({ gaps, specs, workItems, initialGapId, onNav }: GapsProps)
   return (
     <div className="gaps-layout">
       <div className="gaps-list">
-        <div className="gaps-filter-bar">
-          {domains.map((d) => (
-            <button
-              key={d}
-              onClick={() => setFilterDomain(d)}
-              className={`gaps-filter-btn${filterDomain === d ? ' gaps-filter-btn--active' : ''}`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-
         <div className="gaps-list__scroll">
           <ArtifactList
-            items={activeGaps}
-            archivedItems={archivedGaps}
+            items={gaps}
+            filterKey="domain"
+            archivedKey="status"
+            archivedValues={['closed', 'deferred', 'accepted']}
             getKey={(g) => g.id}
             renderRow={(g) => (
               <div

@@ -3,17 +3,16 @@ id: WI-wf-005
 gap-id: GAP-wf-005
 domain: workflow
 status: done
-created: "2026-05-18T00:00:00Z"
+created: "2026-05-28T00:00:00Z"
 abandoned-reason: null
 ---
 
-# Work Item: Add TeamCreate and team_name to spawn-sdd-worker procedure
+# Work Item: Fix session-start stale-audit procedure to say per-gap warnings, not grouped by domain
 
-**Scope:** `plugin/skills/spawn-sdd-worker/SKILL.md:34` — revise step 2 to call TeamCreate before spawning the worker, then pass the created team's name via the `team_name` parameter on the Agent tool call; add a cleanup step calling TeamDelete after the worker completes or is shut down
+**Scope:** `plugin/skills/session-start/SKILL.md:45` — reword the stale-audit reporting sentence to say each warning names the specific gap ID and spec item ID
 
 **Acceptance criteria:**
-- Step 2 begins with a TeamCreate call (e.g., `TeamCreate({ name: "sdd-execution" })`) before the Agent tool call
-- The Agent tool call includes `team_name` set to the created team name
-- A step after the worker completes references TeamDelete to clean up the team
-- Skill text test: the SKILL.md body contains "TeamCreate" and "team_name" in the spawn procedure section
-- Skill text test: the SKILL.md body contains "TeamDelete" in the cleanup/shutdown section
+- The procedure text in step 3 no longer says "grouped by domain"
+- The updated text says each stale-audit warning identifies the specific gap ID and the spec item ID it was generated against
+- The wording is consistent with the example output at line 110 (`⚠ GAP-auth-001 is stale: audit-spec-version ... ≠ SPEC-auth-001 version ...`)
+- Manual review: confirm procedure and example output are now consistent with each other

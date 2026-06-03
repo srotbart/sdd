@@ -3,16 +3,15 @@ id: WI-wf-004
 gap-id: GAP-wf-004
 domain: workflow
 status: done
-created: "2026-05-18T00:00:00Z"
+created: "2026-05-28T00:00:00Z"
 abandoned-reason: null
 ---
 
-# Work Item: Add "worker already running" case to session-start next-action table
+# Work Item: Fix install-statusline fallback spec count to glob domain subdirectories
 
-**Scope:** `plugin/skills/session-start/SKILL.md:73` — add a new row to the next-action footer table covering the case where an sdd-worker is already running, instructing the user to send the domain to the existing worker via SendMessage rather than spawn a new one
+**Scope:** `plugin/skills/install-statusline/SKILL.md:78` — replace `ls .sdd/specs/SPEC-*.md` with a glob that counts spec items across all domain subdirectories
 
 **Acceptance criteria:**
-- The next-action table includes a row for "Worker already running" that suggests `SendMessage to "sdd-worker" with the domain` instead of `/sdd:spawn-sdd-worker`
-- The new row is placed above the execution-condition rows so it takes precedence when a worker is active
-- The procedure section describes how to detect whether a worker is already running (e.g., check if a named agent "sdd-worker" is present in the session)
-- Skill text test: the SKILL.md body contains the string "SendMessage" in the next-action section
+- The fallback command counts `.md` files in `.sdd/specs/*/` subdirectories (excluding `archive/`)
+- The corrected command returns the actual spec item count when the Hub API is unreachable
+- Manual review: test the corrected command against the actual `.sdd/specs/` directory and confirm it returns a non-zero count

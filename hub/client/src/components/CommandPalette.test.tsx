@@ -59,7 +59,7 @@ const SPEC: Spec = {
   abbrev: 'scr',
   version: 'abc12345',
   items: [
-    { id: 'SPEC-scr-001', title: 'Dashboard screen', status: 'active', body: 'The dashboard renders workspaces.', refs: [] },
+    { id: 'SPEC-scr-001', title: 'Dashboard screen', status: 'active', body: 'The dashboard renders workspaces.', refs: [], testStatus: { status: 'not-run' } },
   ],
 };
 

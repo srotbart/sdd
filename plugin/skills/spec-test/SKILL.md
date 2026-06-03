@@ -26,9 +26,9 @@ Accept one of:
 
 ### 1. Identify uncovered spec items
 
-Read the relevant spec file(s). For each active spec item, check whether a
-`**Tests:**` block exists. Items without it are uncovered. Report the list before
-proceeding.
+Glob `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` (skip `archive/` at either level) for each domain being targeted.
+For each active spec item file, check whether a `**Tests:**` block exists in the body.
+Items without it are uncovered. Report the list before proceeding.
 
 If all items are covered, report that and stop — ask the user whether to update
 an existing test or add additional coverage.
@@ -85,12 +85,11 @@ separate `.sdd/` test directory.
 
 ### 5. Update the spec item
 
-For each spec item with newly written tests, add a `**Tests:**` block immediately
-after the spec item's statement text (before the next `##` heading):
+For each spec item with newly written tests, add a `**Tests:**` block to its file
+(`.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md`) after the statement body:
 
 ```markdown
-## SPEC-auth-001 — Admin actions require two-factor verification
-*Status: active | Aliases: none*
+# SPEC-auth-001 — Admin actions require two-factor verification
 
 All admin-privileged operations MUST verify a second factor before proceeding.
 
@@ -104,7 +103,7 @@ Format per test entry: `` `file::test_identifier` — "one-line description of w
 The one-line description must state the behavior, not the assertion. "admin action
 rejected when MFA absent" is good. "asserts 403 status code" is not.
 
-After updating all spec items, recompute and update the spec file's `version` field
+After updating a spec item file, recompute and update its `version` field in frontmatter
 (see `references/schemas.md`, Specs section, for the hash command).
 
 ### 6. Verify the new tests pass
@@ -146,7 +145,14 @@ failing spec test is useful signal, not a blocker for writing other tests.
 2 spec items covered this run.
 1 item has a failing test — spec not yet implemented.
 Spec updated: references/schemas.md version field refreshed.
+Next: Run the test suite then check overall state. Run `/sdd:session-start` to proceed.
 ```
+
+The final line after `---` is conditional on the outcome:
+- **Tests written and suite runnable:** `Run the test suite then \`/sdd:session-start\` to see updated state.`
+- **No items needed coverage:** `All spec items already have test coverage. Run \`/sdd:session-start\` to see updated state.`
+
+Substitute the actual test command for the project (e.g. `npm test`, `pytest`) if it differs.
 
 ## Constraints
 

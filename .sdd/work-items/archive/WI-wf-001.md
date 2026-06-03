@@ -3,17 +3,16 @@ id: WI-wf-001
 gap-id: GAP-wf-001
 domain: workflow
 status: done
-created: "2026-05-17T00:00:00Z"
+created: "2026-06-01T17:18:22Z"
 abandoned-reason: null
 ---
 
-# Work Item: Create sdd:spawn-sdd-worker skill
+# Work Item: Add Invariant and Acceptance Criteria sections to workflow spec item files and schemas
 
-**Scope:** `plugin/skills/spawn-sdd-worker/SKILL.md` — create the skill file with instructions for spawning a persistent agent named `sdd-worker` that runs the full execution pipeline (spec-audit → gap-to-work-items → work-item-close loop) for a specified domain argument.
+**Scope:** `.sdd/specs/workflow/SPEC-wf-001.md` through `SPEC-wf-016.md` and `SPEC-wf-018.md` (17 files), `plugin/references/schemas.md:87` — add `## Invariant` and `## Acceptance criteria` sections to each existing spec item file; update schemas.md spec item template to document the required sections
 
 **Acceptance criteria:**
-- `plugin/skills/spawn-sdd-worker/SKILL.md` exists
-- Skill instructs the agent to use the Agent tool to spawn a named agent called `sdd-worker`
-- The spawned agent's prompt includes: read the domain argument, run `sdd:spec-audit {domain}`, then `sdd:gap-to-work-items {domain}`, then call `sdd:work-item-close` for each open work item until none remain
-- The skill notes the worker is persistent and can receive additional domain names via SendMessage
-- Verification: file exists and grep confirms "sdd-worker" and "Agent tool" are referenced in the skill content
+- All 17 workflow spec item files (001–016, 018) contain `## Invariant` and `## Acceptance criteria` sections in the correct order after the title heading
+- `plugin/references/schemas.md` spec item template shows `## Invariant` and `## Acceptance criteria` sections with descriptions of what each section should contain
+- Test: grep for `## Invariant` across all `.sdd/specs/workflow/SPEC-wf-*.md` (excluding archive) returns exactly 18 matches
+- Test: grep for `## Acceptance criteria` across all `.sdd/specs/workflow/SPEC-wf-*.md` (excluding archive) returns exactly 18 matches

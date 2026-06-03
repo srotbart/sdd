@@ -18,8 +18,11 @@ const STATUS_MAP: Record<string, [string, string]> = {
   'blocked':        ['blocked',  'blocked'],
   'done':           ['done',     'done'],
   'closed':         ['done',     'closed'],
+  'deferred':       ['stale',    'deferred'],
+  'abandoned':      ['stale',    'abandoned'],
   'active':         ['phosphor', 'active'],
   'stale':          ['stale',    'stale'],
+  'archived':       ['done',     'archived'],
 };
 
 export function StatusPill({ status, label }: StatusPillProps) {

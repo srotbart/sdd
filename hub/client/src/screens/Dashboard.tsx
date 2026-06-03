@@ -14,14 +14,14 @@ function computeTotals(workspaces: WorkspaceData[]): DashboardTotals {
   return workspaces.reduce<DashboardTotals>(
     (t, w) => {
       t.targets +=
-        w.counts.targetsAwaitingUser +
-        w.counts.targetsAwaitingAgent +
-        w.counts.targetsReady +
-        w.counts.targetsDraft;
-      t.awaitingUser += w.counts.targetsAwaitingUser;
-      t.openGaps += w.counts.openGaps;
-      t.work += w.counts.workPending + w.counts.workInProgress + w.counts.workBlocked;
-      t.stale += w.counts.staleAuditDomains;
+        (w.counts?.targetsAwaitingUser ?? 0) +
+        (w.counts?.targetsAwaitingAgent ?? 0) +
+        (w.counts?.targetsReady ?? 0) +
+        (w.counts?.targetsDraft ?? 0);
+      t.awaitingUser += w.counts?.targetsAwaitingUser ?? 0;
+      t.openGaps += w.counts?.openGaps ?? 0;
+      t.work += (w.counts?.workPending ?? 0) + (w.counts?.workInProgress ?? 0) + (w.counts?.workBlocked ?? 0);
+      t.stale += w.counts?.staleAuditDomains ?? 0;
       return t;
     },
     { targets: 0, awaitingUser: 0, openGaps: 0, work: 0, stale: 0 },
@@ -71,7 +71,7 @@ function HSection({ children, count }: HSectionProps) {
 
 interface WorkspaceTileProps {
   ws: WorkspaceData;
-  agents: Record<string, Agent>;
+  agents: Agent[];
   now: Date;
   onOpen: () => void;
 }
@@ -86,11 +86,11 @@ function fmtAgo(date: string, now: Date): string {
 }
 
 function WorkspaceTile({ ws, agents, now, onOpen }: WorkspaceTileProps) {
-  const isBusy = ws.agents.some((id) => agents[id]?.status === 'busy');
+  const isBusy = ws.agents.some((id) => agents.find((a) => a.id === id)?.status === 'busy');
   const activityFresh =
     now.getTime() - new Date(ws.lastActivity).getTime() < 5 * 60 * 1000;
-  const blocked = ws.counts.workBlocked;
-  const stale = ws.counts.staleAuditDomains;
+  const blocked = ws.counts?.workBlocked ?? 0;
+  const stale = ws.counts?.staleAuditDomains ?? 0;
 
   return (
     <div
@@ -118,7 +118,7 @@ function WorkspaceTile({ ws, agents, now, onOpen }: WorkspaceTileProps) {
           <span className="workspace-tile__no-agents">no agents attached</span>
         ) : (
           ws.agents.map((id) =>
-            agents[id] ? <AgentChip key={id} agent={agents[id]} /> : null,
+            agents.find((a) => a.id === id) ? <AgentChip key={id} agent={agents.find((a) => a.id === id)!} /> : null,
           )
         )}
       </div>
@@ -136,21 +136,21 @@ function WorkspaceTile({ ws, agents, now, onOpen }: WorkspaceTileProps) {
 
       <div className="workspace-tile__stats">
         <div
-          className={`workspace-tile__stat${ws.counts.targetsAwaitingUser > 0 ? ' workspace-tile__stat--warn' : ''}`}
+          className={`workspace-tile__stat${(ws.counts?.targetsAwaitingUser ?? 0) > 0 ? ' workspace-tile__stat--warn' : ''}`}
         >
-          <b>{ws.counts.targetsAwaitingUser}</b>
+          <b>{ws.counts?.targetsAwaitingUser ?? 0}</b>
           await user
         </div>
         <div
-          className={`workspace-tile__stat${ws.counts.openGaps > 0 ? ' workspace-tile__stat--has' : ''}`}
+          className={`workspace-tile__stat${(ws.counts?.openGaps ?? 0) > 0 ? ' workspace-tile__stat--has' : ''}`}
         >
-          <b>{ws.counts.openGaps}</b>
+          <b>{ws.counts?.openGaps ?? 0}</b>
           gaps
         </div>
         <div
-          className={`workspace-tile__stat${ws.counts.workInProgress > 0 ? ' workspace-tile__stat--has' : ''}`}
+          className={`workspace-tile__stat${(ws.counts?.workInProgress ?? 0) > 0 ? ' workspace-tile__stat--has' : ''}`}
         >
-          <b>{ws.counts.workInProgress}</b>
+          <b>{ws.counts?.workInProgress ?? 0}</b>
           in&nbsp;progress
         </div>
         <div
@@ -166,7 +166,7 @@ function WorkspaceTile({ ws, agents, now, onOpen }: WorkspaceTileProps) {
 
 export interface DashboardProps {
   workspaces: WorkspaceData[];
-  agents: Record<string, Agent>;
+  agents: Agent[];
   activity: ActivityLine[];
   now?: Date;
   onOpenWorkspace: (id: string) => void;
@@ -180,7 +180,7 @@ export function Dashboard({
   onOpenWorkspace,
 }: DashboardProps) {
   const totals = computeTotals(workspaces);
-  const busyAgents = Object.values(agents).filter((a) => a.status === 'busy');
+  const busyAgents = agents.filter((a) => a.status === 'busy');
 
   return (
     <div className="dashboard">

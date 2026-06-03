@@ -142,3 +142,61 @@ describe('Sidenav — CSS layout', () => {
     expect(css).toMatch(/\.sidenav-plugin-ref-section\s*\{[^}]*border-top:\s*1px solid var\(--hair\)/s);
   });
 });
+
+describe('Sidenav — active workspace trigger has 2px accent left border (WI-ui-016)', () => {
+  it('trigger renders with sidenav-ws-trigger--active class when a workspace is active', () => {
+    render(
+      <Sidenav
+        {...defaultProps}
+        workspaces={[{ id: 'ws-1', name: 'Repo', path: '/repo' }]}
+        activeWorkspaceId="ws-1"
+        isHubActive={false}
+      />,
+    );
+    const trigger = document.querySelector('.sidenav-ws-trigger');
+    expect(trigger).not.toBeNull();
+    expect(trigger!.classList.contains('sidenav-ws-trigger--active')).toBe(true);
+  });
+
+  it('trigger does not have sidenav-ws-trigger--active class when no workspace is active', () => {
+    render(
+      <Sidenav
+        {...defaultProps}
+        workspaces={[{ id: 'ws-1', name: 'Repo', path: '/repo' }]}
+        activeWorkspaceId={null}
+        isHubActive={true}
+      />,
+    );
+    const trigger = document.querySelector('.sidenav-ws-trigger');
+    expect(trigger).not.toBeNull();
+    expect(trigger!.classList.contains('sidenav-ws-trigger--active')).toBe(false);
+  });
+});
+
+describe('Sidenav alertCount badge (WI-ui-011)', () => {
+  it('shows alert badge when alertCount > 0', () => {
+    render(
+      <Sidenav
+        {...defaultProps}
+        workspaces={[{ id: 'ws-1', name: 'Repo', path: '/repo', alertCount: 2 }]}
+        activeWorkspaceId="ws-1"
+        isHubActive={false}
+      />,
+    );
+    const badge = document.querySelector('.sidenav-badge');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('2');
+  });
+
+  it('does not show alert badge when alertCount is 0', () => {
+    render(
+      <Sidenav
+        {...defaultProps}
+        workspaces={[{ id: 'ws-1', name: 'Repo', path: '/repo', alertCount: 0 }]}
+        activeWorkspaceId="ws-1"
+        isHubActive={false}
+      />,
+    );
+    expect(document.querySelector('.sidenav-badge')).toBeNull();
+  });
+});

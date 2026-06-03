@@ -5,15 +5,18 @@ interface SpecItem {
   id: string;
   title: string;
   status: "active" | "deprecated" | "aliased";
+  version: string;
   body: string;
+  invariant: string;
+  criteria: string[];
   refs: Array<{ kind: "gap" | "wi"; id: string }>;
+  testStatus: TestStatus;
 }
 
 interface Spec {
   id: string;
   domain: string;
   abbrev: string;
-  version: string;
   items: SpecItem[];
 }
 
@@ -51,7 +54,7 @@ function parseRefs(text: string): Array<{ kind: "gap" | "wi"; id: string }> {
   return refs;
 }
 
-function parseSpecFile(filePath: string): Spec | null {
+function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbrev: string }) | null {
   let content: string;
   try {
     content = fs.readFileSync(filePath, "utf8");
@@ -60,46 +63,44 @@ function parseSpecFile(filePath: string): Spec | null {
   }
 
   const { meta, body } = parseFrontmatter(content);
-  if (!meta["abbrev"] || !meta["domain"]) return null;
+  if (!meta["id"] || !meta["domain"] || !meta["abbrev"]) return null;
 
-  const abbrev = meta["abbrev"];
-  const itemHeaderRe = new RegExp(
-    `^## (SPEC-${abbrev}-\\d+) — (.+)$`,
-    "m"
-  );
-  const sections = body.split(/^## /m).filter((s) => s.trim());
+  const titleMatch = /^# (SPEC-[^\s]+ — .+)$/m.exec(body);
+  const title = titleMatch ? titleMatch[1].replace(/^SPEC-[^\s]+ — /, "").trim() : "";
+  const bodyContent = body.replace(/^# .+\n?/m, "").trim();
 
-  const items: SpecItem[] = [];
+  const sections = bodyContent.split(/\n(?=## )/);
+  let invariant = "";
+  const criteria: string[] = [];
   for (const section of sections) {
-    const firstLine = section.split("\n")[0].trim();
-    const headerMatch = new RegExp(`^(SPEC-${abbrev}-\\d+) — (.+)$`, "i").exec(firstLine);
-    if (!headerMatch) continue;
-
-    const id = headerMatch[1].toUpperCase();
-    const title = headerMatch[2].trim();
-    const rest = section.slice(firstLine.length).trim();
-
-    const statusMatch = /\*Status:\s*(active|deprecated|aliased)/i.exec(rest);
-    const status = (statusMatch?.[1]?.toLowerCase() ?? "active") as SpecItem["status"];
-
-    const bodyLines = rest
-      .split("\n")
-      .filter((l) => !l.match(/^\*Status:/i))
-      .join("\n")
-      .trim();
-
-    items.push({ id, title, status, body: bodyLines, refs: parseRefs(rest) });
+    if (section.startsWith("## Invariant")) {
+      invariant = section.replace(/^## Invariant[ \t]*\n?/, "").trim();
+    } else if (section.startsWith("## Acceptance criteria")) {
+      const criteriaBody = section.replace(/^## Acceptance criteria[ \t]*\n?/, "");
+      for (const line of criteriaBody.split("\n")) {
+        const bullet = /^[-*]\s+(.+)$/.exec(line.trim());
+        if (bullet) {
+          criteria.push(bullet[1].trim());
+        }
+      }
+    }
   }
 
-  return {
-    id: meta["id"] ?? path.basename(filePath, ".md"),
-    domain: meta["domain"],
-    abbrev,
-    version: meta["version"] ?? "",
-    items,
-  };
+  const status = (meta["status"]?.toLowerCase() ?? "active") as SpecItem["status"];
 
-  void itemHeaderRe;
+  return {
+    id: meta["id"].toUpperCase(),
+    title,
+    status,
+    version: meta["version"] ?? "",
+    body: bodyContent,
+    invariant,
+    criteria,
+    refs: parseRefs(bodyContent),
+    testStatus: { status: "not-run" },
+    domain: meta["domain"],
+    abbrev: meta["abbrev"],
+  };
 }
 
 interface DialogTurn {
@@ -137,12 +138,15 @@ function parseTargetFile(filePath: string): Target | null {
   const statement = statementMatch ? statementMatch[1].trim() : "";
 
   const dialog: DialogTurn[] = [];
-  const turnRe = /^### \d{4}-\d{2}-\d{2} — (User|Agent)\n([\s\S]*?)(?=\n### |\s*$)/gm;
-  for (const m of body.matchAll(turnRe)) {
+  const dialogSection = /^## Dialog\s*\n([\s\S]*)$/m.exec(body)?.[1] ?? "";
+  const turns = dialogSection.split(/(?=^### \d{4}-\d{2}-\d{2} — )/m).filter((s) => s.trim());
+  for (const turn of turns) {
+    const m = /^### (\d{4}-\d{2}-\d{2}) — (User|Agent)\s*\n([\s\S]*)$/.exec(turn.trim());
+    if (!m) continue;
     dialog.push({
-      who: m[1].toLowerCase() === "agent" ? "agent" : "user",
-      date: (m[0].match(/(\d{4}-\d{2}-\d{2})/) ?? [])[1] ?? "",
-      text: m[2].trim(),
+      who: m[2].toLowerCase() === "agent" ? "agent" : "user",
+      date: m[1],
+      text: m[3].trim(),
     });
   }
 
@@ -186,7 +190,7 @@ export function parseTargets(sddPath: string): Target[] {
 
   for (const file of archiveFiles) {
     const parsed = parseTargetFile(path.join(archiveDir, file));
-    if (parsed) targets.push(parsed);
+    if (parsed) targets.push({ ...parsed, status: "archived" });
   }
 
   return targets;
@@ -204,6 +208,21 @@ export interface Gap {
   title: string;
   location: string;
   reasoning: string;
+}
+
+const ABBREV_TO_DOMAIN: Record<string, string> = {
+  arch: "architecture",
+  scr: "ui-screens",
+  ui: "ui-layout",
+  uic: "ui-components",
+  wf: "workflow",
+};
+
+function deriveDomainFromSpecItem(specItem: string): string {
+  const match = /^SPEC-([a-z]+)-\d+$/i.exec(specItem);
+  if (!match) return "";
+  const abbrev = match[1].toLowerCase();
+  return ABBREV_TO_DOMAIN[abbrev] ?? abbrev;
 }
 
 function parseGapFile(filePath: string): Gap | null {
@@ -229,7 +248,7 @@ function parseGapFile(filePath: string): Gap | null {
   return {
     id: meta["id"],
     specItem: meta["spec-item"] ?? "",
-    domain: meta["domain"] ?? "",
+    domain: meta["domain"] || deriveDomainFromSpecItem(meta["spec-item"] ?? ""),
     status: meta["status"],
     discovered: meta["discovered"] ?? "",
     auditVersion: meta["audit-spec-version"] ?? "",
@@ -383,17 +402,226 @@ export function parseWorkItems(sddPath: string): WorkItem[] {
 
 export function parseSpecs(sddPath: string): Spec[] {
   const specsDir = path.join(sddPath, "specs");
-  let files: string[];
+  let entries: fs.Dirent[];
   try {
-    files = fs.readdirSync(specsDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
+    entries = fs.readdirSync(specsDir, { withFileTypes: true });
   } catch {
     return [];
   }
 
-  const specs: Spec[] = [];
-  for (const file of files) {
-    const parsed = parseSpecFile(path.join(specsDir, file));
-    if (parsed) specs.push(parsed);
+  const workspaceRoot = path.dirname(sddPath);
+  const specsByDomain = new Map<string, Spec>();
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === "archive") continue;
+    const domainDir = path.join(specsDir, entry.name);
+
+    const specFilePaths: string[] = [];
+
+    let domainFiles: string[];
+    try {
+      domainFiles = fs.readdirSync(domainDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
+    } catch {
+      continue;
+    }
+    for (const f of domainFiles) {
+      specFilePaths.push(path.join(domainDir, f));
+    }
+
+    let subEntries: fs.Dirent[];
+    try {
+      subEntries = fs.readdirSync(domainDir, { withFileTypes: true });
+    } catch {
+      subEntries = [];
+    }
+    for (const sub of subEntries) {
+      if (!sub.isDirectory() || sub.name === "archive") continue;
+      const subDir = path.join(domainDir, sub.name);
+      let subFiles: string[];
+      try {
+        subFiles = fs.readdirSync(subDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
+      } catch {
+        continue;
+      }
+      for (const f of subFiles) {
+        specFilePaths.push(path.join(subDir, f));
+      }
+    }
+
+    for (const filePath of specFilePaths) {
+      const parsed = parseSpecItemFile(filePath);
+      if (!parsed) continue;
+
+      let spec = specsByDomain.get(parsed.domain);
+      if (!spec) {
+        spec = { id: `SPEC-${parsed.abbrev}`, domain: parsed.domain, abbrev: parsed.abbrev, items: [] };
+        specsByDomain.set(parsed.domain, spec);
+      }
+      const { domain: _d, abbrev: _a, ...item } = parsed;
+      spec.items.push(item);
+    }
   }
-  return specs;
+
+  for (const spec of specsByDomain.values()) {
+    spec.items.sort((a, b) => a.id.localeCompare(b.id));
+
+    const mapping = readTestMapping(sddPath, spec.abbrev, spec.domain);
+    let report = null;
+    if (mapping) {
+      const absReport = path.isAbsolute(mapping.report)
+        ? mapping.report
+        : path.join(workspaceRoot, mapping.report);
+      report = mapping.runner === "vitest"
+        ? parseVitestReport(absReport)
+        : parseSurefireReports(absReport);
+    }
+
+    for (const item of spec.items) {
+      item.testStatus = computeTestStatus(item.id, mapping, report);
+    }
+  }
+
+  return Array.from(specsByDomain.values());
+}
+
+// --- Test mapping and report parsing (SPEC-arch-019 through SPEC-arch-022) ---
+
+export interface TestMapping {
+  runner: "vitest" | "maven";
+  report: string;
+  items: Record<string, string[]>;
+}
+
+export interface ParsedTestResult {
+  fullName: string;
+  status: "passed" | "failed";
+}
+
+export interface ParsedReport {
+  tests: ParsedTestResult[];
+  runAt: string;
+}
+
+export type TestStatus = {
+  status: "passing" | "failing" | "missing" | "not-run";
+  lastRun?: string;
+};
+
+export function readTestMapping(sddPath: string, abbrev: string, domain: string): TestMapping | null {
+  const mappingPath = path.join(sddPath, "specs", domain, `SPEC-${abbrev}.tests.json`);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(mappingPath, "utf8");
+  } catch {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as TestMapping;
+  } catch {
+    return null;
+  }
+}
+
+export function parseVitestReport(reportPath: string): ParsedReport | null {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(reportPath, "utf8");
+  } catch {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    return null;
+  }
+  const report = parsed as Record<string, unknown>;
+  const startTime = typeof report["startTime"] === "number" ? report["startTime"] : 0;
+  const runAt = new Date(startTime).toISOString();
+  const testResults = Array.isArray(report["testResults"]) ? report["testResults"] : [];
+  const tests: ParsedTestResult[] = [];
+  for (const suite of testResults) {
+    if (typeof suite !== "object" || suite === null) continue;
+    const assertionResults = (suite as Record<string, unknown>)["assertionResults"];
+    if (!Array.isArray(assertionResults)) continue;
+    for (const assertion of assertionResults) {
+      if (typeof assertion !== "object" || assertion === null) continue;
+      const a = assertion as Record<string, unknown>;
+      const fullName = typeof a["fullName"] === "string" ? a["fullName"] : "";
+      const status = a["status"] === "passed" ? "passed" : "failed";
+      tests.push({ fullName, status });
+    }
+  }
+  return { tests, runAt };
+}
+
+export function parseSurefireReports(dir: string): ParsedReport | null {
+  let xmlFiles: string[];
+  try {
+    xmlFiles = fs.readdirSync(dir).filter((f) => f.startsWith("TEST-") && f.endsWith(".xml"));
+  } catch {
+    return null;
+  }
+  if (xmlFiles.length === 0) {
+    return null;
+  }
+
+  const tests: ParsedTestResult[] = [];
+  let runAt = "";
+
+  for (const file of xmlFiles) {
+    const content = fs.readFileSync(path.join(dir, file), "utf8");
+
+    const suiteTimestampMatch = /timestamp="([^"]+)"/.exec(content);
+    if (suiteTimestampMatch && !runAt) {
+      runAt = new Date(suiteTimestampMatch[1]).toISOString();
+    }
+
+    const testcaseRe = /<testcase\s([^>]*?)(\/>|>([\s\S]*?)<\/testcase>)/g;
+    for (const m of content.matchAll(testcaseRe)) {
+      const attrs = m[1];
+      const body = m[3] ?? "";
+      const classname = (/classname="([^"]*)"/.exec(attrs) ?? [])[1] ?? "";
+      const name = (/\bname="([^"]*)"/.exec(attrs) ?? [])[1] ?? "";
+      const fullName = `${classname} ${name}`.trim();
+      const failed = /<failure[\s>]/.test(body) || /<error[\s>]/.test(body);
+      tests.push({ fullName, status: failed ? "failed" : "passed" });
+    }
+  }
+
+  return { tests, runAt };
+}
+
+export function computeTestStatus(
+  specItemId: string,
+  mapping: TestMapping | null,
+  report: ParsedReport | null
+): TestStatus {
+  if (report === null) {
+    return { status: "not-run" };
+  }
+
+  if (mapping === null) {
+    return { status: "missing", lastRun: report.runAt };
+  }
+
+  const substrings = mapping.items[specItemId];
+  if (!substrings || substrings.length === 0) {
+    return { status: "missing", lastRun: report.runAt };
+  }
+
+  const matched = report.tests.filter((t) =>
+    substrings.some((sub) => t.fullName.toLowerCase().includes(sub.toLowerCase()))
+  );
+
+  if (matched.length === 0) {
+    return { status: "missing", lastRun: report.runAt };
+  }
+
+  const anyFailed = matched.some((t) => t.status === "failed");
+  return { status: anyFailed ? "failing" : "passing", lastRun: report.runAt };
 }

@@ -1,16 +1,16 @@
 ---
 id: GAP-arch-007
-spec-item: SPEC-arch-007
+spec-item: SPEC-arch-024
 domain: architecture
 status: closed
-discovered: "2026-05-15T00:00:00Z"
-audit-spec-version: "1d0b7d02"
-closed-by: WI-arch-001
+discovered: "2026-05-18T00:00:00Z"
+audit-spec-version: "651d284b"
+closed-by: WI-arch-022
 deferred-reason: null
 ---
 
-# Gap: Localhost-only binding not enforced
+# Gap: GET /workspaces/:id/specs response does not include testStatus on SpecItems
 
-**Location:** not yet implemented — no server bind configuration found
+**Location:** `hub/server/sdd-parser.ts:94`
 
-**Reasoning:** No code paths found for this item; the server has not been implemented and therefore does not bind to 127.0.0.1.
+**Reasoning:** The `SpecItem` interface and `parseSpecFile` return value have no `testStatus` field; the `/workspaces/:id/specs` endpoint returns items without the non-optional `testStatus` shape required by SPEC-arch-024.

@@ -18,6 +18,7 @@ const SPEC: Spec = {
       status: 'active',
       body: 'ArtifactList is a generic component.',
       refs: [],
+      testStatus: { status: 'not-run' },
     },
   ],
 };
@@ -206,5 +207,42 @@ describe('Gaps — active and archived sections via ArtifactList', () => {
     const scroll = document.querySelector('.gaps-list__scroll')!;
     const inlineDividers = scroll.querySelectorAll('[style*="opacity"]');
     expect(inlineDividers.length).toBe(0);
+  });
+});
+
+describe('Gaps uses ArtifactList filterKey/archivedKey API — no inline domain filter bar (WI-scr-033)', () => {
+  const ARCH_GAP: Gap = {
+    id: 'GAP-arch-001', specItem: 'SPEC-arch-001', domain: 'architecture', abbrev: 'arch',
+    status: 'open', discovered: '2026-05-17T00:00:00Z', auditVersion: 'abc',
+    title: 'Arch gap', location: 'foo.ts:1', reasoning: 'r',
+    codeContext: { lang: 'typescript', lines: [] }, closedBy: null,
+  };
+
+  it('renders artifact-list-filter-bar for domain filtering — no gaps-filter-bar', () => {
+    render(<Gaps gaps={[ACTIVE_GAP, ARCH_GAP]} specs={[SPEC]} workItems={WORK_ITEMS} onNav={onNav} />);
+    expect(document.querySelector('.artifact-list-filter-bar')).not.toBeNull();
+    expect(document.querySelector('.gaps-filter-bar')).toBeNull();
+  });
+
+  it('domain filter tabs are generated from gap domains', () => {
+    render(<Gaps gaps={[ACTIVE_GAP, ARCH_GAP]} specs={[SPEC]} workItems={WORK_ITEMS} onNav={onNav} />);
+    const btns = Array.from(document.querySelectorAll('.artifact-list-filter-btn')).map((b) => b.textContent);
+    expect(btns.some((t) => t?.includes('ui-components'))).toBe(true);
+    expect(btns.some((t) => t?.includes('architecture'))).toBe(true);
+  });
+
+  it('closed gaps appear in archived section when all domains selected', () => {
+    render(<Gaps gaps={[ACTIVE_GAP, CLOSED_GAP]} specs={[SPEC]} workItems={WORK_ITEMS} onNav={onNav} />);
+    const archivedRows = document.querySelectorAll('.artifact-list-archived-row');
+    expect(archivedRows.length).toBe(1);
+    expect(archivedRows[0].querySelector('.gaps-row__id')?.textContent).toBe('GAP-uic-002');
+  });
+});
+
+describe('Row-level CSS classes present on rendered elements (SPEC-uic-008)', () => {
+  it('.gaps-row class is present on gap list rows — base rule with background: var(--paper) applies', () => {
+    renderGaps([ACTIVE_GAP]);
+    const rows = document.querySelectorAll('.gaps-row');
+    expect(rows.length).toBeGreaterThan(0);
   });
 });

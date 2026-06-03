@@ -6,6 +6,8 @@ const SDD_ARTIFACT_DIRS: Array<[string, SddArtifact]> = [
   [path.join(".sdd", "specs"), "specs"],
   [path.join(".sdd", "gaps"), "gaps"],
   [path.join(".sdd", "work-items"), "work-items"],
+  [path.join(".sdd", "projections"), "projections"],
+  [path.join(".sdd", "design"), "designs"],
 ];
 
 export function resolveArtifact(changedPath: string): SddArtifact | null {

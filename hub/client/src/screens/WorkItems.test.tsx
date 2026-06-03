@@ -44,7 +44,7 @@ const abandonedItem: WorkItem = makeItem({
 
 const gaps: Gap[] = [];
 const specs: Spec[] = [];
-const agents = {};
+const agents: import('../types').Agent[] = [];
 const onNav = vi.fn();
 
 describe('WorkItems — done column 24h filter', () => {
@@ -174,5 +174,75 @@ describe('WorkItems — ArchiveFooter wiring', () => {
       />,
     );
     expect(document.querySelector('.archive-footer')).toBeNull();
+  });
+});
+
+describe('WorkItems — kanban fills full board width (SPEC-scr-038)', () => {
+  it('kanban CSS rule does not contain align-self: start', async () => {
+    const css = await import('./WorkItems.css?raw');
+    const kanbanBlock = css.default.match(/\.kanban\s*\{[^}]*\}/s)?.[0] ?? '';
+    expect(kanbanBlock).not.toContain('align-self: start');
+  });
+
+  it('all four kanban columns are always rendered regardless of item count', () => {
+    render(
+      <WorkItems
+        workItems={[]}
+        gaps={gaps}
+        specs={specs}
+        agents={agents}
+        onNav={onNav}
+      />,
+    );
+    const cols = document.querySelectorAll('.kanban-col');
+    expect(cols).toHaveLength(4);
+  });
+
+  it('an empty column renders the same column element as a populated column', () => {
+    const pending = makeItem({ id: 'WI-p-full', status: 'pending', title: 'Full col item' });
+    render(
+      <WorkItems
+        workItems={[pending]}
+        gaps={gaps}
+        specs={specs}
+        agents={agents}
+        onNav={onNav}
+      />,
+    );
+    const cols = document.querySelectorAll('.kanban-col');
+    expect(cols).toHaveLength(4);
+    const emptyCol = Array.from(cols).find((c) =>
+      c.querySelector('.kanban-col__empty') !== null,
+    );
+    expect(emptyCol).not.toBeUndefined();
+  });
+});
+
+describe('WorkItems — STATUS_BORDER removed (WI-uic-016)', () => {
+  it('kanban renders successfully — no STATUS_BORDER constant needed', () => {
+    const pending = makeItem({ id: 'WI-p', status: 'pending', title: 'Pending task' });
+    expect(() => render(
+      <WorkItems workItems={[pending]} gaps={gaps} specs={specs} agents={agents} onNav={onNav} />,
+    )).not.toThrow();
+  });
+
+  it('pending column card has a border-left-color style set', () => {
+    const pending = makeItem({ id: 'WI-p2', status: 'pending', title: 'Pending task 2' });
+    render(
+      <WorkItems workItems={[pending]} gaps={gaps} specs={specs} agents={agents} onNav={onNav} />,
+    );
+    const card = document.querySelector('.kcard') as HTMLElement;
+    expect(card).not.toBeNull();
+    expect(card.style.borderLeftColor).not.toBe('');
+  });
+
+  it('in-progress column card has a border-left-color style set', () => {
+    const inProgress = makeItem({ id: 'WI-ip', status: 'in-progress', title: 'In progress task' });
+    render(
+      <WorkItems workItems={[inProgress]} gaps={gaps} specs={specs} agents={agents} onNav={onNav} />,
+    );
+    const card = document.querySelector('.kcard') as HTMLElement;
+    expect(card).not.toBeNull();
+    expect(card.style.borderLeftColor).not.toBe('');
   });
 });

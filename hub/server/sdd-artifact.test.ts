@@ -33,8 +33,20 @@ describe("resolveArtifact", () => {
     expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}work-items${sep}archive${sep}WI-arch-001.md`)).toBe("work-items");
   });
 
-  it("returns null for a path outside the four tracked directories", () => {
-    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}design${sep}some-file.md`)).toBeNull();
+  it("returns 'projections' for a file inside .sdd/projections/", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}projections${sep}foo.md`)).toBe("projections");
+  });
+
+  it("returns 'projections' for a nested file inside .sdd/projections/", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}projections${sep}sub${sep}bar.md`)).toBe("projections");
+  });
+
+  it("returns 'designs' for a file inside .sdd/design/", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}design${sep}foo${sep}design.md`)).toBe("designs");
+  });
+
+  it("returns null for a path outside the tracked directories", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}other${sep}some-file.md`)).toBeNull();
   });
 
   it("returns null for a path with no .sdd directory", () => {

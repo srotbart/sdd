@@ -1,0 +1,20 @@
+.test-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.test-status-dot__circle {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.test-status-dot__time {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-4);
+  letter-spacing: 0;
+}

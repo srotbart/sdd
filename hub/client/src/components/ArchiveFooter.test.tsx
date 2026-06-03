@@ -42,16 +42,14 @@ const mockAgent: Agent = {
   pid: 1234,
 };
 
-const agents: Record<string, Agent> = {
-  'agent-1': mockAgent,
-};
+const agents: Agent[] = [mockAgent];
 
 describe('ArchiveFooter — collapsed state (default)', () => {
   it('renders collapsed by default showing count and last-closed time', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -65,7 +63,7 @@ describe('ArchiveFooter — collapsed state (default)', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -75,7 +73,7 @@ describe('ArchiveFooter — collapsed state (default)', () => {
 
   it('returns null when items is empty', () => {
     const { container } = render(
-      <ArchiveFooter items={[]} agents={{}} onOpenItem={vi.fn()} activeId={null} />,
+      <ArchiveFooter items={[]} agents={[]} onOpenItem={vi.fn()} activeId={null} />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -86,7 +84,7 @@ describe('ArchiveFooter — expand/collapse behaviour', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -101,7 +99,7 @@ describe('ArchiveFooter — expand/collapse behaviour', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -114,7 +112,7 @@ describe('ArchiveFooter — expand/collapse behaviour', () => {
     render(
       <ArchiveFooter
         items={[doneItem, abandonedItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -149,7 +147,7 @@ describe('ArchiveFooter — arch-card styling', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -164,7 +162,7 @@ describe('ArchiveFooter — arch-card styling', () => {
     render(
       <ArchiveFooter
         items={[abandonedItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
@@ -179,7 +177,7 @@ describe('ArchiveFooter — arch-card styling', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId="WI-uic-001"
       />,
@@ -193,7 +191,7 @@ describe('ArchiveFooter — arch-card styling', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId="WI-other"
       />,
@@ -208,7 +206,7 @@ describe('ArchiveFooter — arch-card styling', () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={onOpenItem}
         activeId={null}
       />,
@@ -232,17 +230,34 @@ describe('ArchiveFooter — arch-card styling', () => {
     expect(document.querySelector('.agent-chip')).not.toBeNull();
   });
 
-  it('shows unassigned label when no agent', async () => {
+  it('renders AgentChip unassigned pill (not a bare span) when work item has no agent (WI-uic-013)', async () => {
     render(
       <ArchiveFooter
         items={[doneItem]}
-        agents={{}}
+        agents={[]}
         onOpenItem={vi.fn()}
         activeId={null}
       />,
     );
     await userEvent.click(document.querySelector('.archive-footer__bar')!);
-    expect(document.querySelector('.arch-card__unassigned')).not.toBeNull();
+    expect(document.querySelector('.agent-chip--unassigned')).not.toBeNull();
+    expect(document.querySelector('.arch-card__unassigned')).toBeNull();
+  });
+
+  it('renders AgentChip with agent data when work item has an agent (WI-uic-013)', async () => {
+    const itemWithAgent = { ...doneItem, agent: 'agent-1' };
+    render(
+      <ArchiveFooter
+        items={[itemWithAgent]}
+        agents={agents}
+        onOpenItem={vi.fn()}
+        activeId={null}
+      />,
+    );
+    await userEvent.click(document.querySelector('.archive-footer__bar')!);
+    const chip = document.querySelector('.agent-chip');
+    expect(chip).not.toBeNull();
+    expect(chip!.classList.contains('agent-chip--unassigned')).toBe(false);
   });
 });
 

@@ -9,12 +9,6 @@ interface RecentFolder {
   sddSummary?: { targets: number; specs: number; items: number; gaps: number };
 }
 
-const RECENT_FOLDERS: RecentFolder[] = [
-  { path: '~/code/marigold', label: 'marigold', desc: 'photo curation tool (rust)', hasSdd: false },
-  { path: '~/code/cobalt-sync', label: 'cobalt-sync', desc: 'p2p file sync — actively negotiated', hasSdd: true, sddSummary: { targets: 3, specs: 4, items: 18, gaps: 7 } },
-  { path: '~/code/notebook', label: 'notebook', desc: 'personal scratchpad', hasSdd: true, sddSummary: { targets: 0, specs: 1, items: 3, gaps: 0 } },
-  { path: '~/work/quarry', label: 'quarry', desc: 'data warehouse internal tool', hasSdd: false },
-];
 
 interface AttachWorkspaceDialogProps {
   onClose: () => void;
@@ -28,7 +22,20 @@ export function AttachWorkspaceDialog({ onClose, onAttached }: AttachWorkspaceDi
   const [nameDirty, setNameDirty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [browsing, setBrowsing] = useState(false);
+  const [recentFolders, setRecentFolders] = useState<RecentFolder[]>([]);
+  const [checkedHasSdd, setCheckedHasSdd] = useState<boolean | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch('/recent-workspaces')
+      .then((r) => r.json())
+      .then((data: RecentFolder[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setRecentFolders(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -36,6 +43,22 @@ export function AttachWorkspaceDialog({ onClose, onAttached }: AttachWorkspaceDi
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  useEffect(() => {
+    const trimmed = path.trim();
+    const inRecent = recentFolders.some((r) => r.path.toLowerCase() === trimmed.toLowerCase());
+    if (!trimmed || inRecent) {
+      setCheckedHasSdd(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetch(`/check-sdd?path=${encodeURIComponent(trimmed)}`)
+        .then((r) => r.json())
+        .then((data: { hasSdd: boolean }) => setCheckedHasSdd(data.hasSdd))
+        .catch(() => setCheckedHasSdd(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [path, recentFolders]);
 
   function setPathAndDeriveName(p: string) {
     setPath(p);
@@ -45,9 +68,9 @@ export function AttachWorkspaceDialog({ onClose, onAttached }: AttachWorkspaceDi
     }
   }
 
-  const matched = RECENT_FOLDERS.find((r) => r.path.toLowerCase() === path.trim().toLowerCase());
+  const matched = recentFolders.find((r) => r.path.toLowerCase() === path.trim().toLowerCase());
   const pathSet = path.trim().length > 0;
-  const hasSdd = matched?.hasSdd === true;
+  const hasSdd = matched ? matched.hasSdd : checkedHasSdd === true;
   const willInit = pathSet && !hasSdd;
 
   const primaryLabel = !pathSet ? 'attach workspace' : hasSdd ? 'attach workspace' : 'initialize & attach';
@@ -75,7 +98,7 @@ export function AttachWorkspaceDialog({ onClose, onAttached }: AttachWorkspaceDi
       await fetch('/workspaces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), path: trimmed }),
+        body: JSON.stringify({ name: name.trim(), path: trimmed, description: desc.trim() || null }),
       });
       onAttached();
     } finally {
@@ -109,16 +132,16 @@ export function AttachWorkspaceDialog({ onClose, onAttached }: AttachWorkspaceDi
               </button>
             </div>
 
-            {!pathSet && (
+            {!pathSet && recentFolders.length > 0 && (
               <div className="dlg-suggest">
                 <div className="dlg-suggest-label">Recent folders</div>
-                {RECENT_FOLDERS.map((r) => (
+                {recentFolders.map((r) => (
                   <button key={r.path} className="dlg-suggest-row" onClick={() => setPathAndDeriveName(r.path)}>
                     <span className="dlg-suggest-path">{r.path}</span>
                     <span className="dlg-suggest-desc">{r.desc}</span>
                     <span className={`dlg-suggest-tag dlg-suggest-tag--${r.hasSdd ? 'has' : 'fresh'}`}>
                       <span className="dlg-suggest-dot" />
-                      {r.hasSdd ? 'sdd ready' : 'fresh'}
+                      {r.hasSdd ? 'SDD READY' : 'FRESH'}
                     </span>
                   </button>
                 ))}

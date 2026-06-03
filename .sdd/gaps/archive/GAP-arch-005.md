@@ -1,16 +1,16 @@
 ---
 id: GAP-arch-005
-spec-item: SPEC-arch-005
+spec-item: SPEC-arch-022
 domain: architecture
 status: closed
-discovered: "2026-05-15T00:00:00Z"
-audit-spec-version: "1d0b7d02"
-closed-by: WI-arch-005
+discovered: "2026-05-18T00:00:00Z"
+audit-spec-version: "651d284b"
+closed-by: WI-arch-020
 deferred-reason: null
 ---
 
-# Gap: WebSocket endpoint for UI clients does not exist
+# Gap: Test status computation (passing/failing/missing/not-run) not implemented
 
-**Location:** not yet implemented — no WebSocket server or state-push logic found
+**Location:** `hub/server/sdd-parser.ts:384`
 
-**Reasoning:** No code paths found for this item; the WebSocket endpoint for real-time UI state updates has not been implemented.
+**Reasoning:** `parseSpecs` does not compute `testStatus` for any spec item; the four-state logic (not-run, missing, failing, passing) with `lastRun` timestamp required by SPEC-arch-022 is entirely absent.

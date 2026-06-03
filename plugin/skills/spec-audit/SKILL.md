@@ -24,11 +24,18 @@ Accept one of:
 
 ### 1. Load the spec
 
-Read the relevant spec file at `.sdd/specs/SPEC-{domain}.md`. Parse all `## SPEC-`
-items with `*Status: active*`. If auditing a single item, filter to that item only.
+Glob `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` (skip `archive/` at either level). Read each active item file —
+parse frontmatter `id`, `status`, `version`, and the body. If auditing a single item,
+filter to that item only.
 
-Compute the current spec version hash (see `references/schemas.md`, Specs section).
-Record it — every gap written this session will carry this value as `audit-spec-version`.
+Each active spec item body must contain `## Invariant` and `## Acceptance criteria`
+sections (per SPEC-wf-017). The audit reasons against the `## Invariant` section. If
+creating or updating a spec item file during audit, include both sections in order:
+`## Invariant` (concise rule statement), then `## Acceptance criteria` (bullet list
+of verifiable conditions).
+
+Each item file's `version` field is its current hash. Record it per item — every gap
+written for a given spec item carries that item's `version` value as `audit-spec-version`.
 
 ### 2. For each spec item, enumerate relevant code paths
 
@@ -120,8 +127,6 @@ Print a summary:
 ```
 ## Spec Audit — SPEC-auth — 2026-05-12
 
-Spec version: a3f9c812
-
 ### SPEC-auth-001 — Admin actions require two-factor verification
 - src/auth/admin.py:142  gap: execute() called without MFA check  → GAP-auth-001 (new)
 - src/auth/batch.py:87   gap: batch handler bypasses MFA entirely  → GAP-auth-002 (new)
@@ -133,11 +138,17 @@ Spec version: a3f9c812
 
 ---
 2 new gaps, 1 existing gap refreshed, 2 locations hold.
-Run `/sdd:gap-to-work-items` to decompose into work items.
+Next: Decompose gaps into work items. Run `/sdd:gap-to-work-items {domain}` to proceed.
 ```
 
 Show holds alongside gaps — the audit is only credible if it demonstrates what was
 checked, not just what failed.
+
+The final line after `---` is conditional on the outcome:
+- **Gaps found:** `Run \`/sdd:gap-to-work-items {domain}\` to decompose into work items.`
+- **No gaps found:** `Run \`/sdd:spec-test {domain}\` to add test coverage.`
+
+Substitute the actual domain abbreviation (e.g., `architecture`, `auth`) for `{domain}`.
 
 ## Constraints
 

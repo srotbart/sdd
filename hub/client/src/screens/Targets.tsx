@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './Targets.css';
 import type { Target, TargetStatus } from '../types';
+
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
 
@@ -11,12 +13,6 @@ function fmtAgo(dateStr: string): string {
   if (sec < 3600) return `${Math.floor(sec / 60)}m`;
   if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
   return `${Math.floor(sec / 86400)}d`;
-}
-
-interface FilterTab {
-  id: string;
-  label: string;
-  count: number;
 }
 
 interface TargetListRowProps {
@@ -53,28 +49,7 @@ function TargetListRow({ target, isActive, onClick }: TargetListRowProps) {
 }
 
 function TurnBody({ text }: { text: string }) {
-  let html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  html = html.replace(/(?:^|\n)(?:&gt;\s.+\n?)+/g, (m) => {
-    const inner = m
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => l.replace(/^&gt;\s?/, ''))
-      .join(' ');
-    return `\n<blockquote style="border-left:2px solid var(--hair-2);padding-left:10px;margin:8px 0;color:var(--ink-2)">${inner}</blockquote>`;
-  });
-
-  html = html.replace(/`([^`]+)`/g, '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--accent)">$1</span>');
-  html = html.replace(
-    /(\n|^)(\d+)\.\s(.+)/g,
-    '$1<div style="margin-left:18px"><span style="color:var(--ink-4);margin-right:6px">$2.</span>$3</div>',
-  );
-  html = html.replace(/\n/g, '<br/>');
-
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  return <ReactMarkdown>{text}</ReactMarkdown>;
 }
 
 interface TargetDetailProps {
@@ -107,6 +82,7 @@ function TargetDetail({ target }: TargetDetailProps) {
       primary: true,
     },
     accepted: { label: 'send', hint: '', primary: false },
+    archived: { label: 'view', hint: '', primary: false },
   };
 
   const action = actionMap[target.status] ?? { label: 'send', hint: '', primary: false };
@@ -168,7 +144,7 @@ function TargetDetail({ target }: TargetDetailProps) {
                   defaultValue={target.statement}
                 />
               ) : (
-                <div className="statement-block__text">{target.statement}</div>
+                <div className="statement-block__text"><ReactMarkdown>{target.statement}</ReactMarkdown></div>
               )}
             </div>
           </div>
@@ -238,50 +214,20 @@ export interface TargetsProps {
   initialTargetId?: string;
 }
 
+const TARGET_FILTER_LABELS: Record<string, string> = {
+  all: 'all',
+  'awaiting-user': 'awaiting you',
+  'awaiting-agent': 'awaiting agent',
+  ready: 'ready',
+  draft: 'draft',
+  accepted: 'accepted',
+  archived: 'archived',
+};
+
 export function Targets({ targets, initialTargetId }: TargetsProps) {
   const [activeId, setActiveId] = useState<string>(
     initialTargetId ?? targets[0]?.id ?? '',
   );
-  const [filter, setFilter] = useState<string>('all');
-
-  const activeTargets = targets.filter((t) => t.status !== 'accepted');
-  const archivedTargets = targets.filter((t) => t.status === 'accepted');
-
-  const statusFilters: FilterTab[] = [
-    { id: 'all', label: 'all', count: targets.length },
-    {
-      id: 'awaiting-user',
-      label: 'awaiting you',
-      count: targets.filter((t) => t.status === 'awaiting-user').length,
-    },
-    {
-      id: 'awaiting-agent',
-      label: 'awaiting agent',
-      count: targets.filter((t) => t.status === 'awaiting-agent').length,
-    },
-    {
-      id: 'ready',
-      label: 'ready',
-      count: targets.filter((t) => t.status === 'ready').length,
-    },
-    {
-      id: 'draft',
-      label: 'draft',
-      count: targets.filter((t) => t.status === 'draft').length,
-    },
-    {
-      id: 'archived',
-      label: 'archived',
-      count: archivedTargets.length,
-    },
-  ];
-
-  const filtered =
-    filter === 'all'
-      ? activeTargets
-      : filter === 'archived'
-        ? archivedTargets
-        : targets.filter((t) => t.status === filter);
 
   const active = targets.find((t) => t.id === activeId);
 
@@ -296,22 +242,12 @@ export function Targets({ targets, initialTargetId }: TargetsProps) {
       <div className="targets-title-rule" />
     <div className="targets-layout">
       <div className="targets-list">
-        <div className="targets-filter-bar">
-          {statusFilters.map((f) => (
-            <button
-              key={f.id}
-              className={`filter-btn${filter === f.id ? ' filter-btn--active' : ''}`}
-              onClick={() => setFilter(f.id)}
-            >
-              {f.label}
-              <span className="filter-btn__count">{f.count}</span>
-            </button>
-          ))}
-        </div>
         <div className="targets-list-scroll">
           <ArtifactList
-            items={filter === 'all' ? activeTargets : filtered}
-            archivedItems={filter === 'all' ? archivedTargets : []}
+            items={targets}
+            filterKey="status"
+            archivedValues={['accepted', 'archived']}
+            filterLabels={TARGET_FILTER_LABELS}
             getKey={(t) => t.id}
             renderRow={(t) => (
               <TargetListRow

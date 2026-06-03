@@ -11,17 +11,21 @@ import { WorkItems } from './screens/WorkItems';
 import { Activity } from './screens/Activity';
 import { Settings } from './screens/Settings';
 import { PluginReference } from './screens/PluginReference';
+import { Projections } from './screens/Projections';
+import { Designs } from './screens/Designs';
 import { CommandPalette } from './components/CommandPalette';
 import type { WorkspaceData, Target, TargetStatus, Spec, Gap, WorkItem, ActivityLine, Agent } from './types';
 
 const VALID_STATUSES = new Set<TargetStatus>([
-  'awaiting-user', 'awaiting-agent', 'ready', 'draft', 'accepted',
+  'awaiting-user', 'awaiting-agent', 'ready', 'draft', 'accepted', 'archived',
 ]);
 
 const URL_TAB_TO_INTERNAL: Record<string, string> = {
   'session': 'session',
   'targets': 'targets',
   'specs': 'specs',
+  'projections': 'projections',
+  'designs': 'designs',
   'gaps': 'gaps',
   'work-items': 'work items',
   'settings': 'settings',
@@ -33,6 +37,8 @@ const INTERNAL_TAB_TO_URL: Record<string, string> = {
   'session': 'session',
   'targets': 'targets',
   'specs': 'specs',
+  'projections': 'projections',
+  'designs': 'designs',
   'gaps': 'gaps',
   'work items': 'work-items',
   'settings': 'settings',
@@ -124,115 +130,7 @@ function mapApiTarget(raw: Record<string, unknown>): Target {
   };
 }
 
-const MOCK_AGENTS: Record<string, Agent> = {
-  'claude-a': { id: 'a1', initials: 'CA', name: 'claude-a', host: 'localhost', status: 'busy', pid: 12345 },
-  'claude-b': { id: 'a2', initials: 'CB', name: 'claude-b', host: 'localhost', status: 'idle', pid: 12346 },
-};
 
-interface DbWorkspace {
-  id: string;
-  name: string;
-  path: string;
-  description: string | null;
-  created_at: string;
-}
-
-const MOCK_WORKSPACES: WorkspaceData[] = [
-  {
-    id: 'sdd-hub',
-    name: 'sdd-hub',
-    path: '/Users/dev/sdd-hub',
-    description: 'The SDD Hub project itself',
-    lastActivity: new Date().toISOString(),
-    agents: ['claude-a', 'claude-b'],
-    counts: {
-      targetsAwaitingUser: 1,
-      targetsAwaitingAgent: 0,
-      targetsReady: 0,
-      targetsDraft: 1,
-      specs: 3,
-      specItems: 14,
-      openGaps: 2,
-      staleAuditDomains: 0,
-      workPending: 3,
-      workInProgress: 1,
-      workBlocked: 0,
-      workDoneToday: 4,
-    },
-  },
-];
-
-
-const MOCK_SPECS: Spec[] = [
-  {
-    id: 'SPEC-arch',
-    domain: 'architecture',
-    abbrev: 'arch',
-    version: '689ddaf6',
-    items: [
-      { id: 'SPEC-arch-001', title: 'Server runtime is Node.js', status: 'active', body: 'The hub server runs on Node.js. No other server runtime is permitted.', refs: [] },
-      { id: 'SPEC-arch-002', title: 'Frontend is React + TypeScript, bundled with Vite', status: 'active', body: 'The UI is a React application written in TypeScript and bundled with Vite.', refs: [{ kind: 'gap', id: 'GAP-arch-010' }] },
-    ],
-  },
-];
-
-const MOCK_GAPS: Gap[] = [
-  {
-    id: 'GAP-arch-010',
-    specItem: 'SPEC-arch-001',
-    domain: 'architecture',
-    abbrev: 'arch',
-    status: 'open',
-    discovered: '2026-05-15T00:00:00Z',
-    auditVersion: '689ddaf6',
-    title: 'Workspace attachment endpoint missing',
-    location: 'server/index.ts:63',
-    reasoning: 'No POST /workspaces route is registered on the HTTP server.',
-    codeContext: {
-      lang: 'typescript',
-      lines: [
-        { n: 61, src: 'export const server = http.createServer((req, res) => {' },
-        { n: 62, src: '  serveStatic(req, res);' },
-        { n: 63, src: '});', hl: true },
-      ],
-    },
-    closedBy: null,
-  },
-];
-
-const MOCK_WORK_ITEMS: WorkItem[] = [
-  {
-    id: 'WI-arch-010',
-    gapId: 'GAP-arch-010',
-    title: 'Add POST /workspaces endpoint',
-    status: 'in-progress',
-    domain: 'architecture',
-    agent: 'claude-a',
-    created: '2026-05-15T00:00:00Z',
-    scope: 'server/index.ts — add route handler for POST /workspaces',
-    acceptance: ['Accepts { name, path } body', 'Validates .sdd/ exists at path', 'Inserts workspace into SQLite', 'Starts chokidar watcher for the new workspace'],
-    progressNote: 'Route handler stubbed, validation logic next',
-  },
-  {
-    id: 'WI-arch-011',
-    gapId: 'GAP-arch-010',
-    title: 'Add GET /workspaces endpoint',
-    status: 'pending',
-    domain: 'architecture',
-    agent: null,
-    created: '2026-05-15T00:00:00Z',
-    scope: 'server/index.ts — add route handler for GET /workspaces',
-    acceptance: ['Returns all workspaces from SQLite', 'Includes live agent count per workspace'],
-  },
-];
-
-const MOCK_ACTIVITY: ActivityLine[] = [
-  { t: '14:32:01', agent: 'claude-a', kind: 'in', msg: 'Reading server/index.ts' },
-  { t: '14:32:03', agent: 'claude-a', kind: 'in', msg: 'Writing server/index.ts' },
-  { t: '14:32:05', agent: 'claude-a', kind: 'note', msg: 'Route handler stubbed, moving to validation' },
-  { t: '14:32:10', agent: 'claude-b', kind: 'in', msg: 'Running tsc --noEmit' },
-  { t: '14:32:12', agent: 'claude-b', kind: 'note', msg: 'Zero errors' },
-];
 
 
 export function App() {
@@ -256,11 +154,15 @@ export function App() {
   const [hubConnected, setHubConnected] = useState<boolean>(false);
   const appRef = useRef<HTMLDivElement>(null);
   const activeWorkspaceIdRef = useRef<string | null>(activeWorkspaceId);
-  const [workspaces, setWorkspaces] = useState<DbWorkspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
+  const [liveAgents, setLiveAgents] = useState<Agent[]>([]);
   const [liveSpecs, setLiveSpecs] = useState<Spec[]>([]);
   const [liveTargets, setLiveTargets] = useState<Target[]>([]);
   const [liveGaps, setLiveGaps] = useState<Gap[]>([]);
   const [liveWorkItems, setLiveWorkItems] = useState<WorkItem[]>([]);
+  const [liveActivity, setLiveActivity] = useState<ActivityLine[]>([]);
+  const [projectionsRefreshToken, setProjectionsRefreshToken] = useState<number>(0);
+  const [designsRefreshToken, setDesignsRefreshToken] = useState<number>(0);
 
   useEffect(() => {
     activeWorkspaceIdRef.current = activeWorkspaceId;
@@ -274,50 +176,108 @@ export function App() {
   const fetchWorkspaces = useCallback(() => {
     fetch('/workspaces')
       .then((r) => r.json())
-      .then((data: DbWorkspace[]) => setWorkspaces(data))
+      .then((data: WorkspaceData[]) => setWorkspaces(data))
       .catch(() => {});
   }, []);
 
   useEffect(() => { fetchWorkspaces(); }, [fetchWorkspaces]);
 
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}`);
-    ws.onopen = () => setHubConnected(true);
-    ws.onclose = () => setHubConnected(false);
-    ws.onerror = () => setHubConnected(false);
-    ws.onmessage = (event: MessageEvent) => {
-      let msg: unknown;
-      try { msg = JSON.parse(event.data as string); } catch { return; }
-      if (
-        typeof msg !== 'object' || msg === null ||
-        (msg as Record<string, unknown>).type !== 'sdd-changed'
-      ) { return; }
-      const { workspaceId, artifact } = msg as { workspaceId: string; artifact: string };
-      if (workspaceId !== activeWorkspaceIdRef.current) { return; }
-      if (artifact === 'targets') {
-        fetch(`/workspaces/${workspaceId}/targets`)
-          .then((r) => r.json())
-          .then((data: Record<string, unknown>[]) => setLiveTargets(data.map(mapApiTarget)))
-          .catch(() => {});
-      } else if (artifact === 'specs') {
-        fetch(`/workspaces/${workspaceId}/specs`)
-          .then((r) => r.json())
-          .then((data: Spec[]) => setLiveSpecs(data))
-          .catch(() => {});
-      } else if (artifact === 'gaps') {
-        fetch(`/workspaces/${workspaceId}/gaps`)
-          .then((r) => r.json())
-          .then((data: Record<string, unknown>[]) => setLiveGaps(data.map(mapApiGap)))
-          .catch(() => {});
-      } else if (artifact === 'work-items') {
-        fetch(`/workspaces/${workspaceId}/work-items`)
-          .then((r) => r.json())
-          .then((data: Record<string, unknown>[]) => setLiveWorkItems(data.map(mapApiWorkItem)))
-          .catch(() => {});
-      }
+    let destroyed = false;
+    let reconnectDelay = 1000;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      if (destroyed) { return; }
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        reconnectDelay = 1000;
+        setHubConnected(true);
+      };
+
+      ws.onclose = () => {
+        setHubConnected(false);
+        if (!destroyed) {
+          reconnectTimer = setTimeout(() => {
+            reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            connect();
+          }, reconnectDelay);
+        }
+      };
+
+      ws.onerror = () => {
+        setHubConnected(false);
+      };
+
+      ws.onmessage = (event: MessageEvent) => {
+        let msg: unknown;
+        try { msg = JSON.parse(event.data as string); } catch { return; }
+        if (typeof msg !== 'object' || msg === null) { return; }
+        const m = msg as Record<string, unknown>;
+        if (m.type === 'snapshot' || m.type === 'update') {
+          if (Array.isArray(m.workspaces)) {
+            setWorkspaces(m.workspaces as WorkspaceData[]);
+          }
+          if (Array.isArray(m.agents)) {
+            setLiveAgents(m.agents as Agent[]);
+          }
+          return;
+        }
+        if (m.type === 'agent-registered') {
+          return;
+        }
+        if (m.type === 'activity') {
+          const line: ActivityLine = {
+            t: typeof m['t'] === 'string' ? m['t'] : new Date().toISOString().slice(11, 19),
+            agent: typeof m['agentId'] === 'string' ? m['agentId'] : '',
+            kind: (m['kind'] as ActivityLine['kind']) ?? 'in',
+            msg: typeof m['msg'] === 'string' ? m['msg'] : '',
+          };
+          setLiveActivity((prev) => [line, ...prev].slice(0, 500));
+          return;
+        }
+        if (m.type !== 'sdd-changed') { return; }
+        const { workspaceId, artifact } = m as { workspaceId: string; artifact: string };
+        if (workspaceId !== activeWorkspaceIdRef.current) { return; }
+        if (artifact === 'targets') {
+          fetch(`/workspaces/${workspaceId}/targets`)
+            .then((r) => r.json())
+            .then((data: Record<string, unknown>[]) => setLiveTargets(data.map(mapApiTarget)))
+            .catch(() => {});
+        } else if (artifact === 'specs') {
+          fetch(`/workspaces/${workspaceId}/specs`)
+            .then((r) => r.json())
+            .then((data: Spec[]) => setLiveSpecs(data))
+            .catch(() => {});
+        } else if (artifact === 'gaps') {
+          fetch(`/workspaces/${workspaceId}/gaps`)
+            .then((r) => r.json())
+            .then((data: Record<string, unknown>[]) => setLiveGaps(data.map(mapApiGap)))
+            .catch(() => {});
+        } else if (artifact === 'work-items') {
+          fetch(`/workspaces/${workspaceId}/work-items`)
+            .then((r) => r.json())
+            .then((data: Record<string, unknown>[]) => setLiveWorkItems(data.map(mapApiWorkItem)))
+            .catch(() => {});
+        } else if (artifact === 'projections') {
+          setProjectionsRefreshToken((n) => n + 1);
+        } else if (artifact === 'designs') {
+          setDesignsRefreshToken((n) => n + 1);
+        }
+      };
+
+      return ws;
+    }
+
+    const ws = connect();
+
+    return () => {
+      destroyed = true;
+      if (reconnectTimer !== null) { clearTimeout(reconnectTimer); }
+      ws?.close();
     };
-    return () => { ws.close(); };
   }, []);
 
   useEffect(() => {
@@ -404,11 +364,18 @@ export function App() {
       return <PluginReference />;
     }
     if (!activeWorkspace) {
+      if (workspaces.length === 0) {
+        return (
+          <div className="app-empty-state">
+            No workspace attached — use the sidenav to attach a project folder.
+          </div>
+        );
+      }
       return (
         <Dashboard
-          workspaces={MOCK_WORKSPACES}
-          agents={MOCK_AGENTS}
-          activity={MOCK_ACTIVITY}
+          workspaces={workspaces}
+          agents={liveAgents}
+          activity={liveActivity}
           now={new Date()}
           onOpenWorkspace={handleSelectWorkspace}
         />
@@ -416,17 +383,21 @@ export function App() {
     }
     switch (activeTab) {
       case 'session':
-        return <Session targets={liveTargets} specs={MOCK_SPECS} gaps={liveGaps} workItems={liveWorkItems} staleDomains={[]} agents={MOCK_AGENTS} onNav={setActiveTab} />;
+        return <Session targets={liveTargets} specs={liveSpecs} gaps={liveGaps} workItems={liveWorkItems} staleDomains={[]} agents={liveAgents} onNav={setActiveTab} />;
       case 'targets':
-        return <Targets targets={liveTargets} />;
+        return <Targets targets={liveTargets} initialTargetId={selectedItemId ?? undefined} />;
       case 'specs':
-        return <Specs specs={liveSpecs} gaps={liveGaps} workItems={liveWorkItems} onNav={() => {}} />;
+        return <Specs specs={liveSpecs} gaps={liveGaps} workItems={liveWorkItems} initialSpecId={selectedItemId ?? undefined} onNav={() => {}} />;
+      case 'projections':
+        return <Projections workspaceId={activeWorkspace.id} refreshToken={projectionsRefreshToken} />;
+      case 'designs':
+        return <Designs workspaceId={activeWorkspace.id} refreshToken={designsRefreshToken} />;
       case 'gaps':
-        return <Gaps gaps={liveGaps} specs={MOCK_SPECS} workItems={liveWorkItems} onNav={() => {}} />;
+        return <Gaps gaps={liveGaps} specs={liveSpecs} workItems={liveWorkItems} initialGapId={selectedItemId ?? undefined} onNav={() => {}} />;
       case 'work items':
-        return <WorkItems workItems={liveWorkItems} gaps={liveGaps} specs={MOCK_SPECS} agents={MOCK_AGENTS} onNav={() => {}} />;
+        return <WorkItems workItems={liveWorkItems} gaps={liveGaps} specs={liveSpecs} agents={liveAgents} initialWiId={selectedItemId ?? undefined} onNav={() => {}} />;
       case 'activity':
-        return <Activity lines={MOCK_ACTIVITY} agents={MOCK_AGENTS} />;
+        return <Activity lines={liveActivity} agents={liveAgents} />;
       case 'settings':
         return <Settings workspaceId={activeWorkspace.id} />;
       default:
@@ -438,7 +409,7 @@ export function App() {
     <div className="app-shell">
       <Header
         breadcrumb={breadcrumb}
-        agentCount={Object.values(MOCK_AGENTS).length}
+        agentCount={liveAgents.length}
         hubAddress="localhost:22351"
       />
       <Sidenav
@@ -446,6 +417,9 @@ export function App() {
           id: ws.id,
           name: ws.name,
           path: ws.path,
+          alertCount: ws.id === activeWorkspaceId
+            ? liveTargets.filter((t) => t.status === 'awaiting-user').length
+            : ws.counts?.targetsAwaitingUser ?? 0,
         }))}
         activeWorkspaceId={activeWorkspaceId}
         onSelectWorkspace={handleSelectWorkspace}
@@ -454,7 +428,7 @@ export function App() {
         activeTab={activeTab}
         onSelectTab={(tab) => { setPluginRefActive(false); setSelectedItemId(null); setActiveTab(tab); }}
         tabCounts={{
-          targets: liveTargets.filter((t) => t.status !== 'accepted').length,
+          targets: liveTargets.filter((t) => t.status !== 'accepted' && t.status !== 'archived').length,
           gaps: liveGaps.filter((g) => g.status !== 'closed' && g.status !== 'deferred').length,
           'work items': liveWorkItems.filter((w) => w.status !== 'done' && w.status !== 'abandoned').length,
           specs: liveSpecs.length,
@@ -472,9 +446,9 @@ export function App() {
           targets={liveTargets}
           gaps={liveGaps}
           workItems={liveWorkItems}
-          specs={MOCK_SPECS}
+          specs={liveSpecs}
           activeWorkspaceName={activeWorkspace?.name}
-          onNavigate={(kind, _id) => {
+          onNavigate={(kind, id) => {
             const tabMap: Record<string, string> = {
               'target': 'targets',
               'gap': 'gaps',
@@ -483,7 +457,12 @@ export function App() {
               'spec-file': 'specs',
             };
             const tab = tabMap[kind];
-            if (tab) { setPluginRefActive(false); setActiveTab(tab); }
+            if (tab) {
+              setPluginRefActive(false);
+              setActiveTab(tab);
+              setSelectedItemId(id ?? null);
+              setPaletteOpen(false);
+            }
           }}
           onClose={() => setPaletteOpen(false)}
         />

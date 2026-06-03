@@ -40,9 +40,9 @@ Terminal: no open gaps, no pending work items
 - **Conflicts surface, never auto-merge.** When a ready target conflicts with the
   spec, target-engage produces a conflict artifact for user review before writing
   anything to the spec.
-- **Audits are stamped.** Every gap records the spec version it was generated
-  against. Stale gaps are detectable by comparing `audit-spec-version` to the
-  current spec hash.
+- **Audits are stamped per item.** Every gap records the `version` of the specific
+  spec item it was generated against. Stale gaps are detectable by comparing
+  `audit-spec-version` to the current `version` field in the referenced spec item file.
 - **Stable IDs.** Spec item IDs, gap IDs, and work-item IDs are never recycled.
   Aliasing handles renames; migration of existing artifacts is never required.
 - **Reasoning is visible.** Every gap includes a one-line justification.

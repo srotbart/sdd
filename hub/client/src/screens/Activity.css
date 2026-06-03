@@ -124,6 +124,7 @@
 }
 
 .act-line {
+  background: var(--paper);
   display: grid;
   grid-template-columns: 78px 100px 1fr;
   align-items: baseline;

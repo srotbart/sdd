@@ -19,7 +19,6 @@
   border-radius: 4px;
   margin: 16px 16px 0;
   overflow-y: auto;
-  align-self: start;
   align-content: start;
 }
 
@@ -85,6 +84,7 @@
 }
 
 .kcard {
+  background: var(--paper);
   border: 1px solid var(--hair);
   border-left-width: 2px;
   border-radius: 4px;
