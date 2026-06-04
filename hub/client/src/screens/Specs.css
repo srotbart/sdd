@@ -314,3 +314,62 @@
 .specs-item--clickable:hover {
   background: var(--paper-2);
 }
+
+/* Per-domain test-coverage summary strip (SPEC-scr-046) */
+.specs-coverage-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 24px 14px;
+  border-bottom: 1px solid var(--hair);
+  flex-shrink: 0;
+}
+
+.specs-coverage-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-family: Geist, system-ui, sans-serif;
+  font-size: 12px;
+}
+
+.specs-coverage-domain {
+  min-width: 132px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.specs-coverage-fraction {
+  min-width: 92px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.specs-coverage-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--ink-3);
+}
+
+.specs-coverage-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.specs-coverage-counts > span::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dot, var(--ink-4));
+}
+
+.specs-coverage-passing { --dot: #4caf50; }
+.specs-coverage-failing { --dot: #f44336; }
+.specs-coverage-missing { --dot: #ff9800; }
+.specs-coverage-not-run { --dot: #9e9e9e; }
+.specs-coverage-skipped { --dot: #64b5f6; }
