@@ -328,11 +328,11 @@
   color: var(--ink);
 }
 
-.gap-hl-kw  { color: #6e3aa8; }
-.gap-hl-fn  { color: #1f4e7a; }
-.gap-hl-str { color: #8a6a1c; }
+.gap-hl-kw  { color: var(--hl-kw); }
+.gap-hl-fn  { color: var(--hl-fn); }
+.gap-hl-str { color: var(--hl-str); }
 .gap-hl-com { color: var(--ink-3); font-style: italic; }
-.gap-hl-num { color: #a85620; }
+.gap-hl-num { color: var(--hl-num); }
 
 /* Rail */
 .gap-detail__rail {}

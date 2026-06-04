@@ -5,6 +5,14 @@ import { App } from './App';
 import { Sidenav } from './components/Sidenav';
 import { Header } from './components/Header';
 import { AttachWorkspaceDialog } from './components/AttachWorkspaceDialog';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// Read the token CSS at test time via Node fs (jsdom does not process external CSS)
+const tokensRaw = readFileSync(resolve(__dirname, 'styles/tokens.css'), 'utf8');
+
+// Read index.html at test time for structural assertions (SPEC-ui-020)
+const indexHtml = readFileSync(resolve(__dirname, '..', 'index.html'), 'utf8');
 
 const WS = {
   id: 'ws-1', name: 'My Repo', path: '/tmp/repo', description: null, created_at: '2026-01-01',
@@ -613,5 +621,301 @@ describe('SPEC-ui-017 — POST /workspaces body includes name, path, description
     await waitFor(() => expect(body).toBeDefined());
     expect(body).toHaveProperty('description', null);
     expect(body).toMatchObject({ name: 'repo', path: '/my/repo' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-ui-018 — Dark theme token set
+// ---------------------------------------------------------------------------
+describe('SPEC-ui-018 — dark-theme token set declared in tokens.css', () => {
+  const LIGHT_TOKENS = [
+    '--paper', '--paper-2', '--paper-3',
+    '--ink', '--ink-2', '--ink-3', '--ink-4',
+    '--hair', '--hair-2',
+    '--accent', '--accent-deep', '--accent-soft',
+    '--st-open', '--st-progress', '--st-blocked', '--st-done', '--st-draft', '--st-stale',
+  ];
+
+  it('SPEC-ui-018: tokens.css contains a [data-theme="dark"] selector block', () => {
+    expect(tokensRaw).toMatch(/\[data-theme="dark"\]/);
+  });
+
+  it('SPEC-ui-018: every :root token has a corresponding dark override', () => {
+    const darkBlockMatch = tokensRaw.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\}/);
+    expect(darkBlockMatch, '[data-theme="dark"] block not found').toBeTruthy();
+    const darkBlock = darkBlockMatch![1];
+    for (const token of LIGHT_TOKENS) {
+      expect(darkBlock, `token ${token} missing from dark block`).toContain(token);
+    }
+  });
+
+  it('SPEC-ui-018: dark surface tokens differ from light surface tokens', () => {
+    const rootMatch = tokensRaw.match(/:root\s*\{([\s\S]*?)\}/);
+    const darkMatch = tokensRaw.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\}/);
+    expect(rootMatch).toBeTruthy();
+    expect(darkMatch).toBeTruthy();
+    function extractValue(block: string, token: string): string {
+      const escaped = token.replace(/[-]/g, '\\$&');
+      const m = block.match(new RegExp(`${escaped}:\\s*([^;]+);`));
+      return m ? m[1].trim() : '';
+    }
+    const lightPaper = extractValue(rootMatch![1], '--paper');
+    const darkPaper = extractValue(darkMatch![1], '--paper');
+    expect(darkPaper).not.toBe('');
+    expect(darkPaper).not.toBe(lightPaper);
+  });
+
+  it('SPEC-ui-018: dark ink tokens differ from light ink tokens (ink is lightened for dark surfaces)', () => {
+    const rootMatch = tokensRaw.match(/:root\s*\{([\s\S]*?)\}/);
+    const darkMatch = tokensRaw.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\}/);
+    expect(rootMatch).toBeTruthy();
+    expect(darkMatch).toBeTruthy();
+    function extractValue(block: string, token: string): string {
+      const escaped = token.replace(/[-]/g, '\\$&');
+      const m = block.match(new RegExp(`${escaped}:\\s*([^;]+);`));
+      return m ? m[1].trim() : '';
+    }
+    const lightInk = extractValue(rootMatch![1], '--ink');
+    const darkInk = extractValue(darkMatch![1], '--ink');
+    expect(darkInk).not.toBe('');
+    expect(darkInk).not.toBe(lightInk);
+  });
+
+  it('SPEC-ui-018: all six status tokens are present in the dark block and are distinct from each other', () => {
+    const darkMatch = tokensRaw.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\}/);
+    expect(darkMatch, '[data-theme="dark"] block not found').toBeTruthy();
+    const darkBlock = darkMatch![1];
+    const statusTokens = ['--st-open', '--st-progress', '--st-blocked', '--st-done', '--st-draft', '--st-stale'];
+    const values: string[] = [];
+    for (const tok of statusTokens) {
+      const escaped = tok.replace(/[-]/g, '\\$&');
+      const m = darkBlock.match(new RegExp(`${escaped}:\\s*([^;]+);`));
+      expect(m, `${tok} not found in dark block`).toBeTruthy();
+      values.push(m![1].trim());
+    }
+    // all six values must be distinct from one another
+    const unique = new Set(values);
+    expect(unique.size).toBe(6);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-ui-019 — theme toggle in Header
+// ---------------------------------------------------------------------------
+describe('SPEC-ui-019 — Header theme toggle control', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
+    // default matchMedia stub (light OS preference)
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('SPEC-ui-019: header renders a theme-toggle button', () => {
+    render(<Header breadcrumb={['hub']} agentCount={0} hubAddress="localhost:22351" />);
+    expect(document.querySelector('.header-theme-toggle')).not.toBeNull();
+  });
+
+  it('SPEC-ui-019: toggle button aria-label reflects current mode', () => {
+    localStorage.setItem('hub.themeMode', 'dark');
+    render(<Header breadcrumb={['hub']} agentCount={0} hubAddress="localhost:22351" />);
+    const btn = document.querySelector('.header-theme-toggle') as HTMLButtonElement;
+    expect(btn.getAttribute('aria-label')).toContain('dark');
+  });
+
+  it('SPEC-ui-019: clicking toggle cycles mode from system → light', async () => {
+    localStorage.setItem('hub.themeMode', 'system');
+    render(<Header breadcrumb={['hub']} agentCount={0} hubAddress="localhost:22351" />);
+    const btn = document.querySelector('.header-theme-toggle') as HTMLButtonElement;
+    // system → light (next in cycle after system)
+    await userEvent.click(btn);
+    await waitFor(() => {
+      expect(btn.getAttribute('aria-label')).toContain('light');
+    });
+    expect(localStorage.getItem('hub.themeMode')).toBe('light');
+  });
+
+  it('SPEC-ui-019: clicking from light → dark applies data-theme="dark"', async () => {
+    localStorage.setItem('hub.themeMode', 'light');
+    render(<Header breadcrumb={['hub']} agentCount={0} hubAddress="localhost:22351" />);
+    const btn = document.querySelector('.header-theme-toggle') as HTMLButtonElement;
+    await userEvent.click(btn);
+    await waitFor(() => {
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    });
+    expect(localStorage.getItem('hub.themeMode')).toBe('dark');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-ui-020 — pre-paint theme application in index.html
+// ---------------------------------------------------------------------------
+describe('SPEC-ui-020 — inline script applies theme before first paint', () => {
+  // Extract the IIFE body from index.html for direct execution tests
+  function extractPrePaintScript(): string {
+    // Match an inline <script> in <head> (no src= attribute) that references hub.themeMode
+    const m = indexHtml.match(/<script>([\s\S]*?)<\/script>/);
+    return m ? m[1] : '';
+  }
+
+  function runScript(mockStorage: Record<string, string>, prefersDark: boolean): void {
+    // Set up jsdom localStorage
+    localStorage.clear();
+    Object.entries(mockStorage).forEach(([k, v]) => localStorage.setItem(k, v));
+    // Reset data-theme
+    document.documentElement.removeAttribute('data-theme');
+    // Override matchMedia for this run
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: (_: string) => ({ matches: prefersDark, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    });
+    // Execute the IIFE
+    const script = extractPrePaintScript();
+    // eslint-disable-next-line no-eval
+    eval(script);
+  }
+
+  afterEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('SPEC-ui-020: index.html contains an inline script in <head> before the module script tag', () => {
+    // The inline script must appear before <script type="module"
+    const inlinePos = indexHtml.indexOf('<script>');
+    const modulePos = indexHtml.indexOf('<script type="module"');
+    expect(inlinePos, 'No inline <script> found in index.html').toBeGreaterThan(-1);
+    expect(modulePos, 'No module script found in index.html').toBeGreaterThan(-1);
+    expect(inlinePos).toBeLessThan(modulePos);
+  });
+
+  it('SPEC-ui-020: script references the hub.themeMode localStorage key', () => {
+    expect(indexHtml).toContain('hub.themeMode');
+  });
+
+  it('SPEC-ui-020: stored "dark" sets data-theme="dark" regardless of OS preference', () => {
+    runScript({ 'hub.themeMode': 'dark' }, false);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('SPEC-ui-020: stored "light" leaves data-theme absent even when OS prefers dark', () => {
+    runScript({ 'hub.themeMode': 'light' }, true);
+    expect(document.documentElement.getAttribute('data-theme')).toBeNull();
+  });
+
+  it('SPEC-ui-020: stored "system" with dark OS preference sets data-theme="dark"', () => {
+    runScript({ 'hub.themeMode': 'system' }, true);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('SPEC-ui-020: stored "system" with light OS preference leaves data-theme absent', () => {
+    runScript({ 'hub.themeMode': 'system' }, false);
+    expect(document.documentElement.getAttribute('data-theme')).toBeNull();
+  });
+
+  it('SPEC-ui-020: no stored preference with dark OS (defaults to system) sets data-theme="dark"', () => {
+    runScript({}, true);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('SPEC-ui-020: no stored preference with light OS leaves data-theme absent', () => {
+    runScript({}, false);
+    expect(document.documentElement.getAttribute('data-theme')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-ui-021 — component CSS uses tokens not hex literals
+// ---------------------------------------------------------------------------
+describe('SPEC-ui-021 — component CSS references tokens, not hex literals', () => {
+  const specsCss  = readFileSync(resolve(__dirname, 'screens/Specs.css'), 'utf8');
+  const gapsCss   = readFileSync(resolve(__dirname, 'screens/Gaps.css'), 'utf8');
+  const chipCss   = readFileSync(resolve(__dirname, 'components/AgentChip.css'), 'utf8');
+
+  // Helper: extract the lines that define a class's property
+  function classLines(css: string, className: string): string[] {
+    const m = css.match(new RegExp(`\\.${className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'g'));
+    return m ?? [];
+  }
+
+  it('SPEC-ui-021: Specs.css coverage-dot classes use var(--dot-*) not hex literals', () => {
+    const coverageClasses = [
+      'specs-coverage-passing',
+      'specs-coverage-failing',
+      'specs-coverage-missing',
+      'specs-coverage-not-run',
+      'specs-coverage-skipped',
+    ];
+    for (const cls of coverageClasses) {
+      const lines = classLines(specsCss, cls);
+      expect(lines.length, `class .${cls} not found in Specs.css`).toBeGreaterThan(0);
+      const combined = lines.join('');
+      expect(combined, `.${cls} still uses a hex literal`).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+      expect(combined, `.${cls} should reference a CSS var`).toContain('var(--');
+    }
+  });
+
+  it('SPEC-ui-021: Gaps.css syntax-highlight classes use var(--hl-*) not hex literals', () => {
+    const hlClasses = ['gap-hl-kw', 'gap-hl-fn', 'gap-hl-str', 'gap-hl-num'];
+    for (const cls of hlClasses) {
+      const lines = classLines(gapsCss, cls);
+      expect(lines.length, `class .${cls} not found in Gaps.css`).toBeGreaterThan(0);
+      const combined = lines.join('');
+      expect(combined, `.${cls} still uses a hex literal`).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+      expect(combined, `.${cls} should reference a CSS var`).toContain('var(--');
+    }
+  });
+
+  it('SPEC-ui-021: AgentChip.css avatar-colour classes use var(--chip-av-*) not hex background literals', () => {
+    const avClasses = [
+      'agent-chip__av--c0', 'agent-chip__av--c1', 'agent-chip__av--c2',
+      'agent-chip__av--c3', 'agent-chip__av--c4', 'agent-chip__av--c5',
+    ];
+    for (const cls of avClasses) {
+      const lines = classLines(chipCss, cls);
+      expect(lines.length, `class .${cls} not found in AgentChip.css`).toBeGreaterThan(0);
+      const combined = lines.join('');
+      // background should not be a hex literal (color: #fff for white text is acceptable)
+      const withoutColorProp = combined.replace(/color:\s*#fff/g, '');
+      expect(withoutColorProp, `.${cls} background still uses a hex literal`).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+      expect(combined, `.${cls} background should reference a CSS var`).toContain('var(--chip-av-');
+    }
+  });
+
+  it('SPEC-ui-021: tokens.css defines all new dot/hl/chip-av tokens in :root', () => {
+    const newTokens = [
+      '--dot-passing', '--dot-failing', '--dot-missing', '--dot-not-run', '--dot-skipped',
+      '--hl-kw', '--hl-fn', '--hl-str', '--hl-num',
+      '--chip-av-0', '--chip-av-1', '--chip-av-2', '--chip-av-3', '--chip-av-4', '--chip-av-5',
+    ];
+    const rootMatch = tokensRaw.match(/:root\s*\{([\s\S]*?)\}/);
+    expect(rootMatch, ':root block not found in tokens.css').toBeTruthy();
+    for (const tok of newTokens) {
+      expect(rootMatch![1], `${tok} missing from :root`).toContain(tok);
+    }
+  });
+
+  it('SPEC-ui-021: tokens.css defines all new dot/hl/chip-av tokens in [data-theme="dark"]', () => {
+    const newTokens = [
+      '--dot-passing', '--dot-failing', '--dot-missing', '--dot-not-run', '--dot-skipped',
+      '--hl-kw', '--hl-fn', '--hl-str', '--hl-num',
+      '--chip-av-0', '--chip-av-1', '--chip-av-2', '--chip-av-3', '--chip-av-4', '--chip-av-5',
+    ];
+    const darkMatch = tokensRaw.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\}/);
+    expect(darkMatch, '[data-theme="dark"] block not found in tokens.css').toBeTruthy();
+    for (const tok of newTokens) {
+      expect(darkMatch![1], `${tok} missing from dark block`).toContain(tok);
+    }
   });
 });

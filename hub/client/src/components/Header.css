@@ -72,3 +72,19 @@
   background: var(--st-done);
   flex-shrink: 0;
 }
+
+.header-theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-3);
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.header-theme-toggle:hover {
+  color: var(--ink);
+  background: var(--paper-3);
+}

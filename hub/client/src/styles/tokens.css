@@ -26,4 +26,76 @@
   --st-done:     #4f6b48;
   --st-draft:    #8e8e8f;
   --st-stale:    #b15d28;
+
+  /* Coverage dots */
+  --dot-passing:  #4caf50;
+  --dot-failing:  #f44336;
+  --dot-missing:  #ff9800;
+  --dot-not-run:  #9e9e9e;
+  --dot-skipped:  #64b5f6;
+
+  /* Syntax highlight */
+  --hl-kw:  #6e3aa8;
+  --hl-fn:  #1f4e7a;
+  --hl-str: #8a6a1c;
+  --hl-num: #a85620;
+
+  /* Agent-chip avatar palette */
+  --chip-av-0: #5b6af0;
+  --chip-av-1: #2e9e6b;
+  --chip-av-2: #c05c2b;
+  --chip-av-3: #7b3fa0;
+  --chip-av-4: #b5820a;
+  --chip-av-5: #2a7fa8;
+}
+
+[data-theme="dark"] {
+  /* Surfaces */
+  --paper:   #141416;
+  --paper-2: #1c1c1f;
+  --paper-3: #252528;
+
+  /* Ink */
+  --ink:   #e8e8e6;
+  --ink-2: #a8a8a6;
+  --ink-3: #72726f;
+  --ink-4: #48484a;
+
+  /* Hairlines */
+  --hair:   #2a2a2d;
+  --hair-2: #38383b;
+
+  /* Accent */
+  --accent:      #c0735e;
+  --accent-deep: #9e5240;
+  --accent-soft: #d89a86;
+
+  /* Status — lightened for legibility on dark surfaces */
+  --st-open:     #c99a3a;
+  --st-progress: #6b9ec4;
+  --st-blocked:  #d46b5e;
+  --st-done:     #7aab70;
+  --st-draft:    #72726f;
+  --st-stale:    #d48048;
+
+  /* Coverage dots — slightly brightened for dark backgrounds */
+  --dot-passing:  #66bb6a;
+  --dot-failing:  #ef5350;
+  --dot-missing:  #ffa726;
+  --dot-not-run:  #757575;
+  --dot-skipped:  #42a5f5;
+
+  /* Syntax highlight — adjusted for dark background legibility */
+  --hl-kw:  #b39ddb;
+  --hl-fn:  #64b5f6;
+  --hl-str: #ffcc80;
+  --hl-num: #ffab91;
+
+  /* Agent-chip avatar palette — slightly desaturated for dark surfaces */
+  --chip-av-0: #5c6bc0;
+  --chip-av-1: #26a069;
+  --chip-av-2: #bf6937;
+  --chip-av-3: #8e44ad;
+  --chip-av-4: #c08c1a;
+  --chip-av-5: #2980b9;
 }

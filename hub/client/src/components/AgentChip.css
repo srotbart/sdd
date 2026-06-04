@@ -18,12 +18,12 @@
   flex-shrink: 0;
 }
 
-.agent-chip__av--c0 { background: #5b6af0; color: #fff; }
-.agent-chip__av--c1 { background: #2e9e6b; color: #fff; }
-.agent-chip__av--c2 { background: #c05c2b; color: #fff; }
-.agent-chip__av--c3 { background: #7b3fa0; color: #fff; }
-.agent-chip__av--c4 { background: #b5820a; color: #fff; }
-.agent-chip__av--c5 { background: #2a7fa8; color: #fff; }
+.agent-chip__av--c0 { background: var(--chip-av-0); color: #fff; }
+.agent-chip__av--c1 { background: var(--chip-av-1); color: #fff; }
+.agent-chip__av--c2 { background: var(--chip-av-2); color: #fff; }
+.agent-chip__av--c3 { background: var(--chip-av-3); color: #fff; }
+.agent-chip__av--c4 { background: var(--chip-av-4); color: #fff; }
+.agent-chip__av--c5 { background: var(--chip-av-5); color: #fff; }
 
 .agent-chip__name {
   font-family: 'Geist', system-ui, sans-serif;
