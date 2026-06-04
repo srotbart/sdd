@@ -409,28 +409,27 @@ describe("SPEC-arch-022: four-state testStatus computation", () => {
   };
 
   it("SPEC-arch-022: 'not-run' when report is null", () => {
-    expect(computeTestStatus("SPEC-arch-005", mapping, null)).toEqual({ status: "not-run" });
+    const result = computeTestStatus("SPEC-arch-005", mapping, null);
+    expect(result.status).toBe("not-run");
+    expect(result.lastRun).toBeUndefined();
   });
 
   it("SPEC-arch-022: 'missing' when item has no matching test, with lastRun set", () => {
-    expect(computeTestStatus("SPEC-arch-007", mapping, report)).toEqual({
-      status: "missing",
-      lastRun: report.runAt,
-    });
+    const result = computeTestStatus("SPEC-arch-007", mapping, report);
+    expect(result.status).toBe("missing");
+    expect(result.lastRun).toBe(report.runAt);
   });
 
   it("SPEC-arch-022: 'passing' when all matched tests passed", () => {
-    expect(computeTestStatus("SPEC-arch-005", mapping, report)).toEqual({
-      status: "passing",
-      lastRun: report.runAt,
-    });
+    const result = computeTestStatus("SPEC-arch-005", mapping, report);
+    expect(result.status).toBe("passing");
+    expect(result.lastRun).toBe(report.runAt);
   });
 
   it("SPEC-arch-022: 'failing' when at least one matched test failed", () => {
-    expect(computeTestStatus("SPEC-arch-006", mapping, report)).toEqual({
-      status: "failing",
-      lastRun: report.runAt,
-    });
+    const result = computeTestStatus("SPEC-arch-006", mapping, report);
+    expect(result.status).toBe("failing");
+    expect(result.lastRun).toBe(report.runAt);
   });
 });
 

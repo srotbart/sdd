@@ -88,6 +88,12 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
 
   const status = (meta["status"]?.toLowerCase() ?? "active") as SpecItem["status"];
 
+  // Detect **Tests:** skipped — <reason> convention (SPEC-scr-047)
+  const skipMatch = /^\*\*Tests:\*\*\s+skipped\s+[—–-]+\s*(.+)$/m.exec(bodyContent);
+  const testStatus: TestStatus = skipMatch
+    ? { status: "skipped", skipReason: skipMatch[1].trim() }
+    : { status: "not-run" };
+
   return {
     id: meta["id"].toUpperCase(),
     title,
@@ -97,7 +103,7 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     invariant,
     criteria,
     refs: parseRefs(bodyContent),
-    testStatus: { status: "not-run" },
+    testStatus,
     domain: meta["domain"],
     abbrev: meta["abbrev"],
   };
@@ -478,6 +484,8 @@ export function parseSpecs(sddPath: string): Spec[] {
     }
 
     for (const item of spec.items) {
+      // Preserve skip state set by parseSpecItemFile — do not overwrite with computed status
+      if (item.testStatus.status === "skipped") continue;
       item.testStatus = computeTestStatus(item.id, mapping, report);
     }
   }
@@ -503,9 +511,17 @@ export interface ParsedReport {
   runAt: string;
 }
 
-export type TestStatus = {
-  status: "passing" | "failing" | "missing" | "not-run";
+export type PerTestResult = {
+  fullName: string;
+  status: "passing" | "failing" | "missing";
   lastRun?: string;
+};
+
+export type TestStatus = {
+  status: "passing" | "failing" | "missing" | "not-run" | "skipped";
+  lastRun?: string;
+  skipReason?: string;
+  tests?: PerTestResult[];
 };
 
 export function readTestMapping(sddPath: string, abbrev: string, domain: string): TestMapping | null {
@@ -602,26 +618,38 @@ export function computeTestStatus(
   report: ParsedReport | null
 ): TestStatus {
   if (report === null) {
-    return { status: "not-run" };
+    return { status: "not-run", tests: [] };
   }
 
   if (mapping === null) {
-    return { status: "missing", lastRun: report.runAt };
+    return { status: "missing", lastRun: report.runAt, tests: [] };
   }
 
   const substrings = mapping.items[specItemId];
   if (!substrings || substrings.length === 0) {
-    return { status: "missing", lastRun: report.runAt };
+    return { status: "missing", lastRun: report.runAt, tests: [] };
   }
 
-  const matched = report.tests.filter((t) =>
-    substrings.some((sub) => t.fullName.toLowerCase().includes(sub.toLowerCase()))
-  );
+  // Build per-test results: one entry per mapped substring
+  const tests: PerTestResult[] = substrings.map((sub) => {
+    const match = report.tests.find((t) =>
+      t.fullName.toLowerCase().includes(sub.toLowerCase())
+    );
+    if (!match) {
+      return { fullName: sub, status: "missing" as const };
+    }
+    return {
+      fullName: match.fullName,
+      status: match.status === "failed" ? "failing" as const : "passing" as const,
+      lastRun: report.runAt,
+    };
+  });
 
-  if (matched.length === 0) {
-    return { status: "missing", lastRun: report.runAt };
+  const allMissing = tests.every((t) => t.status === "missing");
+  if (allMissing) {
+    return { status: "missing", lastRun: report.runAt, tests };
   }
 
-  const anyFailed = matched.some((t) => t.status === "failed");
-  return { status: anyFailed ? "failing" : "passing", lastRun: report.runAt };
+  const anyFailed = tests.some((t) => t.status === "failing");
+  return { status: anyFailed ? "failing" : "passing", lastRun: report.runAt, tests };
 }

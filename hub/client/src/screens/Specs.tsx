@@ -5,6 +5,32 @@ import { SpecItemList } from './SpecItemList';
 import { SpecItemDetail } from './SpecItemDetail';
 import type { Spec, Gap, WorkItem } from '../types';
 
+interface DomainCoverage {
+  id: string;
+  domain: string;
+  covered: number;
+  total: number;
+  passing: number;
+  failing: number;
+  missing: number;
+  notRun: number;
+  skipped: number;
+}
+
+function computeDomainCoverage(spec: Spec): DomainCoverage {
+  let passing = 0, failing = 0, missing = 0, notRun = 0, skipped = 0;
+  for (const item of spec.items) {
+    const s = item.testStatus.status;
+    if (s === 'passing') passing++;
+    else if (s === 'failing') failing++;
+    else if (s === 'missing') missing++;
+    else if (s === 'skipped') skipped++;
+    else notRun++;
+  }
+  const covered = passing + failing + missing;
+  return { id: spec.id, domain: spec.domain, covered, total: spec.items.length, passing, failing, missing, notRun, skipped };
+}
+
 interface SpecsProps {
   specs: Spec[];
   gaps: Gap[];
@@ -34,6 +60,7 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
     : null;
 
   const totalItems = specs.reduce((n, s) => n + s.items.length, 0);
+  const coverageRows = specs.map(computeDomainCoverage);
 
   const filteredItems = useSpecSearch(activeSpec?.items ?? [], searchQuery);
 
@@ -64,6 +91,22 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
         </span>
       </div>
       <div className="specs-title-rule" />
+
+      <div className="specs-coverage-strip">
+        {coverageRows.map((cov) => (
+          <div key={cov.id} className="specs-coverage-row">
+            <span className="specs-coverage-domain">{cov.domain}</span>
+            <span className="specs-coverage-fraction">{cov.covered}/{cov.total} covered</span>
+            <span className="specs-coverage-counts">
+              <span className="specs-coverage-passing">{cov.passing} passing</span>
+              <span className="specs-coverage-failing">{cov.failing} failing</span>
+              <span className="specs-coverage-missing">{cov.missing} missing</span>
+              <span className="specs-coverage-not-run">{cov.notRun} not-run</span>
+              <span className="specs-coverage-skipped">{cov.skipped} skipped</span>
+            </span>
+          </div>
+        ))}
+      </div>
 
     <div className="specs-layout">
       <div className="specs-sidebar">

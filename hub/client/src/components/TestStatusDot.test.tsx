@@ -37,6 +37,39 @@ describe('TestStatusDot — color rendering', () => {
   });
 });
 
+describe('TestStatusDot — skipped status (SPEC-scr-047)', () => {
+  it('skipped status renders circle with blue color distinct from not-run gray', () => {
+    const { container: containerSkipped } = render(<TestStatusDot status="skipped" />);
+    const { container: containerNotRun } = render(<TestStatusDot status="not-run" />);
+    const skippedCircle = containerSkipped.querySelector('.test-status-dot__circle') as HTMLElement;
+    const notRunCircle = containerNotRun.querySelector('.test-status-dot__circle') as HTMLElement;
+    expect(skippedCircle.style.background).not.toBe(notRunCircle.style.background);
+  });
+
+  it('skipped status renders circle with aria-label "skipped"', () => {
+    const { container } = render(<TestStatusDot status="skipped" />);
+    const circle = container.querySelector('.test-status-dot__circle');
+    expect(circle?.getAttribute('aria-label')).toBe('skipped');
+  });
+
+  it('skipped status omits the timestamp element', () => {
+    const { container } = render(<TestStatusDot status="skipped" skipReason="no code boundary" />);
+    expect(container.querySelector('.test-status-dot__time')).toBeNull();
+  });
+
+  it('skipped status with skipReason includes reason in the title tooltip', () => {
+    const { container } = render(<TestStatusDot status="skipped" skipReason="no code boundary" />);
+    const dot = container.querySelector('.test-status-dot');
+    expect(dot?.getAttribute('title')).toBe('skipped — no code boundary');
+  });
+
+  it('skipped status without skipReason uses "skipped" as the title', () => {
+    const { container } = render(<TestStatusDot status="skipped" />);
+    const dot = container.querySelector('.test-status-dot');
+    expect(dot?.getAttribute('title')).toBe('skipped');
+  });
+});
+
 describe('TestStatusDot — timestamp display', () => {
   it('shows timestamp for passing status', () => {
     const { container } = render(<TestStatusDot status="passing" lastRun="2026-05-19T10:30:00.000Z" />);

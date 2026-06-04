@@ -239,3 +239,65 @@ describe("computeTestStatus", () => {
     expect(result.status).toBe("not-run");
   });
 });
+
+// --- computeTestStatus — per-test breakdown (SPEC-scr-045) ---
+
+describe("computeTestStatus — per-test breakdown (SPEC-scr-045)", () => {
+  it("returns tests array with passing entry when matched test passes", () => {
+    const result = computeTestStatus("SPEC-arch-001", MAPPING, REPORT_ALL_PASSING);
+    expect(result.tests).toBeDefined();
+    expect(result.tests).toHaveLength(1);
+    expect(result.tests![0]!.status).toBe("passing");
+    expect(result.tests![0]!.fullName).toBe("Node.js server starts on port 22351");
+    expect(result.tests![0]!.lastRun).toBe(REPORT_ALL_PASSING.runAt);
+  });
+
+  it("returns tests array with failing entry when matched test fails", () => {
+    const result = computeTestStatus("SPEC-arch-002", MAPPING, REPORT_WITH_FAILURE);
+    expect(result.tests).toHaveLength(1);
+    expect(result.tests![0]!.status).toBe("failing");
+    expect(result.tests![0]!.fullName).toBe("React frontend renders correctly");
+  });
+
+  it("returns tests array with missing entry when no report test matches the substring", () => {
+    const result = computeTestStatus("SPEC-arch-001", MAPPING, {
+      runAt: "2026-05-18T10:00:00.000Z",
+      tests: [{ fullName: "unrelated test about something else", status: "passed" }],
+    });
+    expect(result.tests).toHaveLength(1);
+    expect(result.tests![0]!.status).toBe("missing");
+    expect(result.tests![0]!.fullName).toBe("Node.js server");
+    expect(result.tests![0]!.lastRun).toBeUndefined();
+  });
+
+  it("returns multiple per-test entries for a mapping with multiple substrings", () => {
+    const multiMapping = {
+      runner: "vitest" as const,
+      report: "report.json",
+      items: {
+        "SPEC-arch-001": ["Node.js server", "React frontend"],
+      },
+    };
+    const result = computeTestStatus("SPEC-arch-001", multiMapping, REPORT_WITH_FAILURE);
+    expect(result.tests).toHaveLength(2);
+    const nodejsEntry = result.tests!.find((t) => t.fullName.includes("Node.js server"));
+    const reactEntry = result.tests!.find((t) => t.fullName.includes("React frontend"));
+    expect(nodejsEntry!.status).toBe("passing");
+    expect(reactEntry!.status).toBe("failing");
+  });
+
+  it("returns empty tests array when report is null", () => {
+    const result = computeTestStatus("SPEC-arch-001", MAPPING, null);
+    expect(result.tests).toEqual([]);
+  });
+
+  it("returns empty tests array when mapping is null", () => {
+    const result = computeTestStatus("SPEC-arch-001", null, REPORT_ALL_PASSING);
+    expect(result.tests).toEqual([]);
+  });
+
+  it("returns empty tests array when spec item has no mapping entry", () => {
+    const result = computeTestStatus("SPEC-arch-999", MAPPING, REPORT_ALL_PASSING);
+    expect(result.tests).toEqual([]);
+  });
+});

@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import { StatusPill } from '../components/StatusPill';
 import { TestStatusDot } from '../components/TestStatusDot';
-import type { SpecItem, Gap, WorkItem } from '../types';
+import type { SpecItem, Gap, WorkItem, PerTestResult } from '../types';
 
 interface SpecItemDetailProps {
   item: SpecItem;
@@ -26,7 +26,7 @@ export function SpecItemDetail({ item, gaps, workItems, onBack, onNav }: SpecIte
 
       <div className="specs-item__id-line">
         <span className="specs-item__id">{item.id}</span>
-        <TestStatusDot status={item.testStatus.status} lastRun={item.testStatus.lastRun} />
+        <TestStatusDot status={item.testStatus.status} lastRun={item.testStatus.lastRun} skipReason={item.testStatus.skipReason} />
         <StatusPill status="active" />
         {openGaps.length > 0 && (
           <span className="specs-item__gap-pill">
@@ -37,6 +37,26 @@ export function SpecItemDetail({ item, gaps, workItems, onBack, onNav }: SpecIte
       </div>
 
       <h3 className="specs-item__title">{item.title}</h3>
+
+      {item.testStatus.status === 'skipped' && item.testStatus.skipReason && (
+        <div className="spec-item-detail__skip-reason">
+          <span className="spec-item-detail__skip-label">skip reason:</span>{' '}
+          {item.testStatus.skipReason}
+        </div>
+      )}
+
+      <div className="spec-item-detail__tests">
+        {(item.testStatus.tests ?? []).length === 0 ? (
+          <div className="spec-item-detail__tests-empty">no test results</div>
+        ) : (
+          (item.testStatus.tests as PerTestResult[]).map((t) => (
+            <div key={t.fullName} className="spec-item-detail__test-row">
+              <TestStatusDot status={t.status} lastRun={t.lastRun} />
+              <span className="spec-item-detail__test-name">{t.fullName}</span>
+            </div>
+          ))
+        )}
+      </div>
 
       <div className="spec-item-detail__body">
         <ReactMarkdown>{item.body}</ReactMarkdown>

@@ -88,9 +88,17 @@ export interface CodeContext {
   lines: CodeLine[];
 }
 
-export interface TestStatus {
-  status: 'passing' | 'failing' | 'missing' | 'not-run';
+export interface PerTestResult {
+  fullName: string;
+  status: 'passing' | 'failing' | 'missing';
   lastRun?: string;
+}
+
+export interface TestStatus {
+  status: 'passing' | 'failing' | 'missing' | 'not-run' | 'skipped';
+  lastRun?: string;
+  skipReason?: string;
+  tests?: PerTestResult[];
 }
 
 export interface SpecItem {

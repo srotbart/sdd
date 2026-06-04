@@ -103,10 +103,59 @@ Format per test entry: `` `file::test_identifier` — "one-line description of w
 The one-line description must state the behavior, not the assertion. "admin action
 rejected when MFA absent" is good. "asserts 403 status code" is not.
 
+For spec items that have no meaningful code boundary (pure documentation, intentional
+design decisions, or items that cannot be meaningfully verified by a test), record a
+deliberate skip using the convention:
+
+```markdown
+**Tests:** skipped — <reason>
+```
+
+A skipped item is explicitly accounted for and surfaces as `skipped` in the Hub UI
+(distinct from `not-run`). It is preferable to leaving the item blank — blank means
+uncovered; `skipped` means deliberately excluded from test coverage.
+
 After updating a spec item file, recompute and update its `version` field in frontmatter
 (see `references/schemas.md`, Specs section, for the hash command).
 
-### 6. Verify the new tests pass
+### 6. Write or update the test mapping file
+
+After writing tests and updating spec item files, create or update the per-domain
+test mapping file at `.sdd/specs/{domain}/SPEC-{abbrev}.tests.json`. This file
+tells the Hub parser how to resolve each spec item's test coverage and compute live
+`testStatus` (rather than defaulting every item to `not-run`).
+
+The mapping file schema:
+
+```json
+{
+  "runner": "vitest",
+  "report": "hub/server/test-results/vitest.json",
+  "items": {
+    "SPEC-ARCH-001": ["substring from fullName that matches this item's tests"],
+    "SPEC-ARCH-002": ["another substring"]
+  }
+}
+```
+
+- `runner` — `"vitest"` for Vitest/Jest JSON reporter output; `"maven"` for Surefire XML
+- `report` — path (relative to workspace root) where the test runner writes its JSON report
+- `items` — map from spec item ID (uppercase) to an array of substring strings; each
+  substring must match the `fullName` of at least one test in the report (case-insensitive)
+  so `computeTestStatus` can resolve it. Use the same identifier text you linked in the
+  `**Tests:**` block.
+
+**Ensure the report path is produced by the test runner.** If the project uses Vitest,
+verify (or add) a `--reporter=json --outputFile=<report-path>` flag to the test run
+command (or `vitest.config.ts` reporter config). If the report file does not exist at
+the declared path after a test run, `testStatus` will remain `not-run` for all items.
+Check the project's existing test scripts and reporter configuration before writing the
+mapping; add the reporter output if absent.
+
+Skipped items (those with `**Tests:** skipped — <reason>`) should not appear in the
+`items` map — the Hub parser reads the skip marker directly from the spec item file.
+
+### 7. Verify the new tests pass
 
 Run the newly written tests:
 
@@ -125,7 +174,7 @@ to create work items."
 Do not block on failing tests — record the failure in the report and proceed. A
 failing spec test is useful signal, not a blocker for writing other tests.
 
-### 7. Report
+### 8. Report
 
 ```
 ## Spec Test Coverage — authentication — 2026-05-13
@@ -141,10 +190,15 @@ failing spec test is useful signal, not a blocker for writing other tests.
 
 ### SPEC-auth-003 — (already covered, skipped)
 
+### SPEC-auth-004 — (skipped — no code boundary)
+  **Tests:** skipped — pure documentation item with no verifiable code path
+
 ---
 2 spec items covered this run.
 1 item has a failing test — spec not yet implemented.
-Spec updated: references/schemas.md version field refreshed.
+1 item recorded as skipped.
+Mapping file written: .sdd/specs/authentication/SPEC-auth.tests.json
+Spec updated: version fields refreshed.
 Next: Run the test suite then check overall state. Run `/sdd:session-start` to proceed.
 ```
 
@@ -169,6 +223,12 @@ Substitute the actual test command for the project (e.g. `npm test`, `pytest`) i
   requires recomputing the `version` field.
 - **Never duplicate tests.** If a test already covers a spec item but was written
   before the `**Tests:**` link existed, add the link rather than generating a new test.
+- **Always write the mapping file (step 6).** Linking tests in `**Tests:**` blocks
+  without updating `SPEC-{abbrev}.tests.json` leaves the Hub showing `not-run` for
+  every item. Both the markdown link and the JSON mapping are required.
+- **Skipped items use the convention, not silence.** Write `**Tests:** skipped — <reason>`
+  rather than leaving the `**Tests:**` block absent. Skipped items are excluded from
+  the `items` map in the JSON mapping file.
 
 ## Schema Reference
 

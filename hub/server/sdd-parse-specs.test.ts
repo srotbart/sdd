@@ -60,7 +60,7 @@ describe("parseSpecs — testStatus integration", () => {
     const specs = parseSpecs(sddPath);
     expect(specs).toHaveLength(1);
     for (const item of specs[0]!.items) {
-      expect(item.testStatus).toEqual({ status: "not-run" });
+      expect(item.testStatus.status).toBe("not-run");
     }
   });
 
@@ -268,6 +268,73 @@ describe("parseSpecs — testStatus integration", () => {
     const item = specs[0]!.items[0]!;
     expect(item.invariant).toBe("");
     expect(item.criteria).toEqual([]);
+  });
+});
+
+describe("parseSpecs — SPEC-scr-047: skipped test state", () => {
+  it("parses **Tests:** skipped — <reason> and returns status=skipped with skipReason", () => {
+    const { sddPath } = makeWorkspace();
+    const body = [
+      "## Invariant",
+      "",
+      "This item has no meaningful code boundary.",
+      "",
+      "## Acceptance criteria",
+      "",
+      "- N/A",
+      "",
+      "**Tests:** skipped — no code boundary",
+    ].join("\n");
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Skipped item", body);
+
+    const specs = parseSpecs(sddPath);
+    const item = specs[0]!.items[0]!;
+    expect(item.testStatus.status).toBe("skipped");
+    expect(item.testStatus.skipReason).toBe("no code boundary");
+  });
+
+  it("skipped status is preserved even when a .tests.json mapping exists — skip wins over computed status", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    const body = [
+      "## Invariant",
+      "",
+      "This item has no meaningful code boundary.",
+      "",
+      "## Acceptance criteria",
+      "",
+      "- N/A",
+      "",
+      "**Tests:** skipped — no code boundary",
+    ].join("\n");
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Skipped item", body);
+
+    const reportPath = path.join(workspaceRoot, "reports", "vitest.json");
+    fs.mkdirSync(path.join(workspaceRoot, "reports"), { recursive: true });
+    fs.writeFileSync(reportPath, VITEST_REPORT_ALL_PASSING);
+    const mapping = {
+      runner: "vitest",
+      report: "reports/vitest.json",
+      items: { "SPEC-ARCH-001": ["Node.js server"] },
+    };
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "architecture", "SPEC-arch.tests.json"),
+      JSON.stringify(mapping)
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs[0]!.items[0]!;
+    expect(item.testStatus.status).toBe("skipped");
+    expect(item.testStatus.skipReason).toBe("no code boundary");
+  });
+
+  it("item with no **Tests:** block still gets status=not-run", () => {
+    const { sddPath } = makeWorkspace();
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Regular item", "No tests block here.");
+
+    const specs = parseSpecs(sddPath);
+    const item = specs[0]!.items[0]!;
+    expect(item.testStatus.status).toBe("not-run");
+    expect(item.testStatus.skipReason).toBeUndefined();
   });
 });
 

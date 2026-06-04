@@ -61,6 +61,117 @@ const SPEC_B: Spec = {
 const GAPS: Gap[] = [];
 const WORK_ITEMS: WorkItem[] = [];
 
+const SPEC_MIXED: Spec = {
+  id: 'SPEC-scr',
+  domain: 'ui-screens',
+  abbrev: 'scr',
+  version: 'abc12345',
+  items: [
+    { id: 'SPEC-scr-001', title: 'Passing item', status: 'active', body: '', refs: [], testStatus: { status: 'passing', tests: [] } },
+    { id: 'SPEC-scr-002', title: 'Failing item', status: 'active', body: '', refs: [], testStatus: { status: 'failing', tests: [] } },
+    { id: 'SPEC-scr-003', title: 'Missing item', status: 'active', body: '', refs: [], testStatus: { status: 'missing', tests: [] } },
+    { id: 'SPEC-scr-004', title: 'Not-run item', status: 'active', body: '', refs: [], testStatus: { status: 'not-run', tests: [] } },
+    { id: 'SPEC-scr-005', title: 'Skipped item', status: 'active', body: '', refs: [], testStatus: { status: 'skipped', skipReason: 'no code boundary', tests: [] } },
+  ],
+};
+
+describe('Specs screen coverage summary strip (SPEC-scr-046)', () => {
+  it('renders a coverage strip with one row per domain', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const rows = container.querySelectorAll('.specs-coverage-row');
+    expect(rows).toHaveLength(1);
+  });
+
+  it('renders one coverage row per domain when multiple domains are provided', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED, SPEC_B]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const rows = container.querySelectorAll('.specs-coverage-row');
+    expect(rows).toHaveLength(2);
+  });
+
+  it('covered/total fraction counts passing + failing + missing as covered', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const fraction = container.querySelector('.specs-coverage-fraction');
+    // covered = passing(1) + failing(1) + missing(1) = 3; total = 5
+    expect(fraction!.textContent).toContain('3/5');
+  });
+
+  it('not-run and skipped are not counted as covered', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const fraction = container.querySelector('.specs-coverage-fraction');
+    expect(fraction!.textContent).not.toContain('4/5');
+    expect(fraction!.textContent).not.toContain('5/5');
+  });
+
+  it('shows correct passing count', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const passing = container.querySelector('.specs-coverage-passing');
+    expect(passing!.textContent).toContain('1');
+  });
+
+  it('shows correct failing count', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const failing = container.querySelector('.specs-coverage-failing');
+    expect(failing!.textContent).toContain('1');
+  });
+
+  it('shows correct missing count', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const missing = container.querySelector('.specs-coverage-missing');
+    expect(missing!.textContent).toContain('1');
+  });
+
+  it('shows correct not-run count separately from skipped', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const notRun = container.querySelector('.specs-coverage-not-run');
+    const skipped = container.querySelector('.specs-coverage-skipped');
+    expect(notRun!.textContent).toContain('1');
+    expect(skipped!.textContent).toContain('1');
+  });
+
+  it('skipped count is shown separately from not-run count', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const notRun = container.querySelector('.specs-coverage-not-run');
+    const skipped = container.querySelector('.specs-coverage-skipped');
+    // both exist as distinct elements
+    expect(notRun).not.toBeNull();
+    expect(skipped).not.toBeNull();
+    // they are not the same element
+    expect(notRun).not.toBe(skipped);
+  });
+
+  it('coverage strip updates when specs prop changes', () => {
+    const specAllPassing: Spec = {
+      ...SPEC_MIXED,
+      items: SPEC_MIXED.items.map((item) => ({ ...item, testStatus: { status: 'passing', tests: [] } })),
+    };
+    const { container, rerender } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    expect(container.querySelector('.specs-coverage-fraction')!.textContent).toContain('3/5');
+
+    rerender(<Specs specs={[specAllPassing]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />);
+    expect(container.querySelector('.specs-coverage-fraction')!.textContent).toContain('5/5');
+  });
+});
+
 describe('Specs screen TestStatusDot (SPEC-scr-027)', () => {
   it('renders a TestStatusDot for every spec item in the list', () => {
     render(

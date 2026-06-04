@@ -294,7 +294,7 @@ foo bars.
 
     const res = await fetch(`http://127.0.0.1:${port}/workspaces/ws-ts/specs`);
     const body = (await res.json()) as Array<{ items: Array<{ testStatus: { status: string } }> }>;
-    expect(body[0].items[0].testStatus).toEqual({ status: "not-run" });
+    expect(body[0].items[0].testStatus.status).toBe("not-run");
   });
 
   it("SPEC-arch-013: returns 404 for an unknown workspace", async () => {
