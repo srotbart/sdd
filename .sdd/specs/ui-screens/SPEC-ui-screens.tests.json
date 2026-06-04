@@ -1,0 +1,212 @@
+{
+  "runner": "vitest",
+  "report": "hub/.vitest-report.json",
+  "items": {
+    "SPEC-SCR-001": [
+      "snapshot WebSocket message with workspaces populates Dashboard with live workspace count",
+      "Dashboard receives workspaces from state — no workspace-tile rendered when workspaces is empty"
+    ],
+    "SPEC-SCR-002": [
+      "renders a 5-column pipeline strip",
+      "renders the next-action footer block",
+      "renders targets awaiting user when present"
+    ],
+    "SPEC-SCR-003": [
+      "renders the title bar above the two-pane layout",
+      "title bar contains the bullet, italic word, and subtitle",
+      "title bar contains the + new target button"
+    ],
+    "SPEC-SCR-004": [
+      "renders a search input above the item list",
+      "domain sidebar remains visible in the detail view"
+    ],
+    "SPEC-SCR-005": [
+      "renders active gap rows in the list",
+      "renders archived (closed) gap rows in the list"
+    ],
+    "SPEC-SCR-006": [
+      "done item closed 1h ago appears in kanban done column",
+      "done item closed 25h ago does not appear in kanban done column"
+    ],
+    "SPEC-SCR-007": [
+      "renders empty activity log when lines prop is empty — no fake entries appear",
+      "renders only the provided lines and no synthetic extras"
+    ],
+    "SPEC-SCR-008": [
+      "renders no save button",
+      "calls PATCH /workspaces/:id with only the changed name field on blur"
+    ],
+    "SPEC-SCR-009": [
+      "fetches /workspaces/:id/targets after workspace is auto-selected",
+      "renders Targets without crashing when API returns only required fields"
+    ],
+    "SPEC-SCR-010": [
+      "when all is selected, active targets appear before the ARCHIVED divider",
+      "archived tab appears in the filter bar with accepted target count"
+    ],
+    "SPEC-SCR-011": [
+      "hint text reads \"sets status → awaiting-agent\" when status is awaiting-user",
+      "\"mark ready\" button is present in the toolbar when status is awaiting-user"
+    ],
+    "SPEC-SCR-012": [
+      ".target-row has an explicit background declaration (not inherited)",
+      ".target-row background token is var(--paper)"
+    ],
+    "SPEC-SCR-013": [
+      ".statement-block__text declares font-family: var(--serif)",
+      ".statement-block__text declares font-size: 16px"
+    ],
+    "SPEC-SCR-014": [
+      ".targets-list has background: var(--paper)",
+      ".artifact-list-archived-row CSS rule sets opacity: 0.55",
+      ".artifact-list-archived-row:hover CSS rule sets opacity: 0.85"
+    ],
+    "SPEC-SCR-015": [
+      "clicking divider hides archived rows",
+      "divider label shows ▸ when archived section is collapsed",
+      ".artifact-list-divider__label has letter-spacing: 0.18em"
+    ],
+    "SPEC-SCR-016": [
+      ".dialog has padding: 24px 36px 120px",
+      ".dialog has gap: 22px for vertical rhythm between turns"
+    ],
+    "SPEC-SCR-017": [
+      "renders all 7 TOC section headings"
+    ],
+    "SPEC-SCR-018": [
+      "sidenav targets count badge shows only non-accepted targets",
+      "sidenav gaps count uses live gaps data excluding closed and deferred",
+      "sidenav work items count uses live work-items data excluding done and abandoned"
+    ],
+    "SPEC-SCR-019": [
+      "input has the correct placeholder text",
+      "typing a query filters results to matching items",
+      "matched characters are highlighted with cp-mark",
+      "pressing Escape calls onClose"
+    ],
+    "SPEC-SCR-020": [
+      "fetches /workspaces/:id/gaps after selecting a workspace",
+      "shows the ArtifactList divider when closed gaps exist"
+    ],
+    "SPEC-SCR-021": [
+      "fetches /workspaces/:id/work-items after selecting a workspace",
+      "done item closed 25h ago appears in ArchiveFooter",
+      "abandoned item appears in ArchiveFooter"
+    ],
+    "SPEC-SCR-022": [
+      "writes hub.activeWorkspaceId to localStorage when a workspace is selected",
+      "pre-selects the persisted workspace on mount when the ID is present in the fetched list"
+    ],
+    "SPEC-SCR-023": [
+      "selecting a workspace updates URL to ?w=<id>&v=session",
+      "switching tabs calls replaceState with updated ?v= and retains ?w=",
+      "initialises workspace and tab from URL params, ignoring localStorage"
+    ],
+    "SPEC-SCR-025": [
+      "renders artifact-list-filter-bar instead of targets-filter-bar",
+      "awaiting-you filter renders only awaiting-user rows via ArtifactList",
+      "renders artifact-list-filter-bar for domain filtering — no gaps-filter-bar"
+    ],
+    "SPEC-SCR-027": [
+      "renders a TestStatusDot for every spec item in the list"
+    ],
+    "SPEC-SCR-028": [
+      "auto-selects the first workspace and fetches its targets when no localStorage key is set"
+    ],
+    "SPEC-SCR-029": [
+      "activity WS message appears in Activity screen after navigating to activity tab",
+      "renders only the provided lines and no synthetic extras"
+    ],
+    "SPEC-SCR-030": [
+      "onNavigate with a gap kind and ID navigates to gaps tab and closes palette"
+    ],
+    "SPEC-SCR-031": [
+      "?id=GAP-arch-001 with ?v=gaps causes Gaps to open with GAP-arch-001 pre-selected (WI-scr-028)"
+    ],
+    "SPEC-SCR-032": [
+      "target with status archived appears in the archived section, not the active list",
+      "sidenav targets count badge shows only non-accepted targets"
+    ],
+    "SPEC-SCR-033": [
+      "App renders with live specs fetched from server — Session receives liveSpecs not mock data"
+    ],
+    "SPEC-SCR-034": [
+      "renders empty activity log when lines prop is empty — no fake entries appear",
+      "filters lines by selected agent without mixing in fake entries"
+    ],
+    "SPEC-SCR-035": [
+      "App.tsx workspaces.map does not throw when counts is undefined (optional chaining guard)",
+      "Dashboard renders without throwing when a workspace has counts: undefined (WI-scr-034)"
+    ],
+    "SPEC-SCR-036": [
+      "typing a query that matches one item leaves only that item in the list",
+      "clearing the query restores all items",
+      "switching domains clears the search input",
+      "matches on title field"
+    ],
+    "SPEC-SCR-037": [
+      "clicking an item replaces the list with the detail view showing that item title",
+      "clicking the back button restores the item list",
+      "renders the item body as markdown — **bold** becomes <strong>"
+    ],
+    "SPEC-SCR-038": [
+      "all four kanban columns are always rendered regardless of item count",
+      "an empty column renders the same column element as a populated column",
+      "kanban CSS rule does not contain align-self: start"
+    ],
+    "SPEC-SCR-039": [
+      "renders markdown in the list row — **bold** becomes <strong>",
+      ".specs-item__body has -webkit-line-clamp: 5",
+      ".specs-item__body has overflow: hidden",
+      "clicking an item replaces the list with the detail view showing that item title"
+    ],
+    "SPEC-SCR-040": [
+      "returns name and lastModified for each .md file in .sdd/projections/",
+      "returns empty array when .sdd/projections/ does not exist",
+      "returns raw markdown content of the named projection",
+      "returns 404 when the named projection file does not exist"
+    ],
+    "SPEC-SCR-041": [
+      "projections nav item is positioned between specs and gaps",
+      "renders projection rows in the left panel from fetched data",
+      "each projection row shows a relative timestamp",
+      "right panel renders markdown content of selected projection"
+    ],
+    "SPEC-SCR-042": [
+      "returns name and lastModified for each subdirectory containing design.md",
+      "skips subdirectories that do not contain design.md",
+      "returns empty array when .sdd/design/ does not exist",
+      "returns raw markdown content of design.md for the named design"
+    ],
+    "SPEC-SCR-043": [
+      "designs nav item is positioned between projections and gaps",
+      "renders design rows in the left panel from fetched data",
+      "each design row shows a relative timestamp",
+      "right panel renders markdown content of selected design"
+    ],
+    "SPEC-SCR-044": [
+      "returns skills sorted by name from the highest semver version",
+      "returns skills in ascending name order",
+      "returns empty array when plugin cache directory does not exist",
+      "picks the highest semver version when multiple exist"
+    ],
+    "SPEC-SCR-045": [
+      "returns multiple per-test entries for a mapping with multiple substrings",
+      "returns tests array with missing entry when no report test matches the substring",
+      "renders one row per test in item.testStatus.tests",
+      "renders empty state when testStatus.tests is empty"
+    ],
+    "SPEC-SCR-046": [
+      "renders a coverage strip with one row per domain",
+      "covered/total fraction counts passing + failing + missing as covered",
+      "not-run and skipped are not counted as covered",
+      "shows correct not-run count separately from skipped"
+    ],
+    "SPEC-SCR-047": [
+      "skipped status is preserved even when a .tests.json mapping exists — skip wins over computed status",
+      "item with no **Tests:** block still gets status=not-run",
+      "skipped status renders circle with blue color distinct from not-run gray",
+      "skipped status with skipReason includes reason in the title tooltip"
+    ]
+  }
+}

@@ -16,3 +16,9 @@ dist/
 *.db
 *.db-shm
 *.db-wal
+
+# Generated Vitest reports consumed by the SDD spec test-status mechanism
+# (regenerate with `npm run spec-report` in hub/)
+.vitest-report.json
+hub/.vitest-report.json
+hub/*/.vitest-report.json

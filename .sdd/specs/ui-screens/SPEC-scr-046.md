@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: ui-screens
 status: active
 aliases: []
-version: "7e67e9da"
+version: "435dc225"
 ---
 
 # SPEC-scr-046 — Specs screen shows a per-domain test-coverage summary
@@ -20,3 +20,9 @@ The Specs screen (`hub/client/src/screens/Specs.tsx`) renders a per-domain cover
 - The summary renders on the existing Specs screen (e.g. a header or summary strip), not as a new screen
 - Summary figures are derived from the same `testStatus` values rendered on the item rows (no divergent second source)
 - Counts update when the underlying spec/test data changes (live WebSocket / refresh path)
+
+**Tests:**
+- `hub/client/src/screens/Specs.test.tsx > Specs screen coverage summary strip (SPEC-scr-046) > renders a coverage strip with one row per domain` — "Specs screen renders a per-domain coverage strip"
+- `hub/client/src/screens/Specs.test.tsx > Specs screen coverage summary strip (SPEC-scr-046) > covered/total fraction counts passing + failing + missing as covered` — "covered fraction counts items with a resolved test result"
+- `hub/client/src/screens/Specs.test.tsx > Specs screen coverage summary strip (SPEC-scr-046) > not-run and skipped are not counted as covered` — "not-run and skipped items are excluded from covered"
+- `hub/client/src/screens/Specs.test.tsx > Specs screen coverage summary strip (SPEC-scr-046) > shows correct not-run count separately from skipped` — "per-status counts, including not-run vs skipped, are shown per domain"
