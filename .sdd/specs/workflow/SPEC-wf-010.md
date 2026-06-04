@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "6664a8c1"
+version: "8ca51406"
 ---
 
 # SPEC-wf-010 — Global statusline script renders shell context as the first line
@@ -21,3 +21,5 @@ The global statusline script (`~/.claude/statusline-command.sh`) renders a first
 - Context bar is always 10 chars: filled blocks for used percentage, empty blocks for remainder
 - Colors are ANSI escape codes (e.g. `\033[1;32m`), not JSON hex color values
 - Script reads workspace context from stdin as JSON (`workspace.current_dir`, `context_window.used_percentage`)
+
+**Tests:** skipped — rendered by the user's global statusline script, a user-machine file, not in-repo code

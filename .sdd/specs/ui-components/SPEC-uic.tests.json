@@ -1,0 +1,16 @@
+{
+  "runner": "vitest",
+  "report": "hub/.vitest-report.json",
+  "items": {
+    "SPEC-UIC-001": ["SPEC-uic-001"],
+    "SPEC-UIC-002": ["SPEC-uic-002"],
+    "SPEC-UIC-003": ["SPEC-uic-003"],
+    "SPEC-UIC-004": ["SPEC-uic-004"],
+    "SPEC-UIC-005": ["SPEC-uic-005"],
+    "SPEC-UIC-006": ["SPEC-uic-006"],
+    "SPEC-UIC-007": ["SPEC-uic-007"],
+    "SPEC-UIC-008": ["SPEC-uic-008"],
+    "SPEC-UIC-009": ["SPEC-uic-009"],
+    "SPEC-UIC-010": ["SPEC-uic-010"]
+  }
+}

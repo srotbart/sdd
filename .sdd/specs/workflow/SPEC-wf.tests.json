@@ -1,0 +1,24 @@
+{
+  "runner": "vitest",
+  "report": "hub/.vitest-report.json",
+  "items": {
+    "SPEC-WF-002": ["SPEC-wf-002"],
+    "SPEC-WF-003": ["SPEC-wf-003"],
+    "SPEC-WF-004": ["SPEC-wf-004"],
+    "SPEC-WF-005": ["SPEC-wf-005"],
+    "SPEC-WF-006": ["SPEC-wf-006"],
+    "SPEC-WF-007": ["SPEC-wf-007"],
+    "SPEC-WF-008": ["SPEC-wf-008"],
+    "SPEC-WF-009": ["SPEC-wf-009"],
+    "SPEC-WF-011": ["SPEC-wf-011"],
+    "SPEC-WF-012": ["SPEC-wf-012"],
+    "SPEC-WF-013": ["SPEC-wf-013"],
+    "SPEC-WF-014": ["SPEC-wf-014"],
+    "SPEC-WF-015": ["SPEC-wf-015"],
+    "SPEC-WF-017": ["extracts invariant and criteria from spec item with both sections"],
+    "SPEC-WF-018": ["SPEC-wf-018"],
+    "SPEC-WF-020": ["SPEC-wf-020"],
+    "SPEC-WF-021": ["SPEC-wf-021"],
+    "SPEC-WF-022": ["SPEC-wf-022"]
+  }
+}

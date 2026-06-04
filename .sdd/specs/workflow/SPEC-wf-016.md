@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "675d0c05"
+version: "c2802861"
 ---
 
 # SPEC-wf-016 — Flat domain spec files are decomposed into per-item files during migration
@@ -19,3 +19,5 @@ Existing flat `SPEC-{domain}.md` files are decomposed: each `## SPEC-{abbrev}-{N
 - Flat `SPEC-{domain}.md` files are deleted after all items are extracted
 - `design/` subdirectory and `COLLAPSE-*.md` files in `.sdd/specs/` are not modified
 - No flat domain spec files remain in `.sdd/specs/` after migration completes
+
+**Tests:** skipped — historical one-time migration step — no migration code remains in-repo

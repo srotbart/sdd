@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "f2254dd6"
+version: "0a91a176"
 ---
 
 # SPEC-wf-001 — SDD has two phases: intent (human+Claude) and execution (sdd-worker)
@@ -18,3 +18,5 @@ The SDD pipeline splits into two phases with different actors. The **intent phas
 - Intent-phase skills (`sdd:target-engage`, spec reconciliation) are never invoked by an automated agent
 - sdd-worker only invokes execution-phase skills (`sdd:spec-audit`, `sdd:gap-to-work-items`, `sdd:work-item-close`)
 - Human sign-off is required before any spec change reaches the execution phase
+
+**Tests:** skipped — conceptual two-phase actor split — a process claim with no code artifact to assert

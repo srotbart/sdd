@@ -4,7 +4,7 @@ domain: workflow
 abbrev: workflow
 status: active
 aliases: []
-version: "ecb16f3d"
+version: "98e86d5a"
 ---
 
 # SPEC-wf-019 — Design phase is an optional pre-target planning artifact
@@ -24,3 +24,5 @@ An optional design phase may precede target creation for larger or more complex 
 - When a design changes materially (new scope added or existing intent contradicted), new targets are created and engaged through the normal negotiation process — the design informs the target but does not bypass negotiation
 - Design changes that only refine or clarify without changing scope require no target action
 - A design change that contradicts an existing accepted target causes that target to be re-engaged (flipped to `awaiting-agent`) with a note referencing the design change
+
+**Tests:** skipped — design-phase-optional process convention — no code path encodes it
