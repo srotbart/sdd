@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "13849c8d"
+version: "a861c81f"
 ---
 
 # SPEC-wf-008 — Every pipeline skill output ends with a concrete next-step footer
@@ -21,3 +21,14 @@ Each SDD skill that represents a pipeline stage must end its output with a `---`
 - `sdd:spec-audit` footer uses `gap-to-work-items` when gaps found, `spec-test` when none found
 - `sdd:work-item-close` footer uses next WI ID when items remain, `spec-audit` to verify when all closed
 - `sdd:spawn-sdd-worker` footer reads: "Worker running. You will be notified on completion."
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: session-start contains a '---' divider and a 'Next:' footer line` — session-start ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: target-engage contains a '---' divider and a 'Next:' footer line` — target-engage ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spec-audit contains a '---' divider and a 'Next:' footer line` — spec-audit ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: gap-to-work-items contains a '---' divider and a 'Next:' footer line` — gap-to-work-items ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: work-item-close contains a '---' divider and a 'Next:' footer line` — work-item-close ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spec-test contains a '---' divider and a 'Next:' footer line` — spec-test ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spec-audit footer routes to gap-to-work-items when gaps are found` — the audit footer routes to gap decomposition on the gaps-found outcome
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spawn-sdd-worker footer reads 'Worker running. You will be notified on completion.'` — the worker-spawn footer uses the fixed completion-notice phrasing

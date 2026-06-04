@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "879a8644"
+version: "3f175611"
 ---
 
 # SPEC-wf-004 — sdd:init describes the two-phase workflow
@@ -19,3 +19,9 @@ The `sdd:init` skill output includes a description of the two-phase workflow: th
 - The section names `/sdd:target-engage` as the intent-phase skill
 - The section names `/sdd:spawn-sdd-worker` as the execution-phase skill
 - The section distinguishes which phase the human is responsible for vs. which is delegated
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-004: sdd-init describes the two-phase workflow > SPEC-wf-004: contains a Two-phase workflow section` — init output documents the two-phase model
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-004: sdd-init describes the two-phase workflow > SPEC-wf-004: names /sdd:target-engage as the intent-phase skill` — the intent phase points at target-engage
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-004: sdd-init describes the two-phase workflow > SPEC-wf-004: names /sdd:spawn-sdd-worker as the execution-phase skill` — the execution phase points at spawn-sdd-worker

@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: ui-screens
 status: active
 aliases: []
-version: "71dbf37b"
+version: "3e06c3b8"
 ---
 
 # SPEC-scr-043 — Hub Designs screen lists design directories and renders selected design.md
@@ -21,3 +21,11 @@ A Designs screen is added to the Hub sidebar between Projections and Gaps. The l
 - `sdd-changed` WebSocket event triggers automatic re-fetch and re-render of the current design
 - Empty state shown when `.sdd/design/` is empty or does not exist
 - Two-pane layout consistent with Projections and Specs screens
+
+**Tests:**
+- `hub/client/src/screens/Designs.test.tsx > Sidenav designs entry > designs nav item is positioned between projections and gaps` — "Designs nav item appears in the sidebar between Projections and Gaps"
+- `hub/client/src/screens/Designs.test.tsx > Designs screen (SPEC-scr-043) > renders design rows in the left panel from fetched data` — "left panel lists design directories fetched from the backend"
+- `hub/client/src/screens/Designs.test.tsx > Designs screen (SPEC-scr-043) > each design row shows a relative timestamp` — "each row shows the design name and a relative timestamp"
+- `hub/client/src/screens/Designs.test.tsx > Designs screen (SPEC-scr-043) > right panel renders markdown content of selected design` — "right panel renders the selected design.md as markdown via react-markdown"
+- `hub/client/src/screens/Designs.test.tsx > Designs screen (SPEC-scr-043) > shows empty state when no designs exist` — "empty state is shown when no designs exist"
+- `hub/client/src/screens/Designs.test.tsx > Designs screen (SPEC-scr-043) > re-fetches designs when refreshToken changes` — "screen re-fetches and re-renders the current design when the refreshToken (driven by sdd-changed) changes"

@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "ad2911f7"
+version: "2b05f077"
 ---
 
 # SPEC-wf-012 — SDD statusline counts use direct file operations with parent-directory walk-up
@@ -22,3 +22,11 @@ All four SDD counts shown in the statusline are derived by direct file operation
 - All counts exclude `archive/` directories
 - `sdd_root` found by walking up from `workspace.current_dir`; stops at `/` without error
 - No Hub API is called for count data at any point
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-012: SDD statusline counts use direct file operations with parent-directory walk-up > SPEC-wf-012: walks up parent directories to find the .sdd root, stopping at /` — the script walks up to find the .sdd root
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-012: SDD statusline counts use direct file operations with parent-directory walk-up > SPEC-wf-012: target count greps for awaiting-user markdown files` — targets are counted by direct grep
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-012: SDD statusline counts use direct file operations with parent-directory walk-up > SPEC-wf-012: spec count uses find for SPEC-*.md excluding archive across all domains` — spec items are counted by find excluding archive
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-012: SDD statusline counts use direct file operations with parent-directory walk-up > SPEC-wf-012: gap and work-item counts use find -maxdepth 1 in their directories` — gaps and work items are counted by shallow find
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-012: SDD statusline counts use direct file operations with parent-directory walk-up > SPEC-wf-012: makes no Hub API call for count data (no curl/wget/localhost fetch for counts)` — counts never call the Hub API

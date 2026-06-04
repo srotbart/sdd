@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "9b495bc7"
+version: "de9bedc3"
 ---
 
 # SPEC-wf-006 — sdd-worker prompt defines role, responsibilities, and gap reporting
@@ -20,3 +20,10 @@ The prompt passed to the sdd-worker by `sdd:spawn-sdd-worker` must open with an 
 - Worker sends a "nothing to do" message to team lead and stops when no gaps or work items exist
 - Worker sends gap report to team lead after `sdd:spec-audit` completes, before proceeding to `sdd:gap-to-work-items`
 - Worker proceeds to `sdd:gap-to-work-items` autonomously without waiting for lead approval
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt opens with an explicit execution-agent role declaration` — the prompt declares the pure-execution role up front
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt prohibits the intent-phase skills session-start and target-engage` — the prompt forbids intent-phase skills
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt instructs a 'nothing to do' message when no gaps are found` — the worker reports and stops when there is no work
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt instructs sending the gap report to the team lead after the audit` — the worker reports found gaps to the lead after auditing

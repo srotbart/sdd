@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "fb82af49"
+version: "21117428"
 ---
 
 # SPEC-wf-014 — Each spec item file carries its own domain metadata and per-item version hash
@@ -19,3 +19,9 @@ Per-item frontmatter fields: `id` (e.g. `SPEC-wf-013`), `domain` (e.g. `workflow
 - The `version` field is an 8-char SHA-256 prefix of the file's content
 - Writing skills recompute and update `version` immediately after any content change
 - No domain-level manifest file exists; domain identity comes from the subdirectory name
+
+**Tests:**
+
+- `hub/server/spec-wf.test.ts > SPEC-wf-014: each spec item file carries its own domain metadata and per-item version hash > SPEC-wf-014: an item file carries its own version hash from frontmatter` — each item exposes its own version hash
+- `hub/server/spec-wf.test.ts > SPEC-wf-014: each spec item file carries its own domain metadata and per-item version hash > SPEC-wf-014: domain identity comes from per-item frontmatter; two domains stay separate` — domain identity is per-item and keeps domains separate
+- `hub/server/spec-wf.test.ts > SPEC-wf-014: each spec item file carries its own domain metadata and per-item version hash > SPEC-wf-014: an item file MISSING the domain frontmatter field is rejected (not silently grouped)` — an item without a domain field is rejected

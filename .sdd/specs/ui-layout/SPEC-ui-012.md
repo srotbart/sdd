@@ -4,9 +4,14 @@ domain: ui-layout
 abbrev: ui
 status: active
 aliases: []
-version: "78fc01ba"
+version: "32b619a0"
 ---
 
 # SPEC-ui-012 — Sidenav and main content show an empty state when no workspaces are attached
 
 When `workspaces.length === 0`, the WORKSPACE section of the sidenav shows only the `+ attach workspace` affordance (no workspace rows, no dropdown). The NAVIGATE section is hidden (SPEC-ui-011). The main content area shows a centred empty-state prompt: "No workspace attached — use the sidenav to attach a project folder." The Dashboard tile grid is not rendered.
+
+**Tests:**
+
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-012 — empty state with no workspaces attached > SPEC-ui-012: main shows the centred empty-state prompt and no dashboard grid` — "With no workspaces, main shows the empty-state prompt and no dashboard grid."
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-012 — empty state with no workspaces attached > SPEC-ui-012: sidenav shows the attach affordance and no NAVIGATE rows when no workspaces exist` — "With no workspaces, the sidenav shows only the attach affordance and no NAVIGATE rows."

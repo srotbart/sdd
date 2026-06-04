@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "2654c7a4"
+version: "c2621d34"
 ---
 
 # SPEC-wf-009 — /sdd:install-statusline skill appends SDD delegation to the user's global statusline script
@@ -22,3 +22,11 @@ A skill `/sdd:install-statusline` exists in the SDD plugin at `plugin/skills/ins
 - Idempotency: if `plugins/cache/sdd` is already present in the script, skill skips and reports "already installed"
 - Skill never modifies any `settings.json` file
 - `plugin/statusline.sh` exists alongside the plugin skills and contains the SDD status line output logic
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-009: install-statusline appends SDD delegation to the global statusline script > SPEC-wf-009: the install-statusline SKILL.md exists` — the install-statusline skill is a committed plugin artifact
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-009: install-statusline appends SDD delegation to the global statusline script > SPEC-wf-009: reads ~/.claude/settings.json and extracts statusLine.command` — the skill locates the global statusline script from settings.json
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-009: install-statusline appends SDD delegation to the global statusline script > SPEC-wf-009: is idempotent on the presence of plugins/cache/sdd` — re-running is a no-op when already installed
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-009: install-statusline appends SDD delegation to the global statusline script > SPEC-wf-009: never writes to a settings.json file (only appends to the script)` — the skill only appends to the script, never edits settings.json
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-009: install-statusline appends SDD delegation to the global statusline script > SPEC-wf-009: plugin/statusline.sh exists alongside the skills` — the delegated statusline script ships with the plugin

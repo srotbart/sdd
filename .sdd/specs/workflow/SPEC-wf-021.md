@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "35c9870d"
+version: "db0de871"
 ---
 
 # SPEC-wf-021 — sdd-worker is spawned with the sonnet model
@@ -19,3 +19,8 @@ When `sdd:spawn-sdd-worker` spawns the `sdd-worker` agent via the Agent tool, it
 - The `model` parameter is set on the same Agent tool call that sets `name: "sdd-worker"`
 - The worker is not spawned with opus or by inheriting the session model
 - Re-spawning a worker for an additional domain (or via SendMessage reuse) does not change the pinned model
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-021: sdd-worker is spawned with the sonnet model > SPEC-wf-021: lists model: "sonnet" in the Agent spawn parameters` — the spawn parameters pin model sonnet
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-021: sdd-worker is spawned with the sonnet model > SPEC-wf-021: does not pin opus and explains sonnet is sufficient for the deterministic pipeline` — the worker is not spawned on opus

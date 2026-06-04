@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "6b73b4c4"
+version: "15868e14"
 ---
 
 # SPEC-wf-011 — SDD statusline line shows targets, specs, gaps, work items, and a color-coded hub link
@@ -22,3 +22,10 @@ When a `.sdd/` directory is found (by walking up parent directories from `worksp
 - Link is green when ports 22400 and 22351 are both open; red when both closed; orange when one is closed
 - Health check uses `nc -z -w 1`; result cached in `/tmp/.sdd-hub-status-color` for 30s
 - No second line is rendered when no `.sdd/` directory is found in the directory tree
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-011: SDD statusline shows targets, specs, gaps, work items, color-coded hub link > SPEC-wf-011: renders the line in fixed order targets · specs · gaps · work items` — the four counts render in the fixed order
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-011: SDD statusline shows targets, specs, gaps, work items, color-coded hub link > SPEC-wf-011: emits an OSC 8 hyperlink to http://localhost:22400 labelled 'open hub'` — the hub link is an OSC 8 hyperlink to the hub
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-011: SDD statusline shows targets, specs, gaps, work items, color-coded hub link > SPEC-wf-011: color-codes hub health green/red/orange and caches in /tmp/.sdd-hub-status-color` — the hub link color reflects cached health
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-011: SDD statusline shows targets, specs, gaps, work items, color-coded hub link > SPEC-wf-011: hub health check uses nc -z -w 1 on ports 22400 and 22351` — health is probed on both hub ports

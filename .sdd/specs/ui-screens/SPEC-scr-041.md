@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: ui-screens
 status: active
 aliases: []
-version: "8f11443e"
+version: "f5391c0a"
 ---
 
 # SPEC-scr-041 — Hub Projections screen renders live markdown with auto-refresh
@@ -22,3 +22,11 @@ A Projections screen is added to the Hub sidebar between Specs and Gaps. The lef
 - When `sdd-changed` is received over WebSocket, the current projection content re-fetches and re-renders automatically
 - Empty state shown when no projections exist yet
 - Screen follows the existing two-pane layout (`specs-root` / `specs-layout` pattern or equivalent)
+
+**Tests:**
+- `hub/client/src/screens/Projections.test.tsx > Sidenav projections entry > projections nav item is positioned between specs and gaps` — "Projections nav item appears in the sidebar between Specs and Gaps"
+- `hub/client/src/screens/Projections.test.tsx > Projections screen (SPEC-scr-041) > renders projection rows in the left panel from fetched data` — "left panel lists projections fetched from the backend"
+- `hub/client/src/screens/Projections.test.tsx > Projections screen (SPEC-scr-041) > each projection row shows a relative timestamp` — "each row shows a relative timestamp"
+- `hub/client/src/screens/Projections.test.tsx > Projections screen (SPEC-scr-041) > right panel renders markdown content of selected projection` — "right panel renders the selected projection as markdown via react-markdown"
+- `hub/client/src/screens/Projections.test.tsx > Projections screen (SPEC-scr-041) > shows empty state when no projections exist` — "empty state is shown when no projections exist"
+- `hub/client/src/screens/Projections.test.tsx > Projections screen (SPEC-scr-041) > re-fetches projections when refreshToken changes` — "screen re-fetches and re-renders when the refreshToken (driven by sdd-changed) changes"

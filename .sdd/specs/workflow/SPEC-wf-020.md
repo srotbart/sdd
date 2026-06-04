@@ -4,7 +4,7 @@ domain: workflow
 abbrev: workflow
 status: active
 aliases: []
-version: "5a784294"
+version: "76de1960"
 ---
 
 # SPEC-wf-020 — sdd:explain skill spawns a dedicated sdd-explainer agent
@@ -22,3 +22,11 @@ The `sdd:explain <subject>` skill spawns a dedicated agent named `sdd-explainer`
 - In non-interactive mode: agent traverses autonomously and writes the full document without user prompts, then shuts down
 - Specs are always consulted first as the authoritative layer before reading code
 - `.sdd/projections/` directory is created if it does not exist
+
+**Tests:**
+
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent > SPEC-wf-020: creates team sdd-explain-{project-slug} and spawns sdd-explainer` — the skill creates the explain team and spawns the explainer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent > SPEC-wf-020: pins the sonnet model for the explainer agent` — the explainer is pinned to sonnet
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent > SPEC-wf-020: writes the projection to .sdd/projections/<subject>.md` — the agent writes to the projections file
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent > SPEC-wf-020: agent's first action asks interactive vs non-interactive` — the agent first asks interactive vs non-interactive
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent > SPEC-wf-020: consults .sdd/specs first as authoritative ground truth before code` — specs are consulted before code

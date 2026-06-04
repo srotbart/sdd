@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: ui-screens
 status: active
 aliases: []
-version: "1b9cdc03"
+version: "9ba8bbc9"
 ---
 
 # SPEC-scr-044 — Plugin reference page derives skill list from installed plugin SKILL.md files
@@ -22,3 +22,12 @@ The plugin reference page's Skills section is populated dynamically from the ins
 - `PluginReference.tsx` fetches `/plugin-skills` on mount and replaces the hardcoded `SKILLS` array with the fetched data
 - If the endpoint fails or returns empty, the skills section shows a fallback message rather than an empty list
 - The endpoint is not workspace-scoped — it reflects the globally installed plugin
+
+**Tests:**
+- `hub/server/plugin-skills.test.ts > GET /plugin-skills — SPEC-scr-044 > returns skills sorted by name from the highest semver version` — "endpoint returns {name,description} from the highest-semver installed plugin version, sorted by name"
+- `hub/server/plugin-skills.test.ts > GET /plugin-skills — SPEC-scr-044 > returns skills in ascending name order` — "skills are returned sorted by name ascending"
+- `hub/server/plugin-skills.test.ts > GET /plugin-skills — SPEC-scr-044 > returns empty array when plugin cache directory does not exist` — "endpoint returns empty array when no plugin cache is installed"
+- `hub/server/plugin-skills.test.ts > getPluginSkills — unit > picks the highest semver version when multiple exist` — "skill loader selects the highest semver version directory"
+- `hub/client/src/screens/PluginReference.test.tsx > PluginReference skill list (SPEC-scr-044) > fetches /plugin-skills on mount and renders returned skill names` — "frontend fetches /plugin-skills on mount and renders the returned skills"
+- `hub/client/src/screens/PluginReference.test.tsx > PluginReference skill list (SPEC-scr-044) > shows fallback message when /plugin-skills fetch fails` — "skills section shows a fallback message when the fetch fails"
+- `hub/client/src/screens/PluginReference.test.tsx > PluginReference skill list (SPEC-scr-044) > shows fallback message when /plugin-skills returns empty array` — "skills section shows a fallback message when the endpoint returns an empty list"
