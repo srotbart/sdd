@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "d84efeb9"
+version: "b40e7b27"
 ---
 
 # SPEC-wf-026 — Improvements are a team-produced enhancement artifact type
@@ -21,3 +21,8 @@ SDD includes an **improvements** artifact type, the enhancement-focused sibling 
 - An improvement artifact records: what to improve, where, expected benefit, and an effort/impact estimate
 - Proposals are de-duplicated across the three agents into distinct artifacts
 - Issues and improvements share the same artifact mechanics, differing only in intent
+
+**Tests:**
+- `plugin/skills/review-improvements/SKILL.md` contains "TeamCreate" — "review-improvements skill invokes TeamCreate to spawn 3 agents"
+- `.sdd/improvements/` directory exists — "improvements artifact storage location is scaffolded"
+- `.sdd/improvements/archive/` directory exists — "improvements archive storage location is scaffolded"
