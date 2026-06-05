@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: ui-screens
 status: active
 aliases: []
-version: "99416b0d"
+version: "949a31cd"
 ---
 
 # SPEC-scr-049 — Test indicators appear on each spec artifact list row
@@ -20,3 +20,10 @@ In the Specs screen, each spec artifact (per-domain) list row displays a single 
 - Per-artifact coverage is visible in the list without opening the artifact
 - The indicator reuses `TestStatusDot` / the existing coverage computation (no new status model)
 - The existing top coverage strip is retained for detailed counts
+
+**Tests:**
+- `hub/client/src/screens/Specs.test.tsx::SPEC-scr-049 each specs-domain-row shows exactly one TestStatusDot` — "each domain sidebar row shows exactly one aggregate test status dot"
+- `hub/client/src/screens/Specs.test.tsx::SPEC-scr-049 domain with all passing items shows a passing dot (green circle)` — "passing domain shows a passing dot"
+- `hub/client/src/screens/Specs.test.tsx::SPEC-scr-049 domain with one failing item shows a failing dot` — "domain with failing items shows a failing dot"
+- `hub/client/src/screens/Specs.test.tsx::SPEC-scr-049 domain with no test runs shows a not-run dot` — "domain with no test runs shows a not-run dot"
+- `hub/client/src/screens/Specs.test.tsx::SPEC-scr-049 the existing coverage strip is still rendered alongside the sidebar dots` — "the top coverage strip is retained"

@@ -172,12 +172,95 @@ describe('Specs screen coverage summary strip (SPEC-scr-046)', () => {
   });
 });
 
+describe('Specs screen sidebar domain aggregate TestStatusDot (SPEC-scr-049)', () => {
+  const SPEC_ALL_PASSING: Spec = {
+    id: 'SPEC-scr',
+    domain: 'ui-screens',
+    abbrev: 'scr',
+    version: 'abc12345',
+    items: [
+      { id: 'SPEC-scr-001', title: 'Item A', status: 'active', body: '', refs: [], testStatus: { status: 'passing', tests: [] } },
+      { id: 'SPEC-scr-002', title: 'Item B', status: 'active', body: '', refs: [], testStatus: { status: 'passing', tests: [] } },
+    ],
+  };
+
+  const SPEC_WITH_FAILING: Spec = {
+    id: 'SPEC-scr',
+    domain: 'ui-screens',
+    abbrev: 'scr',
+    version: 'abc12345',
+    items: [
+      { id: 'SPEC-scr-001', title: 'Item A', status: 'active', body: '', refs: [], testStatus: { status: 'passing', tests: [] } },
+      { id: 'SPEC-scr-002', title: 'Item B', status: 'active', body: '', refs: [], testStatus: { status: 'failing', tests: [] } },
+    ],
+  };
+
+  const SPEC_NOT_RUN: Spec = {
+    id: 'SPEC-scr',
+    domain: 'ui-screens',
+    abbrev: 'scr',
+    version: 'abc12345',
+    items: [
+      { id: 'SPEC-scr-001', title: 'Item A', status: 'active', body: '', refs: [], testStatus: { status: 'not-run' } },
+    ],
+  };
+
+  it('SPEC-scr-049 each specs-domain-row shows exactly one TestStatusDot', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_A, SPEC_B]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const domainRows = container.querySelectorAll('.specs-domain-row');
+    expect(domainRows.length).toBe(2);
+    domainRows.forEach((row) => {
+      const dots = row.querySelectorAll('.test-status-dot');
+      expect(dots.length).toBe(1);
+    });
+  });
+
+  it('SPEC-scr-049 domain with all passing items shows a passing dot (green circle)', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_ALL_PASSING]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const dot = container.querySelector('.specs-domain-row .test-status-dot__circle') as HTMLElement;
+    expect(dot).not.toBeNull();
+    expect(dot.getAttribute('aria-label')).toBe('passing');
+  });
+
+  it('SPEC-scr-049 domain with one failing item shows a failing dot', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_WITH_FAILING]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const dot = container.querySelector('.specs-domain-row .test-status-dot__circle') as HTMLElement;
+    expect(dot).not.toBeNull();
+    expect(dot.getAttribute('aria-label')).toBe('failing');
+  });
+
+  it('SPEC-scr-049 domain with no test runs shows a not-run dot', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_NOT_RUN]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    const dot = container.querySelector('.specs-domain-row .test-status-dot__circle') as HTMLElement;
+    expect(dot).not.toBeNull();
+    expect(dot.getAttribute('aria-label')).toBe('not-run');
+  });
+
+  it('SPEC-scr-049 the existing coverage strip is still rendered alongside the sidebar dots', () => {
+    const { container } = render(
+      <Specs specs={[SPEC_MIXED]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
+    );
+    expect(container.querySelector('.specs-coverage-strip')).not.toBeNull();
+    expect(container.querySelector('.specs-domain-row .test-status-dot')).not.toBeNull();
+  });
+});
+
 describe('Specs screen TestStatusDot (SPEC-scr-027)', () => {
   it('renders a TestStatusDot for every spec item in the list', () => {
-    render(
+    const { container } = render(
       <Specs specs={[SPEC_A]} gaps={GAPS} workItems={WORK_ITEMS} onNav={onNav} />,
     );
-    const dots = document.querySelectorAll('.test-status-dot');
+    const content = container.querySelector('.specs-content');
+    expect(content).not.toBeNull();
+    const dots = content!.querySelectorAll('.test-status-dot');
     expect(dots.length).toBe(SPEC_A.items.length);
   });
 });
