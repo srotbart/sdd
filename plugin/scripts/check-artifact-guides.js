@@ -50,7 +50,7 @@ let allPassed = true;
 
 for (const guide of guides.sort()) {
   const filePath = path.join(artifactsDir, guide);
-  const content = fs.readFileSync(filePath, 'utf8');
+  const content = fs.readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
   const missing = [];
 
   REQUIRED_SECTIONS.forEach((pattern, i) => {

@@ -44,7 +44,7 @@ const skillsByName = new Map();
 for (const dir of skillDirs) {
   const skillFile = path.join(skillsDir, dir, 'SKILL.md');
   if (!fs.existsSync(skillFile)) continue;
-  const content = fs.readFileSync(skillFile, 'utf8');
+  const content = fs.readFileSync(skillFile, 'utf8').replace(/\r\n/g, '\n');
   const fm = parseFrontmatter(content);
   if (fm && fm.name) {
     skillsByName.set(fm.name, dir);
@@ -58,7 +58,7 @@ if (!fs.existsSync(readmePath)) {
   process.exit(1);
 }
 
-const readme = fs.readFileSync(readmePath, 'utf8');
+const readme = fs.readFileSync(readmePath, 'utf8').replace(/\r\n/g, '\n');
 
 // Find the ## Skills section
 const skillsSectionMatch = readme.match(/## Skills\n\n([\s\S]*?)(?=\n## |\n---|\Z)/);

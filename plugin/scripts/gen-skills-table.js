@@ -74,7 +74,7 @@ for (const dir of skillDirs.sort()) {
     console.warn(`WARN: No SKILL.md found in ${dir}/`);
     continue;
   }
-  const content = fs.readFileSync(skillFile, 'utf8');
+  const content = fs.readFileSync(skillFile, 'utf8').replace(/\r\n/g, '\n');
   const fm = parseFrontmatter(content);
   if (!fm || !fm.name) {
     console.warn(`WARN: Could not parse frontmatter from ${dir}/SKILL.md`);
@@ -118,7 +118,7 @@ if (!fs.existsSync(readmePath)) {
   process.exit(1);
 }
 
-let readme = fs.readFileSync(readmePath, 'utf8');
+let readme = fs.readFileSync(readmePath, 'utf8').replace(/\r\n/g, '\n');
 
 // Find the "## Skills" section and replace the table within it
 // The table runs from the first | after "## Skills" to the first blank line after the table
