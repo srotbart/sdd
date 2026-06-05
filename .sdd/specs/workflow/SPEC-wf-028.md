@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "08ab5d72"
+version: "2f1cabfc"
 ---
 
 # SPEC-wf-028 — Coding standards are user-authored and live outside the spec
@@ -20,3 +20,7 @@ Repositories using SDD have **user-authored coding standards** covering formatti
 - Standards are not represented as spec items and are not evaluated by `/sdd:spec-audit`
 - Standards are present both in `CLAUDE.md` (proactive delivery) and a structured `.sdd/standards/` artifact (reviewer rubric), kept consistent
 - Standards apply in any repository containing a `.sdd/` directory
+
+**Tests:**
+- `.sdd/standards/standards-template.md` exists — "standards rubric template is scaffolded in .sdd/standards/"
+- `CLAUDE.md` contains "Coding Standards" — "CLAUDE.md has a standards section for proactive delivery"
