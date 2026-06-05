@@ -808,6 +808,191 @@ describe('liveAgents populated from WebSocket messages (WI-arch-025)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// SPEC-scr-052 — Sidenav active-artifact counts cover every artifact-bearing tab
+// ---------------------------------------------------------------------------
+describe('Sidenav tabCounts — issues, improvements, projections, designs, standards (SPEC-scr-052)', () => {
+  async function selectWorkspace() {
+    const wsTrigger = await waitFor(() => {
+      const el = document.querySelector('.sidenav-ws-trigger');
+      if (!el) throw new Error('no ws trigger');
+      return el;
+    });
+    await userEvent.click(wsTrigger);
+    const wsRow = await waitFor(() => {
+      const el = document.querySelector('.sidenav-ws-panel-row');
+      if (!el) throw new Error('no ws panel row');
+      return el;
+    });
+    await userEvent.click(wsRow);
+  }
+
+  function setupFetchWithData(overrides: Partial<Record<string, unknown>>) {
+    global.fetch = vi.fn((url: string) => {
+      if (url === '/workspaces') {
+        return Promise.resolve({ json: () => Promise.resolve([WS]) } as Response);
+      }
+      for (const [suffix, data] of Object.entries(overrides)) {
+        if ((url as string).endsWith(suffix)) {
+          return Promise.resolve({ json: () => Promise.resolve(data) } as Response);
+        }
+      }
+      return Promise.resolve({ json: () => Promise.resolve([]) } as Response);
+    }) as unknown as typeof fetch;
+  }
+
+  function findNavRow(label: string) {
+    return Array.from(document.querySelectorAll('.sidenav-nav-row'))
+      .find((el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === label);
+  }
+
+  it('issues count badge shows active issues only (excludes resolved and wont-fix)', async () => {
+    setupFetchWithData({
+      '/issues': [
+        { id: 'ISS-001', domain: 'arch', severity: 'high', status: 'open', title: 'A', body: '', discovered: '' },
+        { id: 'ISS-002', domain: 'arch', severity: 'low', status: 'in-progress', title: 'B', body: '', discovered: '' },
+        { id: 'ISS-003', domain: 'arch', severity: 'low', status: 'resolved', title: 'C', body: '', discovered: '' },
+        { id: 'ISS-004', domain: 'arch', severity: 'low', status: 'wont-fix', title: 'D', body: '', discovered: '' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('issues');
+      expect(row).toBeTruthy();
+      const badge = row!.querySelector('.sidenav-nav-count');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toBe('2');
+    });
+  });
+
+  it('issues count badge is absent when all issues are resolved or wont-fix', async () => {
+    setupFetchWithData({
+      '/issues': [
+        { id: 'ISS-001', domain: 'arch', severity: 'high', status: 'resolved', title: 'A', body: '', discovered: '' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('issues');
+      expect(row).toBeTruthy();
+      expect(row!.querySelector('.sidenav-nav-count')).toBeNull();
+    });
+  });
+
+  it('improvements count badge shows active improvements only (excludes done and wont-do)', async () => {
+    setupFetchWithData({
+      '/improvements': [
+        { id: 'IMP-001', domain: 'arch', effort: 'low', impact: 'high', status: 'open', title: 'A', body: '', discovered: '' },
+        { id: 'IMP-002', domain: 'arch', effort: 'low', impact: 'low', status: 'in-progress', title: 'B', body: '', discovered: '' },
+        { id: 'IMP-003', domain: 'arch', effort: 'low', impact: 'low', status: 'done', title: 'C', body: '', discovered: '' },
+        { id: 'IMP-004', domain: 'arch', effort: 'low', impact: 'low', status: 'wont-do', title: 'D', body: '', discovered: '' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('improvements');
+      expect(row).toBeTruthy();
+      const badge = row!.querySelector('.sidenav-nav-count');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toBe('2');
+    });
+  });
+
+  it('improvements count badge is absent when all improvements are done or wont-do', async () => {
+    setupFetchWithData({
+      '/improvements': [
+        { id: 'IMP-001', domain: 'arch', effort: 'low', impact: 'low', status: 'done', title: 'A', body: '', discovered: '' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('improvements');
+      expect(row).toBeTruthy();
+      expect(row!.querySelector('.sidenav-nav-count')).toBeNull();
+    });
+  });
+
+  it('projections count badge shows number of projections documents', async () => {
+    setupFetchWithData({
+      '/projections': [
+        { name: 'overview', lastModified: '2026-06-01T00:00:00Z' },
+        { name: 'status', lastModified: '2026-06-01T00:00:00Z' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('projections');
+      expect(row).toBeTruthy();
+      const badge = row!.querySelector('.sidenav-nav-count');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toBe('2');
+    });
+  });
+
+  it('designs count badge shows number of designs documents', async () => {
+    setupFetchWithData({
+      '/designs': [
+        { name: 'auth-flow', lastModified: '2026-06-01T00:00:00Z' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('designs');
+      expect(row).toBeTruthy();
+      const badge = row!.querySelector('.sidenav-nav-count');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toBe('1');
+    });
+  });
+
+  it('projections count badge is absent when there are no projections', async () => {
+    setupFetchWithData({ '/projections': [] });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('projections');
+      expect(row).toBeTruthy();
+      expect(row!.querySelector('.sidenav-nav-count')).toBeNull();
+    });
+  });
+
+  it('standards count badge shows number of standards files', async () => {
+    setupFetchWithData({
+      '/standards': [
+        { name: 'standards-template.md', content: '# Standards' },
+        { name: 'additional.md', content: '# More' },
+      ],
+    });
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const row = findNavRow('standards');
+      expect(row).toBeTruthy();
+      const badge = row!.querySelector('.sidenav-nav-count');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toBe('2');
+    });
+  });
+
+  it('session, activity, and settings tabs render no count badge', async () => {
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      for (const label of ['session', 'activity', 'settings']) {
+        const row = findNavRow(label);
+        expect(row).toBeTruthy();
+        expect(row!.querySelector('.sidenav-nav-count')).toBeNull();
+      }
+    });
+  });
+});
+
 describe('Dashboard receives live WorkspaceData (WI-scr-025)', () => {
   let mockWsInstance: {
     onopen: (() => void) | null;

@@ -176,6 +176,9 @@ export function App() {
   const [liveActivity, setLiveActivity] = useState<ActivityLine[]>([]);
   const [projectionsRefreshToken, setProjectionsRefreshToken] = useState<number>(0);
   const [designsRefreshToken, setDesignsRefreshToken] = useState<number>(0);
+  const [liveProjectionsCount, setLiveProjectionsCount] = useState<number>(0);
+  const [liveDesignsCount, setLiveDesignsCount] = useState<number>(0);
+  const [liveStandardsCount, setLiveStandardsCount] = useState<number>(0);
 
   useEffect(() => {
     activeWorkspaceIdRef.current = activeWorkspaceId;
@@ -364,6 +367,30 @@ export function App() {
       .catch(() => setLiveImprovements([]));
   }, [activeWorkspaceId]);
 
+  useEffect(() => {
+    if (!activeWorkspaceId) { setLiveProjectionsCount(0); return; }
+    fetch(`/workspaces/${activeWorkspaceId}/projections`)
+      .then((r) => r.json())
+      .then((data: unknown[]) => setLiveProjectionsCount(data.length))
+      .catch(() => setLiveProjectionsCount(0));
+  }, [activeWorkspaceId, projectionsRefreshToken]);
+
+  useEffect(() => {
+    if (!activeWorkspaceId) { setLiveDesignsCount(0); return; }
+    fetch(`/workspaces/${activeWorkspaceId}/designs`)
+      .then((r) => r.json())
+      .then((data: unknown[]) => setLiveDesignsCount(data.length))
+      .catch(() => setLiveDesignsCount(0));
+  }, [activeWorkspaceId, designsRefreshToken]);
+
+  useEffect(() => {
+    if (!activeWorkspaceId) { setLiveStandardsCount(0); return; }
+    fetch(`/workspaces/${activeWorkspaceId}/standards`)
+      .then((r) => r.json())
+      .then((data: unknown[]) => setLiveStandardsCount(data.length))
+      .catch(() => setLiveStandardsCount(0));
+  }, [activeWorkspaceId]);
+
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId) ?? null;
   const isHubActive = activeWorkspaceId === null;
 
@@ -474,6 +501,11 @@ export function App() {
           gaps: liveGaps.filter((g) => g.status !== 'closed' && g.status !== 'deferred').length,
           'work items': liveWorkItems.filter((w) => w.status !== 'done' && w.status !== 'abandoned').length,
           specs: liveSpecs.length,
+          issues: liveIssues.filter((i) => i.status === 'open' || i.status === 'in-progress').length,
+          improvements: liveImprovements.filter((i) => i.status === 'open' || i.status === 'in-progress').length,
+          projections: liveProjectionsCount,
+          designs: liveDesignsCount,
+          standards: liveStandardsCount,
         }}
         isHubActive={isHubActive}
         onWorkspaceAttached={fetchWorkspaces}
