@@ -406,6 +406,159 @@ export function parseWorkItems(sddPath: string): WorkItem[] {
   return items;
 }
 
+// ---- Issues (ISS-*) -------------------------------------------------------
+
+export interface Issue {
+  id: string;
+  domain: string;
+  severity: string;
+  status: string;
+  title: string;
+  body: string;
+  discovered: string;
+}
+
+function parseIssueFile(filePath: string): Issue | null {
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+  const { meta, body } = parseFrontmatter(content);
+  if (!meta["id"] || !meta["status"]) return null;
+  const titleMatch = /^# (?:Issue|ISS-[^\s]+)[:\s]*(.*)$/m.exec(body);
+  const title = titleMatch ? titleMatch[1].trim() : meta["id"];
+  return {
+    id: meta["id"],
+    domain: meta["domain"] ?? "",
+    severity: meta["severity"] ?? "medium",
+    status: meta["status"],
+    title,
+    body: body.replace(/^# .+\n?/m, "").trim(),
+    discovered: meta["discovered"] ?? "",
+  };
+}
+
+export function parseIssues(sddPath: string): Issue[] {
+  const issuesDir = path.join(sddPath, "issues");
+  const issues: Issue[] = [];
+  let files: string[];
+  try {
+    files = fs.readdirSync(issuesDir).filter((f) => f.startsWith("ISS-") && f.endsWith(".md"));
+  } catch {
+    return issues;
+  }
+  for (const file of files) {
+    const parsed = parseIssueFile(path.join(issuesDir, file));
+    if (parsed) issues.push(parsed);
+  }
+  const archiveDir = path.join(issuesDir, "archive");
+  let archiveFiles: string[];
+  try {
+    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.startsWith("ISS-") && f.endsWith(".md"));
+  } catch {
+    return issues;
+  }
+  for (const file of archiveFiles) {
+    const parsed = parseIssueFile(path.join(archiveDir, file));
+    if (parsed) issues.push(parsed);
+  }
+  return issues;
+}
+
+// ---- Improvements (IMP-*) -------------------------------------------------
+
+export interface Improvement {
+  id: string;
+  domain: string;
+  effort: string;
+  impact: string;
+  status: string;
+  title: string;
+  body: string;
+  discovered: string;
+}
+
+function parseImprovementFile(filePath: string): Improvement | null {
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+  const { meta, body } = parseFrontmatter(content);
+  if (!meta["id"] || !meta["status"]) return null;
+  const titleMatch = /^# (?:Improvement|IMP-[^\s]+)[:\s]*(.*)$/m.exec(body);
+  const title = titleMatch ? titleMatch[1].trim() : meta["id"];
+  return {
+    id: meta["id"],
+    domain: meta["domain"] ?? "",
+    effort: meta["effort"] ?? "medium",
+    impact: meta["impact"] ?? "medium",
+    status: meta["status"],
+    title,
+    body: body.replace(/^# .+\n?/m, "").trim(),
+    discovered: meta["discovered"] ?? "",
+  };
+}
+
+export function parseImprovements(sddPath: string): Improvement[] {
+  const improvementsDir = path.join(sddPath, "improvements");
+  const improvements: Improvement[] = [];
+  let files: string[];
+  try {
+    files = fs.readdirSync(improvementsDir).filter((f) => f.startsWith("IMP-") && f.endsWith(".md"));
+  } catch {
+    return improvements;
+  }
+  for (const file of files) {
+    const parsed = parseImprovementFile(path.join(improvementsDir, file));
+    if (parsed) improvements.push(parsed);
+  }
+  const archiveDir = path.join(improvementsDir, "archive");
+  let archiveFiles: string[];
+  try {
+    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.startsWith("IMP-") && f.endsWith(".md"));
+  } catch {
+    return improvements;
+  }
+  for (const file of archiveFiles) {
+    const parsed = parseImprovementFile(path.join(archiveDir, file));
+    if (parsed) improvements.push(parsed);
+  }
+  return improvements;
+}
+
+// ---- Standards (readable docs from .sdd/standards/) ----------------------
+
+export interface StandardsFile {
+  name: string;
+  content: string;
+}
+
+export function parseStandards(sddPath: string): StandardsFile[] {
+  const standardsDir = path.join(sddPath, "standards");
+  const result: StandardsFile[] = [];
+  let files: string[];
+  try {
+    files = fs.readdirSync(standardsDir).filter((f) => f.endsWith(".md") && !f.startsWith("."));
+  } catch {
+    return result;
+  }
+  for (const file of files) {
+    try {
+      const content = fs.readFileSync(path.join(standardsDir, file), "utf8");
+      result.push({ name: file, content });
+    } catch {
+      // skip unreadable files
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+
 export function parseSpecs(sddPath: string): Spec[] {
   const specsDir = path.join(sddPath, "specs");
   let entries: fs.Dirent[];

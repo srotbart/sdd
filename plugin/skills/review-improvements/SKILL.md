@@ -90,7 +90,7 @@ engaged-by: null  # WI-{abbrev}-{seq} or IMP-engage invocation when engaged
 - `impact: low` — minor ergonomic improvement
 
 **The team never auto-applies improvements.** Writing the artifact is the only
-output. Whether to act is the user's decision after engaging with `/sdd:issue-engage`.
+output. Whether to act is the user's decision after engaging with `/sdd:review-engage`.
 
 ### 4. Report
 
@@ -111,7 +111,7 @@ output. Whether to act is the user's decision after engaging with `/sdd:issue-en
 
 ---
 4 improvements written.
-Next: Engage proposals with the user. Run `/sdd:issue-engage IMP-auth-001` to proceed.
+Next: Engage proposals with the user. Run `/sdd:review-engage IMP-auth-001` to proceed.
 ```
 
 ## Constraints
@@ -138,14 +138,14 @@ stable. IDs are never recycled.
 **Terminal states → archive:** `accepted`, `dismissed`
 **Active states:** `open`
 
-Engagement (dismissal or acceptance) is handled by `/sdd:issue-engage`, not by
+Engagement (dismissal or acceptance) is handled by `/sdd:review-engage`, not by
 this skill.
 
 ## Shared Mechanics with Issues
 
 The improvements artifact shares the same mechanics as the issues artifact
 (SPEC-wf-025): storage layout with `archive/`, de-duplication across team,
-in-document engagement via `/sdd:issue-engage`, and terminal-state archival.
+in-document engagement via `/sdd:review-engage`, and terminal-state archival.
 The distinction is intent: issues flag defects; improvements propose enhancements.
 
 ## Schema Reference

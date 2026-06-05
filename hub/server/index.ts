@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { getDb, getAllWorkspaces, getRecentWorkspaces, getWorkspaceById, updateWorkspace, insertWorkspace } from "./db/index.js";
-import { parseSpecs, parseTargets, parseGaps, parseWorkItems } from "./sdd-parser.js";
+import { parseSpecs, parseTargets, parseGaps, parseWorkItems, parseIssues, parseImprovements, parseStandards } from "./sdd-parser.js";
 import { attachUiWebSocketServer, broadcastUpdate, broadcastSddChanged } from "./ws-ui.js";
 import { getWorkspacesEnriched } from "./workspace-data.js";
 export type { WorkspaceCounts, WorkspaceData } from "./workspace-data.js";
@@ -232,6 +232,39 @@ async function handleApi(
       return true;
     }
     json(res, 200, parseTargets(path.join(ws.path, ".sdd")));
+    return true;
+  }
+
+  const issuesMatch = /^\/workspaces\/([^/?]+)\/issues$/.exec(url);
+  if (method === "GET" && issuesMatch) {
+    const ws = getWorkspaceById(issuesMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    json(res, 200, parseIssues(path.join(ws.path, ".sdd")));
+    return true;
+  }
+
+  const improvementsMatch = /^\/workspaces\/([^/?]+)\/improvements$/.exec(url);
+  if (method === "GET" && improvementsMatch) {
+    const ws = getWorkspaceById(improvementsMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    json(res, 200, parseImprovements(path.join(ws.path, ".sdd")));
+    return true;
+  }
+
+  const standardsMatch = /^\/workspaces\/([^/?]+)\/standards$/.exec(url);
+  if (method === "GET" && standardsMatch) {
+    const ws = getWorkspaceById(standardsMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    json(res, 200, parseStandards(path.join(ws.path, ".sdd")));
     return true;
   }
 

@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "4f211211"
+version: "f764a46d"
 ---
 
 # SPEC-wf-027 — Issues and improvements are engaged like targets and resolve into a spec change or a gap
@@ -22,5 +22,5 @@ Issue and improvement artifacts are not acted on automatically. They are followe
 - The engage step is intent-phase (requires human sign-off), consistent with SPEC-wf-001
 
 **Tests:**
-- `plugin/skills/issue-engage/SKILL.md` contains "dismissed" — "issue-engage skill handles dismissed terminal decision with provenance"
-- `plugin/skills/issue-engage/SKILL.md` contains "accepted" — "issue-engage skill handles accepted terminal decision routing to spec change or gap"
+- `plugin/skills/review-engage/SKILL.md` contains "dismissed" — "review-engage skill handles dismissed terminal decision with provenance"
+- `plugin/skills/review-engage/SKILL.md` contains "accepted" — "review-engage skill handles accepted terminal decision routing to spec change or gap"

@@ -131,6 +131,56 @@ draft → awaiting-agent → awaiting-user → ready → accepted → [archive]
 /sdd:session-start               # check remaining state
 ```
 
+## All Skills
+
+### `/sdd:explain` — Explain
+asks to "explain how X works", "document X", "write an explanation of X", or wants a deep-dive document on a component, concept, or subsystem in the current project
+
+### `/sdd:gap-to-work-items` — Gap To Work Items
+says "decompose gaps into work items", "create work items for GAP-auth", "generate work items from gap report", "break down gaps for authentication", or wants to turn open gap files into actionable work items
+
+### `/sdd:install-statusline` — Install Statusline
+invokes `/sdd:install-statusline` or asks to "install the SDD statusline", "set up the statusline", or "add SDD statusline to Claude Code"
+
+### `/sdd:next` — Next
+says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all domains with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill
+
+### `/sdd:review-engage` — Review Engage
+says "engage issue ISS-auth-001", "engage improvement IMP-auth-001", "discuss this finding", "accept this issue", "dismiss this improvement", "what should I do about ISS-X", or wants to interactively decide what to do with an issue or improvement artifact
+
+### `/sdd:review-improvements` — Review Improvements
+says "find improvements", "suggest refactors", "what can be simplified", "propose enhancements", or wants a 3-agent team to propose improvements — enhancements, refactors, simplifications, performance, ergonomics, better patterns
+
+### `/sdd:review-issues` — Review Issues
+says "run a code review", "find issues in the codebase", "sweep for problems", "review domain X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts
+
+### `/sdd:sdd-help` — Sdd Help
+says "how does SDD work", "explain spec-driven development", "what is the SDD workflow", "how do I use SDD", "explain the SDD pipeline", "what are SDD skills", or wants to understand spec-driven development before starting or when confused about the workflow
+
+### `/sdd:sdd-init` — Sdd Init
+says "initialize SDD", "set up SDD", "create the SDD folder", "bootstrap SDD for this project", or wants to start using spec-driven development in a project that has no `.sdd/` directory yet
+
+### `/sdd:session-start` — Session Start
+says "start my SDD session", "show SDD state", "what's pending in SDD", "what targets are waiting", "check my SDD", or begins work on a spec-driven project and wants a status snapshot
+
+### `/sdd:spawn-sdd-worker` — Spawn Sdd Worker
+says "spawn the sdd worker", "start the sdd worker", "hand off execution to the worker", or wants to delegate the execution phase (spec-audit, gap creation, work item closure) to an autonomous agent for a given domain
+
+### `/sdd:spec-audit` — Spec Audit
+says "audit the spec", "audit authentication spec", "check the codebase against spec", "find gaps in SPEC-auth", "run a gap audit", "audit SPEC-auth-003", or wants to know where the codebase diverges from a spec
+
+### `/sdd:spec-collapse` — Spec Collapse
+says "collapse the spec", "consolidate spec items", "merge spec items", "clean up the spec", "spec is getting messy", or wants to propose structural reorganisation of spec files
+
+### `/sdd:spec-test` — Spec Test
+says "write tests for the spec", "add spec tests for authentication", "cover SPEC-auth-001 with a test", "generate integration tests for the spec", "which spec items have no tests", or wants to add automated test coverage to spec items
+
+### `/sdd:target-engage` — Target Engage
+says "engage target TGT-XXX", "respond to this target", "process this target", "reconcile TGT-XXX with spec", "fold target into spec", or otherwise asks the agent to act on a target file in the SDD workflow
+
+### `/sdd:work-item-close` — Work Item Close
+says "close work item WI-auth-001", "implement WI-auth-001", "work on WI-auth-001", "close the next work item", or wants to implement a specific work item including tests
+
 ## Schema Reference
 
 For artifact file formats, frontmatter fields, ID conventions, and state machines:

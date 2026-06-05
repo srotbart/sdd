@@ -164,3 +164,41 @@ export interface Design {
   name: string;
   lastModified: string;
 }
+
+export type IssueSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type IssueStatus = 'open' | 'resolved' | 'wont-fix' | 'in-progress';
+
+export interface Issue {
+  id: string;
+  domain: string;
+  severity: IssueSeverity;
+  status: IssueStatus;
+  title: string;
+  body: string;
+  discovered: string;
+}
+
+export type ImprovementEffort = 'high' | 'medium' | 'low';
+export type ImprovementImpact = 'high' | 'medium' | 'low';
+export type ImprovementStatus = 'open' | 'done' | 'wont-do' | 'in-progress';
+
+export interface Improvement {
+  id: string;
+  domain: string;
+  effort: ImprovementEffort;
+  impact: ImprovementImpact;
+  status: ImprovementStatus;
+  title: string;
+  body: string;
+  discovered: string;
+}
+
+export interface StandardsSection {
+  title: string;
+  content: string;
+}
+
+export interface StandardsData {
+  sections: StandardsSection[];
+  raw: string;
+}

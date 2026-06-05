@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import { StatusPill } from '../components/StatusPill';
 import { TestStatusDot } from '../components/TestStatusDot';
+import { ArtifactIdLink } from '../components/ArtifactIdLink';
 import type { SpecItem, Gap, WorkItem, PerTestResult } from '../types';
 
 interface SpecItemDetailProps {
@@ -65,10 +66,9 @@ export function SpecItemDetail({ item, gaps, workItems, onBack, onNav }: SpecIte
       {(itemGaps.length > 0 || itemWIs.length > 0) && (
         <div className="specs-item__refs">
           {itemGaps.map((g) => (
-            <button
+            <span
               key={g.id}
               className="specs-ref-pill"
-              onClick={() => onNav('gaps', g.id)}
             >
               <span
                 className="specs-ref-pill__led"
@@ -79,21 +79,20 @@ export function SpecItemDetail({ item, gaps, workItems, onBack, onNav }: SpecIte
                       : 'var(--st-done)',
                 }}
               />
-              {g.id}
-            </button>
+              <ArtifactIdLink id={g.id} />
+            </span>
           ))}
           {itemWIs.map((w) => (
-            <button
+            <span
               key={w.id}
               className="specs-ref-pill"
-              onClick={() => onNav('work items', w.id)}
             >
               <span
                 className="specs-ref-pill__led"
                 style={{ background: 'var(--st-progress)' }}
               />
-              {w.id}
-            </button>
+              <ArtifactIdLink id={w.id} />
+            </span>
           ))}
         </div>
       )}
