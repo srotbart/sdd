@@ -1,6 +1,6 @@
 {
   "name": "sdd",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Spec-driven development: declare what must be true, let agents find and close the gaps.",
   "author": {
     "name": "Sergey Rotbart",
