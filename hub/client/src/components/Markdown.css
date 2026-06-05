@@ -1,0 +1,32 @@
+/* Syntax highlighting — maps highlight.js token classes to app theme tokens.
+   Unmapped token classes inherit the default code color (--ink) so no third-party
+   color scheme bleeds in. Follows light/dark theme automatically via CSS variables. */
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-operator,
+.hljs-punctuation {
+  color: var(--hl-kw);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_,
+.hljs-built_in {
+  color: var(--hl-fn);
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-attribute,
+.hljs-template-variable,
+.hljs-regexp {
+  color: var(--hl-str);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-meta,
+.hljs-symbol {
+  color: var(--hl-num);
+}

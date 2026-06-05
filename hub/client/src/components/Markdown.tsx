@@ -1,6 +1,8 @@
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import { ArtifactIdLink } from './ArtifactIdLink';
+import './Markdown.css';
 
 // Minimal local type aliases so we don't need an @types/mdast import.
 // Only the node shapes used by the plugin are declared here.
@@ -120,6 +122,7 @@ export function Markdown({ children }: MarkdownProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkArtifactLinks]}
+      rehypePlugins={[[rehypeHighlight, { detect: false, ignoreMissing: true }]]}
       urlTransform={urlTransform}
       components={{
         a({ href, children: linkChildren, ...props }) {

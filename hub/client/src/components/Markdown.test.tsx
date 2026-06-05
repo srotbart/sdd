@@ -125,3 +125,56 @@ describe('Markdown component — artifact ID linkification (SPEC-uic-014)', () =
     expect(buttons[0].textContent).toBe('TGT-001');
   });
 });
+
+describe('Markdown component — syntax highlighting (SPEC-uic-015)', () => {
+  it('a fenced code block with a language tag renders hljs class and token spans', () => {
+    const md = '```ts\nconst x: string = "hello";\n```';
+    const { container } = render(<Markdown>{md}</Markdown>);
+    const code = container.querySelector('code');
+    expect(code).not.toBeNull();
+    // rehype-highlight adds the hljs class to the <code> element
+    expect(code!.classList.contains('hljs')).toBe(true);
+    // At least one hljs-* token class should be present on a child span
+    const tokenSpans = container.querySelectorAll('[class*="hljs-"]');
+    expect(tokenSpans.length).toBeGreaterThan(0);
+  });
+
+  it('a fenced code block with no language tag renders without error and no token spans', () => {
+    const md = '```\nsome plain code\n```';
+    // Should not throw; detect: false means no auto-detection
+    const { container } = render(<Markdown>{md}</Markdown>);
+    const code = container.querySelector('code');
+    expect(code).not.toBeNull();
+    expect(code!.textContent).toContain('some plain code');
+    const tokenSpans = container.querySelectorAll('[class*="hljs-"]');
+    expect(tokenSpans.length).toBe(0);
+  });
+
+  it('a fenced code block with an unknown language tag degrades gracefully', () => {
+    const md = '```unknownlang\nsome code here\n```';
+    // ignoreMissing: true means no error thrown for unknown languages
+    const { container } = render(<Markdown>{md}</Markdown>);
+    const code = container.querySelector('code');
+    expect(code).not.toBeNull();
+    expect(code!.textContent).toContain('some code here');
+    // No token spans — unknown language falls back to plain text
+    const tokenSpans = container.querySelectorAll('[class*="hljs-"]');
+    expect(tokenSpans.length).toBe(0);
+  });
+
+  it('rehype-raw is NOT in the rehypePlugins list (SPEC-uic-013 safety regression)', () => {
+    // Raw HTML must still be escaped; no rehype-raw means <script> is not rendered
+    const { container } = render(<Markdown>{'<script>alert(1)</script>'}</Markdown>);
+    expect(container.querySelector('script')).toBeNull();
+  });
+
+  it('artifact IDs inside fenced code blocks are still NOT linkified (SPEC-uic-014 regression)', () => {
+    const md = '```ts\nconst id = "TGT-001";\n```';
+    const { container } = renderWithPeeker(<Markdown>{md}</Markdown>);
+    const buttons = container.querySelectorAll('button.artifact-id-link');
+    expect(buttons.length).toBe(0);
+    // The ID still appears as text inside the code block
+    const code = container.querySelector('code');
+    expect(code!.textContent).toContain('TGT-001');
+  });
+});

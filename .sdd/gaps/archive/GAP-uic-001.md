@@ -1,19 +1,20 @@
 ---
 id: GAP-uic-001
-spec-item: SPEC-uic-001
+spec-item: SPEC-uic-015
+domain: ui-components
 status: closed
-discovered: "2026-05-17T00:00:00Z"
-audit-spec-version: "d059c530"
-closed-by: WI-uic-003
+discovered: "2026-06-05T00:00:00Z"
+audit-spec-version: "1d510278"
+closed-by: WI-uic-001
 deferred-reason: null
 ---
 
-# GAP-uic-001 — ArtifactList shared component does not exist
+# Gap: rehype-highlight not installed or wired into the shared Markdown component
 
 **Locations:**
-- `hub/client/src/components/ArtifactList.tsx` — file does not exist
-- `hub/client/src/components/ArtifactList.css` — file does not exist
-- `hub/client/src/screens/Targets.tsx:321` — inline archived divider block instead of ArtifactList
-- `hub/client/src/screens/Gaps.tsx:50` — flat list with no archived/active split; no ArtifactList usage
+- `hub/client/package.json` — `rehype-highlight` and `highlight.js` are absent from dependencies
+- `hub/client/src/components/Markdown.tsx:119` — `ReactMarkdown` is called with no `rehypePlugins`; the `rehype-highlight` plugin is not composed into the pipeline
+- `hub/client/src/styles/tokens.css` — no `hljs-*` class rules mapping highlight.js token classes to `--hl-kw` / `--hl-fn` / `--hl-str` / `--hl-num` CSS tokens
+- `hub/client/src/components/Markdown.test.tsx` — no SPEC-uic-015 test cases covering syntax highlighting behavior
 
-**Reasoning:** `ArtifactList.tsx` and `ArtifactList.css` are entirely absent; `Targets.tsx` renders the archived divider inline; `Gaps.tsx` has no archived section at all — neither screen uses the shared component.
+**Reasoning:** The shared Markdown component has no rehype-highlight plugin, no hljs CSS token mapping, and no tests; fenced code blocks render as flat monospaced text rather than themed highlighted output.
