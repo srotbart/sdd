@@ -56,7 +56,7 @@ interface TargetDetailProps {
   target: Target;
 }
 
-function TargetDetail({ target }: TargetDetailProps) {
+export function TargetDetail({ target }: TargetDetailProps) {
   const [composer, setComposer] = useState('');
   const [editingStatement, setEditingStatement] = useState(false);
 

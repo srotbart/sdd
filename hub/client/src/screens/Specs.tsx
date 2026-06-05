@@ -3,6 +3,8 @@ import './Specs.css';
 import { useSpecSearch } from './useSpecSearch';
 import { SpecItemList } from './SpecItemList';
 import { SpecItemDetail } from './SpecItemDetail';
+import { TestStatusDot } from '../components/TestStatusDot';
+import type { TestStatusKind } from '../components/TestStatusDot';
 import type { Spec, Gap, WorkItem } from '../types';
 
 interface DomainCoverage {
@@ -29,6 +31,14 @@ function computeDomainCoverage(spec: Spec): DomainCoverage {
   }
   const covered = passing + failing + missing;
   return { id: spec.id, domain: spec.domain, covered, total: spec.items.length, passing, failing, missing, notRun, skipped };
+}
+
+function domainRolledUpStatus(cov: DomainCoverage): TestStatusKind {
+  if (cov.failing > 0) return 'failing';
+  if (cov.missing > 0) return 'missing';
+  if (cov.passing > 0 && cov.total === cov.passing) return 'passing';
+  if (cov.skipped > 0 && cov.passing === 0 && cov.failing === 0 && cov.missing === 0 && cov.notRun === 0) return 'skipped';
+  return 'not-run';
 }
 
 interface SpecsProps {
@@ -111,21 +121,26 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
     <div className="specs-layout">
       <div className="specs-sidebar">
         <div className="specs-sidebar__label">domains</div>
-        {specs.map((spec) => (
-          <div
-            key={spec.id}
-            className={`specs-domain-row${activeSpecId === spec.id ? ' specs-domain-row--active' : ''}`}
-            onClick={() => handleSelectDomain(spec.id)}
-          >
-            <div className="specs-domain-row__inner">
-              <div className="specs-domain-row__name">{spec.domain}</div>
-              <div className="specs-domain-row__meta">
-                {spec.id} · &lt;{spec.version}&gt;
+        {specs.map((spec) => {
+          const cov = coverageRows.find((r) => r.id === spec.id)!;
+          const rolledUp = domainRolledUpStatus(cov);
+          return (
+            <div
+              key={spec.id}
+              className={`specs-domain-row${activeSpecId === spec.id ? ' specs-domain-row--active' : ''}`}
+              onClick={() => handleSelectDomain(spec.id)}
+            >
+              <div className="specs-domain-row__inner">
+                <div className="specs-domain-row__name">{spec.domain}</div>
+                <div className="specs-domain-row__meta">
+                  {spec.id} · &lt;{spec.version}&gt;
+                </div>
               </div>
+              <TestStatusDot status={rolledUp} />
+              <span className="specs-count">{spec.items.length}</span>
             </div>
-            <span className="specs-count">{spec.items.length}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="specs-content">

@@ -1,4 +1,20 @@
-# SDD Artifact Schemas
+# SDD Artifact Schemas — Index
+
+> **This file is an index.** For complete operating rules, schemas, lifecycle,
+> transitions, procedure, invariants, and edge cases for each artifact type,
+> read the authoritative guide for that type:
+>
+> | Artifact | Guide |
+> |---|---|
+> | Target | [`plugin/references/artifacts/target.md`](artifacts/target.md) |
+> | Spec item | [`plugin/references/artifacts/spec.md`](artifacts/spec.md) |
+> | Gap | [`plugin/references/artifacts/gap.md`](artifacts/gap.md) |
+> | Work item | [`plugin/references/artifacts/work-item.md`](artifacts/work-item.md) |
+>
+> The sections below are a quick reference. The guides are the single source
+> of truth — when they conflict with this file, the guides win.
+
+---
 
 All SDD state lives under `.sdd/` at the project root. Specs are durable.
 Targets, gaps, and work-items are scaffolding that archives on terminal-state

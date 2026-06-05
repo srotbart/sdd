@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "c997f814"
+version: "397f6889"
 ---
 
 # SPEC-wf-024 — session-start delivers the artifact operating contract for the session
@@ -20,3 +20,6 @@ The `sdd:session-start` skill emits, as part of its agent-facing output, a terse
 - The contract covers all active artifact types
 - The contract is emitted once, as part of `session-start`, and references the full guides for detail
 - The contract conveys each artifact's working rules (schema, transitions, procedure, invariants), not just a name list
+
+**Tests:**
+- `plugin/skills/session-start/SKILL.md` contains "operating contract" — "session-start SKILL.md includes an operating contract step derived from references/artifacts/"

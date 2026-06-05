@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "e3f507ce"
+version: "449a3de9"
 ---
 
 # SPEC-wf-023 — Each artifact type has one authoritative operating guide
@@ -20,3 +20,6 @@ Each SDD artifact type has exactly one authoritative source that fully defines h
 - `references/schemas.md` and the skills reference these guides instead of duplicating the rules
 - A CI/grep check fails if any artifact guide is missing one of the six sections
 - Each guide is the single source of truth for working with its artifact type (no competing copy)
+
+**Tests:**
+- `plugin/scripts/check-artifact-guides.js` — "exits 0 when all 4 guides have all 6 sections present"

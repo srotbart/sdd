@@ -39,15 +39,22 @@ via frontmatter references back to the spec.
 
 | Skill | Invoke | Purpose |
 |---|---|---|
-| Init | `/sdd:init [intent]` | Bootstrap `.sdd/` directory structure |
-| Help | `/sdd:help` | Explain the workflow and all skills |
-| Session Start | `/sdd:session-start` | Status snapshot — start every session here |
-| Target Engage | `/sdd:target-engage TGT-XXX` | Negotiate a target or fold it into spec |
-| Spec Audit | `/sdd:spec-audit {domain}` | Find gaps between codebase and spec |
-| Gap to Work Items | `/sdd:gap-to-work-items {domain}` | Decompose gaps into actionable tasks |
-| Work Item Close | `/sdd:work-item-close WI-XXX` | Implement a work item including tests |
-| Spec Test | `/sdd:spec-test {domain}` | Generate integration tests for spec items, linked back into the spec |
-| Spec Collapse | `/sdd:spec-collapse` | Propose structural cleanup of spec files |
+| Explain | `/sdd:explain` | Use when the user invokes `/sdd:explain <subject>`, asks to "explain how X works", "document X", "write an explanation of X", or wants a deep-dive document on a component, concept, or subsystem in the current project |
+| Gap To Work Items | `/sdd:gap-to-work-items` | says "decompose gaps into work items", "create work items for GAP-auth", "generate work items from gap report", "break down gaps for authentication", or wants to turn open gap files into actionable work items |
+| Install Statusline | `/sdd:install-statusline` | invokes `/sdd:install-statusline` or asks to "install the SDD statusline", "set up the statusline", or "add SDD statusline to Claude Code" |
+| Issue Engage | `/sdd:issue-engage` | says "engage issue ISS-auth-001", "engage improvement IMP-auth-001", "discuss this finding", "accept this issue", "dismiss this improvement", "what should I do about ISS-X", or wants to interactively decide what to do with an issue or improvement artifact |
+| Next | `/sdd:next` | says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all domains with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill |
+| Review Improvements | `/sdd:review-improvements` | says "find improvements", "suggest refactors", "what can be simplified", "propose enhancements", or wants a 3-agent team to propose improvements — enhancements, refactors, simplifications, performance, ergonomics, better patterns |
+| Review Issues | `/sdd:review-issues` | says "run a code review", "find issues in the codebase", "sweep for problems", "review domain X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts |
+| Sdd Help | `/sdd:sdd-help` | says "how does SDD work", "explain spec-driven development", "what is the SDD workflow", "how do I use SDD", "explain the SDD pipeline", "what are SDD skills", or wants to understand spec-driven development before starting or when confused about the workflow |
+| Sdd Init | `/sdd:sdd-init` | says "initialize SDD", "set up SDD", "create the SDD folder", "bootstrap SDD for this project", or wants to start using spec-driven development in a project that has no `.sdd/` directory yet |
+| Session Start | `/sdd:session-start` | says "start my SDD session", "show SDD state", "what's pending in SDD", "what targets are waiting", "check my SDD", or begins work on a spec-driven project and wants a status snapshot |
+| Spawn Sdd Worker | `/sdd:spawn-sdd-worker` | Use when the user invokes `/sdd:spawn-sdd-worker`, says "spawn the sdd worker", "start the sdd worker", "hand off execution to the worker", or wants to delegate the execution phase (spec-audit, gap creation, work item closure) to an autonomous agent for a given domain |
+| Spec Audit | `/sdd:spec-audit` | says "audit the spec", "audit authentication spec", "check the codebase against spec", "find gaps in SPEC-auth", "run a gap audit", "audit SPEC-auth-003", or wants to know where the codebase diverges from a spec |
+| Spec Collapse | `/sdd:spec-collapse` | says "collapse the spec", "consolidate spec items", "merge spec items", "clean up the spec", "spec is getting messy", or wants to propose structural reorganisation of spec files |
+| Spec Test | `/sdd:spec-test` | says "write tests for the spec", "add spec tests for authentication", "cover SPEC-auth-001 with a test", "generate integration tests for the spec", "which spec items have no tests", or wants to add automated test coverage to spec items |
+| Target Engage | `/sdd:target-engage` | says "engage target TGT-XXX", "respond to this target", "process this target", "reconcile TGT-XXX with spec", "fold target into spec", or otherwise asks the agent to act on a target file in the SDD workflow |
+| Work Item Close | `/sdd:work-item-close` | says "close work item WI-auth-001", "implement WI-auth-001", "work on WI-auth-001", "close the next work item", or wants to implement a specific work item including tests |
 
 ## Getting Started
 

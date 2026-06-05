@@ -72,7 +72,95 @@ Sort within each section by ID ascending (e.g., TGT-001 before TGT-009).
 
 If any section exceeds 10 entries, show the first 5 then `… and N more`.
 
-### 5. Next-action footer
+### 5. Emit high-level orientation
+
+Before the artifact operating contract, emit a concise **high-level orientation**
+for the agent. This is the brief "map" layer — the contract in step 5b is the
+detail layer. The orientation shares its source of truth with `sdd-help` and
+the SPEC-wf-023 artifact guides (it references them; it is not a divergent copy).
+
+**Orientation content:**
+
+1. **Artifact map** — what each SDD artifact type represents and how to act on it
+   at a glance (one line per type):
+   - Target: user intent, negotiated in-document → folds into spec
+   - Spec: canonical invariants, source of truth → audited against codebase
+   - Gap: audit finding, codebase diverges from spec → decomposed into work items
+   - Work item: scoped task to close a gap → implemented with tests
+   - Issue: reviewer-flagged problem → engaged via issue-engage
+   - Improvement: reviewer-proposed enhancement → engaged via issue-engage
+
+2. **Pipeline model** — the spec→code→review→gaps→refactor flow:
+   ```
+   spec (red) → code (green) → review (issues/improvements) → gaps → refactor
+   ```
+   Concrete skills: target-engage → spec-audit → gap-to-work-items → work-item-close
+
+3. **Project-specific context** — essential orientation for this repo's `.sdd/`:
+   - ID conventions: `TGT-{seq}`, `SPEC-{abbrev}-{seq}`, `GAP-{abbrev}-{seq}`, `WI-{abbrev}-{seq}`
+   - Artifact locations: derive from the active artifacts found in steps 2–3
+   - Active domains: list the domain subdirectories found under `.sdd/specs/`
+
+Keep the orientation to ≤15 lines. Reference `references/sdd-pipeline.md` and
+`plugin/skills/sdd-help/SKILL.md` as the authoritative source for the pipeline model.
+
+Omit this block when running in zero-state (no `.sdd/` directory found, step 1).
+
+### 5b. Emit artifact operating contract
+
+After the status snapshot (step 4), emit a terse consolidated **operating
+contract** for the agent, derived from `references/artifacts/*.md`. The purpose
+is to give the agent the working rules for every artifact it may touch during
+the session without requiring it to re-read the full guides.
+
+Emit one block per active artifact type, in this order: target, spec, gap,
+work-item. For each artifact, extract and summarise:
+
+- **ID + path convention** (one line)
+- **Active states** (one line)
+- **Terminal states → archive** (one line)
+- **Key invariants** (2–4 bullet points — the discipline rules most likely to be
+  violated: version recomputation, append-only dialog, atomic writes, etc.)
+
+Keep the total contract under 30 lines. Use a collapsible or clearly-delineated
+block so the user can skip it. Reference each full guide for exhaustive detail:
+`references/artifacts/{type}.md`.
+
+Example format:
+
+```
+---
+## Artifact Operating Contract
+
+**Target** (`TGT-{seq}` · `.sdd/targets/`)
+States: draft → awaiting-agent → awaiting-user → ready → accepted/archived
+Terminal → archive: accepted, archived
+Rules: dialog append-only; current statement editable by either party; soft cap ~3 rounds; atomic write (dialog + status in one edit); conflicts surface as .conflict.md, never auto-merge.
+Full guide: references/artifacts/target.md
+
+**Spec** (`SPEC-{abbrev}-{seq}` · `.sdd/specs/{domain}/`)
+States: active → deprecated/aliased
+Terminal → archive: deprecated, aliased
+Rules: version field recomputed on every write; one invariant per item; ## Invariant + ## Acceptance criteria sections mandatory; IDs never recycled; never deleted, only archived.
+Full guide: references/artifacts/spec.md
+
+**Gap** (`GAP-{abbrev}-{seq}` · `.sdd/gaps/`)
+States: open
+Terminal → archive: closed, accepted, deferred
+Rules: one-line reasoning mandatory; never fabricate file:line locations; audit-spec-version stamped on every write; never renumber IDs; do not close if closed-by is already set.
+Full guide: references/artifacts/gap.md
+
+**Work Item** (`WI-{abbrev}-{seq}` · `.sdd/work-items/`)
+States: pending → in-progress → done/abandoned; blocked
+Terminal → archive: done, abandoned
+Rules: flip to in-progress before writing code; tests are not optional; minimal scope (make reasoning false, nothing more); verify before archiving; do not close gaps with non-null closed-by.
+Full guide: references/artifacts/work-item.md
+---
+```
+
+Omit this block when running in zero-state (no `.sdd/` directory found, step 1).
+
+### 6. Next-action footer
 
 End with exactly one suggestion based on highest-priority state:
 
