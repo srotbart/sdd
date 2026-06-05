@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "0747bc89"
+version: "ce76b5ad"
 ---
 
 # SPEC-wf-030 — session-start gives the agent a high-level orientation to artifacts and the pipeline
@@ -20,3 +20,7 @@ In addition to the user-facing status snapshot and the operating contract (SPEC-
 - The orientation includes the spec → code → review → gaps → refactor pipeline mental model
 - The orientation surfaces project-specific essential context: ID conventions, artifact locations, active domains
 - The model shares one source of truth with `sdd-help` and the SPEC-wf-023 guides (no divergent copy)
+
+**Tests:**
+- `plugin/skills/session-start/SKILL.md` contains "orientation" — "session-start SKILL.md has a high-level orientation step"
+- `plugin/skills/session-start/SKILL.md` contains "spec.*code.*review" — "session-start orientation includes the pipeline mental model"

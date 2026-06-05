@@ -72,7 +72,41 @@ Sort within each section by ID ascending (e.g., TGT-001 before TGT-009).
 
 If any section exceeds 10 entries, show the first 5 then `… and N more`.
 
-### 5. Emit artifact operating contract
+### 5. Emit high-level orientation
+
+Before the artifact operating contract, emit a concise **high-level orientation**
+for the agent. This is the brief "map" layer — the contract in step 5b is the
+detail layer. The orientation shares its source of truth with `sdd-help` and
+the SPEC-wf-023 artifact guides (it references them; it is not a divergent copy).
+
+**Orientation content:**
+
+1. **Artifact map** — what each SDD artifact type represents and how to act on it
+   at a glance (one line per type):
+   - Target: user intent, negotiated in-document → folds into spec
+   - Spec: canonical invariants, source of truth → audited against codebase
+   - Gap: audit finding, codebase diverges from spec → decomposed into work items
+   - Work item: scoped task to close a gap → implemented with tests
+   - Issue: reviewer-flagged problem → engaged via issue-engage
+   - Improvement: reviewer-proposed enhancement → engaged via issue-engage
+
+2. **Pipeline model** — the spec→code→review→gaps→refactor flow:
+   ```
+   spec (red) → code (green) → review (issues/improvements) → gaps → refactor
+   ```
+   Concrete skills: target-engage → spec-audit → gap-to-work-items → work-item-close
+
+3. **Project-specific context** — essential orientation for this repo's `.sdd/`:
+   - ID conventions: `TGT-{seq}`, `SPEC-{abbrev}-{seq}`, `GAP-{abbrev}-{seq}`, `WI-{abbrev}-{seq}`
+   - Artifact locations: derive from the active artifacts found in steps 2–3
+   - Active domains: list the domain subdirectories found under `.sdd/specs/`
+
+Keep the orientation to ≤15 lines. Reference `references/sdd-pipeline.md` and
+`plugin/skills/sdd-help/SKILL.md` as the authoritative source for the pipeline model.
+
+Omit this block when running in zero-state (no `.sdd/` directory found, step 1).
+
+### 5b. Emit artifact operating contract
 
 After the status snapshot (step 4), emit a terse consolidated **operating
 contract** for the agent, derived from `references/artifacts/*.md`. The purpose
