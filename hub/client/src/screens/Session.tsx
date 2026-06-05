@@ -1,7 +1,9 @@
+import { useState, useEffect, useCallback } from 'react';
 import './Session.css';
 import type { Target, Spec, Gap, WorkItem, PipelineStage, Agent } from '../types';
 import { StatusPill } from '../components/StatusPill';
 import { AgentChip } from '../components/AgentChip';
+import { TargetDetail } from './Targets';
 
 interface SessionProps {
   targets: Target[];
@@ -167,6 +169,19 @@ export function Session({
   specVersion,
   onNav,
 }: SessionProps) {
+  const [panelTarget, setPanelTarget] = useState<Target | null>(null);
+
+  const closePanel = useCallback(() => setPanelTarget(null), []);
+
+  useEffect(() => {
+    if (!panelTarget) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') closePanel();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [panelTarget, closePanel]);
+
   const byStatus = (s: Target['status']) => targets.filter((t) => t.status === s);
 
   const awaitingUser = byStatus('awaiting-user');
@@ -194,7 +209,7 @@ export function Session({
   const next = computeNextAction({ awaitingUser, ready, staleDomains, openGaps, work: activeWork });
 
   return (
-    <div className="session">
+    <div className={`session${panelTarget ? ' session--panel-open' : ''}`}>
       <div className="session__terminal">
         <div>
           <span className="session__terminal-prompt">$</span>
@@ -218,7 +233,7 @@ export function Session({
           count={awaitingUser.length}
         >
           {awaitingUser.map((t) => (
-            <AwaitingUserRow key={t.id} target={t} onClick={() => onNav('targets', t.id)} />
+            <AwaitingUserRow key={t.id} target={t} onClick={() => setPanelTarget(t)} />
           ))}
         </CategoryRows>
       )}
@@ -232,7 +247,7 @@ export function Session({
               title={t.title}
               meta={`[${t.domain}]`}
               status={t.status}
-              onClick={() => onNav('targets', t.id)}
+              onClick={() => setPanelTarget(t)}
             />
           ))}
         </CategoryRows>
@@ -250,7 +265,7 @@ export function Session({
               title={t.title}
               meta={`[${t.domain}]`}
               status={t.status}
-              onClick={() => onNav('targets', t.id)}
+              onClick={() => setPanelTarget(t)}
             />
           ))}
         </CategoryRows>
@@ -265,7 +280,7 @@ export function Session({
               title={t.title || '(empty)'}
               meta={`[${t.domain}]`}
               status={t.status}
-              onClick={() => onNav('targets', t.id)}
+              onClick={() => setPanelTarget(t)}
             />
           ))}
         </CategoryRows>
@@ -419,6 +434,23 @@ export function Session({
           <span className="session__terminal-caret" />
         </div>
       </div>
+
+      {panelTarget && (
+        <div className="session-target-panel" role="dialog" aria-modal="true">
+          <div className="session-target-panel__header">
+            <button
+              className="session-target-panel__close"
+              onClick={closePanel}
+              aria-label="Close panel"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="session-target-panel__body">
+            <TargetDetail target={panelTarget} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

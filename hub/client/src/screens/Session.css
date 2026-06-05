@@ -278,3 +278,53 @@
 .session__next-cmd {
   margin-top: 8px;
 }
+
+/* SPEC-scr-048: right-side target detail panel */
+.session--panel-open {
+  display: flex;
+  gap: 0;
+  max-width: none;
+}
+
+.session-target-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  background: var(--paper);
+  border-left: 1px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.session-target-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--hair);
+  flex-shrink: 0;
+}
+
+.session-target-panel__close {
+  background: none;
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-3);
+  padding: 4px 10px;
+}
+
+.session-target-panel__close:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.session-target-panel__body {
+  flex: 1;
+  overflow: auto;
+}
