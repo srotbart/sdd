@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "57c8c116"
+version: "4708f517"
 ---
 
 # SPEC-wf-025 — Issues are a reviewer-team-produced artifact type
@@ -21,3 +21,8 @@ SDD includes an **issues** artifact type produced by a dedicated reviewer team. 
 - An issue artifact records: location, problem description, rationale, and a `low`/`medium`/`high` severity
 - Findings are de-duplicated across the three reviewers into distinct artifacts
 - The reviewer team does not auto-fix the issues it finds
+
+**Tests:**
+- `plugin/skills/review-issues/SKILL.md` contains "TeamCreate" — "review-issues skill invokes TeamCreate to spawn 3 reviewer agents"
+- `.sdd/issues/` directory exists — "issues artifact storage location is scaffolded"
+- `.sdd/issues/archive/` directory exists — "issues archive storage location is scaffolded"
