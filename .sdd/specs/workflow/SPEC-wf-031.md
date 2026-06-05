@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "a652a81d"
+version: "01e47768"
 ---
 
 # SPEC-wf-031 — Plugin documentation stays in sync with the skills
@@ -20,3 +20,7 @@ The plugin's user-facing documentation stays in sync with the actual set of skil
 - A CI check fails on drift: undocumented skills, documented-but-missing skills, or stale descriptions
 - The `sdd-help` skill enumeration is kept consistent by the same mechanism
 - After running the generator, the README table lists exactly the skills present under `plugin/skills/`
+
+**Tests:**
+- `node plugin/scripts/gen-skills-table.js` exits 0 and outputs a markdown table — "generator reads SKILL.md frontmatter and outputs a table"
+- `node plugin/scripts/check-skills-drift.js` exits 0 after README update — "drift check passes: 15 skills in sync"
