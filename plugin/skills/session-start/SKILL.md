@@ -72,7 +72,61 @@ Sort within each section by ID ascending (e.g., TGT-001 before TGT-009).
 
 If any section exceeds 10 entries, show the first 5 then `… and N more`.
 
-### 5. Next-action footer
+### 5. Emit artifact operating contract
+
+After the status snapshot (step 4), emit a terse consolidated **operating
+contract** for the agent, derived from `references/artifacts/*.md`. The purpose
+is to give the agent the working rules for every artifact it may touch during
+the session without requiring it to re-read the full guides.
+
+Emit one block per active artifact type, in this order: target, spec, gap,
+work-item. For each artifact, extract and summarise:
+
+- **ID + path convention** (one line)
+- **Active states** (one line)
+- **Terminal states → archive** (one line)
+- **Key invariants** (2–4 bullet points — the discipline rules most likely to be
+  violated: version recomputation, append-only dialog, atomic writes, etc.)
+
+Keep the total contract under 30 lines. Use a collapsible or clearly-delineated
+block so the user can skip it. Reference each full guide for exhaustive detail:
+`references/artifacts/{type}.md`.
+
+Example format:
+
+```
+---
+## Artifact Operating Contract
+
+**Target** (`TGT-{seq}` · `.sdd/targets/`)
+States: draft → awaiting-agent → awaiting-user → ready → accepted/archived
+Terminal → archive: accepted, archived
+Rules: dialog append-only; current statement editable by either party; soft cap ~3 rounds; atomic write (dialog + status in one edit); conflicts surface as .conflict.md, never auto-merge.
+Full guide: references/artifacts/target.md
+
+**Spec** (`SPEC-{abbrev}-{seq}` · `.sdd/specs/{domain}/`)
+States: active → deprecated/aliased
+Terminal → archive: deprecated, aliased
+Rules: version field recomputed on every write; one invariant per item; ## Invariant + ## Acceptance criteria sections mandatory; IDs never recycled; never deleted, only archived.
+Full guide: references/artifacts/spec.md
+
+**Gap** (`GAP-{abbrev}-{seq}` · `.sdd/gaps/`)
+States: open
+Terminal → archive: closed, accepted, deferred
+Rules: one-line reasoning mandatory; never fabricate file:line locations; audit-spec-version stamped on every write; never renumber IDs; do not close if closed-by is already set.
+Full guide: references/artifacts/gap.md
+
+**Work Item** (`WI-{abbrev}-{seq}` · `.sdd/work-items/`)
+States: pending → in-progress → done/abandoned; blocked
+Terminal → archive: done, abandoned
+Rules: flip to in-progress before writing code; tests are not optional; minimal scope (make reasoning false, nothing more); verify before archiving; do not close gaps with non-null closed-by.
+Full guide: references/artifacts/work-item.md
+---
+```
+
+Omit this block when running in zero-state (no `.sdd/` directory found, step 1).
+
+### 6. Next-action footer
 
 End with exactly one suggestion based on highest-priority state:
 
