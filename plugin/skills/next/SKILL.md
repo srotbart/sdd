@@ -60,7 +60,7 @@ actions. Annotate each with three signals:
 - Spec test → `/sdd:spec-test {domain}`
 - Review issues → `/sdd:review-issues {domain}`
 - Review improvements → `/sdd:review-improvements {domain}`
-- Issue engage → `/sdd:issue-engage ISS-{id}`
+- Issue engage → `/sdd:review-engage ISS-{id}`
 
 ### 3. Rank and present candidates
 

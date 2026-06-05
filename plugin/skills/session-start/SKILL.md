@@ -87,8 +87,8 @@ the SPEC-wf-023 artifact guides (it references them; it is not a divergent copy)
    - Spec: canonical invariants, source of truth → audited against codebase
    - Gap: audit finding, codebase diverges from spec → decomposed into work items
    - Work item: scoped task to close a gap → implemented with tests
-   - Issue: reviewer-flagged problem → engaged via issue-engage
-   - Improvement: reviewer-proposed enhancement → engaged via issue-engage
+   - Issue: reviewer-flagged problem → engaged via review-engage
+   - Improvement: reviewer-proposed enhancement → engaged via review-engage
 
 2. **Pipeline model** — the spec→code→review→gaps→refactor flow:
    ```

@@ -1,10 +1,10 @@
 ---
-name: issue-engage
-description: This skill should be used when the user invokes `/sdd:issue-engage`, says "engage issue ISS-auth-001", "engage improvement IMP-auth-001", "discuss this finding", "accept this issue", "dismiss this improvement", "what should I do about ISS-X", or wants to interactively decide what to do with an issue or improvement artifact. Mirrors the target-engage flow; outcomes are a spec change or a new gap, or dismissal with provenance.
+name: review-engage
+description: This skill should be used when the user invokes `/sdd:review-engage`, says "engage issue ISS-auth-001", "engage improvement IMP-auth-001", "discuss this finding", "accept this issue", "dismiss this improvement", "what should I do about ISS-X", or wants to interactively decide what to do with an issue or improvement artifact. Mirrors the target-engage flow; outcomes are a spec change or a new gap, or dismissal with provenance.
 version: 0.1.0
 ---
 
-# SDD Issue Engage
+# SDD Review Engage
 
 Read an issue (`ISS-*`) or improvement (`IMP-*`) artifact, engage it in-document
 with the user, and reach a terminal decision: **accepted** (creates a spec change
@@ -124,7 +124,7 @@ Or for dismissal:
 **Artifact:** ISS-auth-003 → archived (dismissed)
 
 ---
-Next: Continue engaging the next open issue. Run `/sdd:issue-engage ISS-auth-004` to proceed.
+Next: Continue engaging the next open issue. Run `/sdd:review-engage ISS-auth-004` to proceed.
 ```
 
 ## Constraints

@@ -83,7 +83,7 @@ reviewed-by: null  # WI-{abbrev}-{seq} or ISS-engage invocation when engaged
 - `low` — minor style nit, naming suggestion, low-priority improvement
 
 **Reviewers never auto-fix.** Writing an issue is the only output. The fix is
-the user's decision after engaging the issue with `/sdd:issue-engage`.
+the user's decision after engaging the issue with `/sdd:review-engage`.
 
 ### 4. Report
 
@@ -105,7 +105,7 @@ the user's decision after engaging the issue with `/sdd:issue-engage`.
 
 ---
 5 issues written (1 duplicate removed).
-Next: Engage findings with the user. Run `/sdd:issue-engage ISS-auth-001` to proceed.
+Next: Engage findings with the user. Run `/sdd:review-engage ISS-auth-001` to proceed.
 ```
 
 ## Constraints
@@ -132,7 +132,7 @@ stable. IDs are never recycled.
 **Terminal states → archive:** `accepted`, `dismissed`
 **Active states:** `open`
 
-Engagement (dismissal or acceptance) is handled by `/sdd:issue-engage`, not by
+Engagement (dismissal or acceptance) is handled by `/sdd:review-engage`, not by
 this skill.
 
 ## Schema Reference
