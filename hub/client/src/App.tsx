@@ -17,6 +17,8 @@ import { Issues } from './screens/Issues';
 import { Improvements } from './screens/Improvements';
 import { Standards } from './screens/Standards';
 import { CommandPalette } from './components/CommandPalette';
+import { PeekerProvider } from './components/PeekerContext';
+import { ArtifactPeeker } from './components/ArtifactPeeker';
 import type { WorkspaceData, Target, TargetStatus, Spec, Gap, WorkItem, ActivityLine, Agent, Issue, Improvement } from './types';
 
 const VALID_STATUSES = new Set<TargetStatus>([
@@ -438,7 +440,14 @@ export function App() {
     }
   }
 
+  function handleNav(tab: string, id?: string) {
+    setPluginRefActive(false);
+    setActiveTab(tab);
+    setSelectedItemId(id ?? null);
+  }
+
   return (
+    <PeekerProvider>
     <div className="app-shell">
       <Header
         breadcrumb={breadcrumb}
@@ -500,6 +509,16 @@ export function App() {
           onClose={() => setPaletteOpen(false)}
         />
       )}
+      <ArtifactPeeker
+        targets={liveTargets}
+        specs={liveSpecs}
+        gaps={liveGaps}
+        workItems={liveWorkItems}
+        issues={liveIssues}
+        improvements={liveImprovements}
+        onNav={handleNav}
+      />
     </div>
+    </PeekerProvider>
   );
 }
