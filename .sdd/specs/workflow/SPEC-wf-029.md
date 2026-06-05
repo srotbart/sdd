@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "e55da335"
+version: "8f94f871"
 ---
 
 # SPEC-wf-029 — Coding standards are enforced across three layers, not by spec-audit
@@ -20,3 +20,7 @@ User-authored coding standards (SPEC-wf-028) are enforced through three compleme
 - The issues reviewer team (SPEC-wf-025) audits code against the `.sdd/standards/` rubric for judgement-based rules
 - Standards violations surfaced at review become issues that flow into refactor work items
 - `/sdd:spec-audit` is not used as a coding-standards enforcement mechanism
+
+**Tests:**
+- `bash plugin/scripts/lint-check.sh` exits 0 in a clean state — "lint-check.sh runs and passes in a clean repo"
+- `plugin/scripts/lint-check.sh` does not reference "spec-audit" — "lint-check does not invoke spec-audit for standards enforcement"
