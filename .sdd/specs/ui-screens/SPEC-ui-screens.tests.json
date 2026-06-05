@@ -207,6 +207,33 @@
       "item with no **Tests:** block still gets status=not-run",
       "skipped status renders circle with blue color distinct from not-run gray",
       "skipped status with skipReason includes reason in the title tooltip"
+    ],
+    "SPEC-SCR-050": [
+      "SPEC-scr-050 Issues screen — empty state > renders the empty state message when issues array is empty",
+      "SPEC-scr-050 Issues screen — empty state > does not render any issue rows when issues array is empty",
+      "SPEC-scr-050 Issues screen — with data > renders ISS-* ids in the list rows",
+      "SPEC-scr-050 Issues screen — with data > renders severity badge on each row",
+      "SPEC-scr-050 Issues screen — with data > renders domain in the meta line",
+      "SPEC-scr-050 Issues screen — with data > shows detail panel title when an issue is selected",
+      "SPEC-scr-050 Issues screen — with data > screen has no create/edit/engage buttons",
+      "SPEC-scr-050 Improvements screen — empty state > renders the empty state message when improvements array is empty",
+      "SPEC-scr-050 Improvements screen — empty state > does not render any improvement rows when improvements array is empty",
+      "SPEC-scr-050 Improvements screen — with data > renders IMP-* ids in the list rows",
+      "SPEC-scr-050 Improvements screen — with data > renders effort/impact badge on each row",
+      "SPEC-scr-050 Improvements screen — with data > renders domain in the meta line",
+      "SPEC-scr-050 Improvements screen — with data > shows detail panel title when an improvement is selected",
+      "SPEC-scr-050 Improvements screen — with data > screen has no create/edit/engage buttons"
+    ],
+    "SPEC-SCR-051": [
+      "SPEC-scr-051 Standards screen — empty state > renders empty state when no standards files are returned",
+      "SPEC-scr-051 Standards screen — empty state > renders the standards layout container",
+      "SPEC-scr-051 Standards screen — empty state > shows title bar with the word standards",
+      "SPEC-scr-051 Standards screen — empty state > renders empty state when workspaceId is null",
+      "SPEC-scr-051 Standards screen — with content > renders section headings from the standards content",
+      "SPEC-scr-051 Standards screen — with content > renders standards content as readable sections",
+      "SPEC-scr-051 Standards screen — with content > renders the file source label",
+      "SPEC-scr-051 Standards screen — with content > fetches from the correct endpoint",
+      "SPEC-scr-051 Standards screen — with content > screen has no create/edit buttons"
     ]
   }
 }

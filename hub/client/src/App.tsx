@@ -13,8 +13,11 @@ import { Settings } from './screens/Settings';
 import { PluginReference } from './screens/PluginReference';
 import { Projections } from './screens/Projections';
 import { Designs } from './screens/Designs';
+import { Issues } from './screens/Issues';
+import { Improvements } from './screens/Improvements';
+import { Standards } from './screens/Standards';
 import { CommandPalette } from './components/CommandPalette';
-import type { WorkspaceData, Target, TargetStatus, Spec, Gap, WorkItem, ActivityLine, Agent } from './types';
+import type { WorkspaceData, Target, TargetStatus, Spec, Gap, WorkItem, ActivityLine, Agent, Issue, Improvement } from './types';
 
 const VALID_STATUSES = new Set<TargetStatus>([
   'awaiting-user', 'awaiting-agent', 'ready', 'draft', 'accepted', 'archived',
@@ -28,6 +31,9 @@ const URL_TAB_TO_INTERNAL: Record<string, string> = {
   'designs': 'designs',
   'gaps': 'gaps',
   'work-items': 'work items',
+  'issues': 'issues',
+  'improvements': 'improvements',
+  'standards': 'standards',
   'settings': 'settings',
   'plugin-reference': 'plugin-reference',
   'activity': 'activity',
@@ -41,6 +47,9 @@ const INTERNAL_TAB_TO_URL: Record<string, string> = {
   'designs': 'designs',
   'gaps': 'gaps',
   'work items': 'work-items',
+  'issues': 'issues',
+  'improvements': 'improvements',
+  'standards': 'standards',
   'settings': 'settings',
   'plugin-reference': 'plugin-reference',
   'activity': 'activity',
@@ -160,6 +169,8 @@ export function App() {
   const [liveTargets, setLiveTargets] = useState<Target[]>([]);
   const [liveGaps, setLiveGaps] = useState<Gap[]>([]);
   const [liveWorkItems, setLiveWorkItems] = useState<WorkItem[]>([]);
+  const [liveIssues, setLiveIssues] = useState<Issue[]>([]);
+  const [liveImprovements, setLiveImprovements] = useState<Improvement[]>([]);
   const [liveActivity, setLiveActivity] = useState<ActivityLine[]>([]);
   const [projectionsRefreshToken, setProjectionsRefreshToken] = useState<number>(0);
   const [designsRefreshToken, setDesignsRefreshToken] = useState<number>(0);
@@ -335,6 +346,22 @@ export function App() {
       .catch(() => setLiveWorkItems([]));
   }, [activeWorkspaceId]);
 
+  useEffect(() => {
+    if (!activeWorkspaceId) { setLiveIssues([]); return; }
+    fetch(`/workspaces/${activeWorkspaceId}/issues`)
+      .then((r) => r.json())
+      .then((data: Issue[]) => setLiveIssues(data))
+      .catch(() => setLiveIssues([]));
+  }, [activeWorkspaceId]);
+
+  useEffect(() => {
+    if (!activeWorkspaceId) { setLiveImprovements([]); return; }
+    fetch(`/workspaces/${activeWorkspaceId}/improvements`)
+      .then((r) => r.json())
+      .then((data: Improvement[]) => setLiveImprovements(data))
+      .catch(() => setLiveImprovements([]));
+  }, [activeWorkspaceId]);
+
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId) ?? null;
   const isHubActive = activeWorkspaceId === null;
 
@@ -396,6 +423,12 @@ export function App() {
         return <Gaps gaps={liveGaps} specs={liveSpecs} workItems={liveWorkItems} initialGapId={selectedItemId ?? undefined} onNav={() => {}} />;
       case 'work items':
         return <WorkItems workItems={liveWorkItems} gaps={liveGaps} specs={liveSpecs} agents={liveAgents} initialWiId={selectedItemId ?? undefined} onNav={() => {}} />;
+      case 'issues':
+        return <Issues issues={liveIssues} initialIssueId={selectedItemId ?? undefined} />;
+      case 'improvements':
+        return <Improvements improvements={liveImprovements} initialImprovementId={selectedItemId ?? undefined} />;
+      case 'standards':
+        return <Standards workspaceId={activeWorkspace?.id ?? null} />;
       case 'activity':
         return <Activity lines={liveActivity} agents={liveAgents} />;
       case 'settings':

@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: ui-screens
 status: active
 aliases: []
-version: "26abb74a"
+version: "4e610a0e"
 ---
 
 # SPEC-scr-050 — Dedicated Hub screens for issues and improvements, each with its own artifact list
@@ -20,3 +20,19 @@ The Hub provides dedicated screens for the **issues** and **improvements** artif
 - Both screens have navigation entries alongside the other artifact screens
 - The Hub loads `.sdd/issues/` and `.sdd/improvements/` into the client
 - The screens are read-only (no engage/editing performed in the UI)
+
+**Tests:**
+- `SPEC-scr-050 Issues screen — empty state > renders the empty state message when issues array is empty`
+- `SPEC-scr-050 Issues screen — empty state > does not render any issue rows when issues array is empty`
+- `SPEC-scr-050 Issues screen — with data > renders ISS-* ids in the list rows`
+- `SPEC-scr-050 Issues screen — with data > renders severity badge on each row`
+- `SPEC-scr-050 Issues screen — with data > renders domain in the meta line`
+- `SPEC-scr-050 Issues screen — with data > shows detail panel title when an issue is selected (first issue auto-selected)`
+- `SPEC-scr-050 Issues screen — with data > screen has no create/edit/engage buttons — read-only`
+- `SPEC-scr-050 Improvements screen — empty state > renders the empty state message when improvements array is empty`
+- `SPEC-scr-050 Improvements screen — empty state > does not render any improvement rows when improvements array is empty`
+- `SPEC-scr-050 Improvements screen — with data > renders IMP-* ids in the list rows`
+- `SPEC-scr-050 Improvements screen — with data > renders effort/impact badge on each row`
+- `SPEC-scr-050 Improvements screen — with data > renders domain in the meta line`
+- `SPEC-scr-050 Improvements screen — with data > shows detail panel title when an improvement is selected (first auto-selected)`
+- `SPEC-scr-050 Improvements screen — with data > screen has no create/edit/engage buttons — read-only`

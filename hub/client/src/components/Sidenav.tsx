@@ -9,7 +9,7 @@ export interface Workspace {
   alertCount?: number;
 }
 
-const NAV_TABS = ['session', 'targets', 'specs', 'projections', 'designs', 'gaps', 'work items', 'activity', 'settings'] as const;
+const NAV_TABS = ['session', 'targets', 'specs', 'projections', 'designs', 'gaps', 'work items', 'issues', 'improvements', 'standards', 'activity', 'settings'] as const;
 
 interface SidenavProps {
   workspaces: Workspace[];
