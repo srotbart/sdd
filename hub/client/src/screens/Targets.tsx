@@ -5,6 +5,7 @@ import type { Target, TargetStatus } from '../types';
 
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
+import { ArtifactIdLink } from '../components/ArtifactIdLink';
 
 function fmtAgo(dateStr: string): string {
   const d = new Date(dateStr);
@@ -28,7 +29,7 @@ function TargetListRow({ target, isActive, onClick }: TargetListRowProps) {
       onClick={onClick}
     >
       <div className="target-row__header">
-        <span className="target-row__id">{target.id}</span>
+        <ArtifactIdLink id={target.id} className="target-row__id" />
         <StatusPill status={target.status} />
         <span className="target-row__time">{fmtAgo(target.created)} ago</span>
       </div>

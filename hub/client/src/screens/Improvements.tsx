@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './Improvements.css';
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
+import { ArtifactIdLink } from '../components/ArtifactIdLink';
 import type { Improvement } from '../types';
 
 interface ImprovementsProps {
@@ -36,7 +37,7 @@ export function Improvements({ improvements, initialImprovementId }: Improvement
                   onClick={() => setActiveId(imp.id)}
                 >
                   <div className="improvements-row__top">
-                    <span className="improvements-row__id">{imp.id}</span>
+                    <ArtifactIdLink id={imp.id} className="improvements-row__id" />
                     <span className="improvements-row__effort-impact">
                       effort:{imp.effort} / impact:{imp.impact}
                     </span>

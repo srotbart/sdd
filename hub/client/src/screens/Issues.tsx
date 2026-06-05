@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './Issues.css';
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
+import { ArtifactIdLink } from '../components/ArtifactIdLink';
 import type { Issue } from '../types';
 
 interface IssuesProps {
@@ -36,7 +37,7 @@ export function Issues({ issues, initialIssueId }: IssuesProps) {
                   onClick={() => setActiveId(iss.id)}
                 >
                   <div className="issues-row__top">
-                    <span className="issues-row__id">{iss.id}</span>
+                    <ArtifactIdLink id={iss.id} className="issues-row__id" />
                     <span className={`issues-row__severity issues-row__severity--${iss.severity}`}>
                       {iss.severity}
                     </span>

@@ -3,6 +3,7 @@ import './WorkItems.css';
 import { StatusPill } from '../components/StatusPill';
 import { AgentChip } from '../components/AgentChip';
 import { ArchiveFooter } from '../components/ArchiveFooter';
+import { ArtifactIdLink } from '../components/ArtifactIdLink';
 import type { WorkItem, Gap, Spec, Agent } from '../types';
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -116,7 +117,7 @@ function KanbanCard({ workItem: w, agents, borderColor, fmtAgo, onClick }: Kanba
       style={{ borderLeftColor: borderColor }}
       onClick={onClick}
     >
-      <div className="kcard__id">{w.id}</div>
+      <ArtifactIdLink id={w.id} className="kcard__id" />
       <div className="kcard__title">{w.title}</div>
       <div className="kcard__foot">
         {agent ? (
@@ -174,7 +175,7 @@ function WorkItemDrawer({ workItem: wi, gaps, specs, agents, onClose, onNav }: W
   return (
     <div className="wi-drawer">
       <div className="wi-drawer__header">
-        <span className="wi-drawer__id">{wi.id}</span>
+        <ArtifactIdLink id={wi.id} className="wi-drawer__id" />
         <StatusPill status={wi.status} />
         <button className="wi-drawer__close" onClick={onClose}>✕</button>
       </div>

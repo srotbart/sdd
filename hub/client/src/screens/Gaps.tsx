@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './Gaps.css';
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
+import { ArtifactIdLink } from '../components/ArtifactIdLink';
 import type { Gap, Spec, WorkItem } from '../types';
 
 interface GapsProps {
@@ -44,12 +45,12 @@ export function Gaps({ gaps, specs, workItems, initialGapId, onNav }: GapsProps)
                 onClick={() => setActiveId(g.id)}
               >
                 <div className="gaps-row__top">
-                  <span className="gaps-row__id">{g.id}</span>
+                  <ArtifactIdLink id={g.id} className="gaps-row__id" />
                   <StatusPill status={g.status} />
                   {g.closedBy && (
                     <span className="gaps-row__closer-pill">
                       <span className="gaps-row__closer-led" />
-                      {g.closedBy}
+                      <ArtifactIdLink id={g.closedBy} />
                     </span>
                   )}
                 </div>
