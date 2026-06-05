@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/Markdown';
 import { StatusPill } from '../components/StatusPill';
 import { TestStatusDot } from '../components/TestStatusDot';
 import type { SpecItem, Gap, WorkItem } from '../types';
@@ -42,7 +42,7 @@ export function SpecItemList({ items, gaps, workItems, onSelectItem, onNav }: Sp
             </div>
             <h3 className="specs-item__title">{item.title}</h3>
             <div className="specs-item__body">
-              <ReactMarkdown>{item.body}</ReactMarkdown>
+              <Markdown>{item.body}</Markdown>
             </div>
 
             {(itemGaps.length > 0 || itemWIs.length > 0) && (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/Markdown';
 import './Projections.css';
 import type { Projection } from '../types';
 
@@ -67,7 +67,7 @@ export function Projections({ workspaceId, refreshToken }: ProjectionsProps) {
         <div className="projections-content">
           {content ? (
             <div className="projections-body">
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <Markdown>{content}</Markdown>
             </div>
           ) : (
             <div className="projections-no-selection">

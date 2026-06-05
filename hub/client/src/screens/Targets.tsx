@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/Markdown';
 import './Targets.css';
 import type { Target, TargetStatus } from '../types';
 
@@ -50,7 +50,7 @@ function TargetListRow({ target, isActive, onClick }: TargetListRowProps) {
 }
 
 function TurnBody({ text }: { text: string }) {
-  return <ReactMarkdown>{text}</ReactMarkdown>;
+  return <Markdown>{text}</Markdown>;
 }
 
 interface TargetDetailProps {
@@ -145,7 +145,7 @@ export function TargetDetail({ target }: TargetDetailProps) {
                   defaultValue={target.statement}
                 />
               ) : (
-                <div className="statement-block__text"><ReactMarkdown>{target.statement}</ReactMarkdown></div>
+                <div className="statement-block__text"><Markdown>{target.statement}</Markdown></div>
               )}
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/Markdown';
 import './Designs.css';
 import type { Design } from '../types';
 
@@ -67,7 +67,7 @@ export function Designs({ workspaceId, refreshToken }: DesignsProps) {
         <div className="designs-content">
           {content ? (
             <div className="designs-body">
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <Markdown>{content}</Markdown>
             </div>
           ) : (
             <div className="designs-no-selection">

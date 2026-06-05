@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/Markdown';
 import { StatusPill } from '../components/StatusPill';
 import { TestStatusDot } from '../components/TestStatusDot';
 import { ArtifactIdLink } from '../components/ArtifactIdLink';
@@ -60,7 +60,7 @@ export function SpecItemDetail({ item, gaps, workItems, onBack, onNav }: SpecIte
       </div>
 
       <div className="spec-item-detail__body">
-        <ReactMarkdown>{item.body}</ReactMarkdown>
+        <Markdown>{item.body}</Markdown>
       </div>
 
       {(itemGaps.length > 0 || itemWIs.length > 0) && (
