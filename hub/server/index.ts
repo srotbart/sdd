@@ -12,6 +12,7 @@ import { getWorkspacesEnriched } from "./workspace-data.js";
 export type { WorkspaceCounts, WorkspaceData } from "./workspace-data.js";
 import { resolveArtifact } from "./sdd-artifact.js";
 import { attachAgentWebSocketServer } from "./ws-agent.js";
+import { attachPtyWebSocketServer } from "./ws-pty.js";
 import { startWatcher } from "./watcher.js";
 
 const HOST = "127.0.0.1";
@@ -572,6 +573,7 @@ export const server = http.createServer(async (req, res) => {
 
 attachUiWebSocketServer(server);
 attachAgentWebSocketServer(server);
+attachPtyWebSocketServer(server);
 
 getDb();
 
