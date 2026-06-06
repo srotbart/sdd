@@ -312,3 +312,44 @@ describe("SPEC-wf-021: sdd-worker is spawned with the sonnet model", () => {
     expect(skill.toLowerCase()).toMatch(/sonnet is sufficient/);
   });
 });
+
+describe("SPEC-wf-034: projection-comments skill addresses comments and prunes handled entries", () => {
+  const skill = read("plugin/skills/projection-comments/SKILL.md");
+
+  it("SPEC-wf-034: skill file exists at plugin/skills/projection-comments/SKILL.md", () => {
+    expect(fs.existsSync(path.join(SKILLS, "projection-comments", "SKILL.md"))).toBe(true);
+  });
+
+  it("SPEC-wf-034: description mentions addressing projection comments and pruning", () => {
+    expect(skill.toLowerCase()).toMatch(/address.*projection.*comment|projection.*comment.*prun/);
+  });
+
+  it("SPEC-wf-034: skill reads .comments.json for the named projection", () => {
+    expect(skill).toMatch(/\.comments\.json/);
+  });
+
+  it("SPEC-wf-034: skill lists all four action types: clarify, re-evaluate, expand, condense", () => {
+    expect(skill).toMatch(/clarify/);
+    expect(skill).toMatch(/re-evaluate/);
+    expect(skill).toMatch(/expand/);
+    expect(skill).toMatch(/condense/);
+  });
+
+  it("SPEC-wf-034: skill states that unaddressable entries are left in place (not silently dropped)", () => {
+    expect(skill.toLowerCase()).toMatch(/not silently drop|left in place|unaddressable|cannot.*address/);
+  });
+
+  it("SPEC-wf-034: skill instructs writing the pruned JSON back to .comments.json", () => {
+    // Must mention both removing addressed entries and writing the result back
+    expect(skill).toMatch(/\.comments\.json/);
+    expect(skill.toLowerCase()).toMatch(/prun|remov.*address|address.*remov/);
+  });
+
+  it("SPEC-wf-034: skill ends with a next-step footer referencing session-start", () => {
+    expect(skill).toMatch(/session-start/);
+  });
+
+  it("SPEC-wf-034: skill states it operates per projection and does not touch unrelated artifacts", () => {
+    expect(skill.toLowerCase()).toMatch(/per projection|does not.*other projection|operate.*per/);
+  });
+});
