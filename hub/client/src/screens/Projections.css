@@ -85,3 +85,122 @@
   font-size: 13px;
   color: var(--ink-3);
 }
+
+/* ---- Text-selection comment marker ---- */
+.proj-marker-btn {
+  position: absolute;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 5px;
+  cursor: pointer;
+  z-index: 20;
+  pointer-events: all;
+}
+.proj-marker-btn:hover { opacity: 0.85; }
+
+/* ---- Action menu ---- */
+.proj-action-menu {
+  position: absolute;
+  background: var(--paper-1, #fff);
+  border: 1px solid var(--hair);
+  border-radius: 5px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 8px;
+  z-index: 30;
+  min-width: 200px;
+  pointer-events: all;
+}
+.proj-action-menu__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.proj-action-btn {
+  background: var(--paper-2);
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 3px 7px;
+  cursor: pointer;
+  color: var(--ink-2);
+  text-transform: lowercase;
+}
+.proj-action-btn:hover { background: var(--paper-3, #e8e8e8); }
+.proj-action-btn--active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.proj-action-note {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  padding: 4px 6px;
+  resize: none;
+  color: var(--ink-1);
+  background: var(--paper-1, #fff);
+  margin-bottom: 6px;
+}
+.proj-action-confirm {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  width: 100%;
+}
+.proj-action-confirm:hover { opacity: 0.85; }
+
+/* ---- Comment highlights ---- */
+mark.proj-comment-mark {
+  background: rgba(255, 210, 60, 0.35);
+  border-radius: 2px;
+  padding: 0 1px;
+  position: relative;
+  cursor: help;
+}
+mark.proj-comment-mark:hover {
+  background: rgba(255, 210, 60, 0.65);
+}
+/* Tooltip via title-style: real tooltip rendered with ::after pseudo */
+mark.proj-comment-mark[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  background: var(--ink-1, #222);
+  color: var(--paper-1, #fff);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  white-space: pre;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 40;
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+mark.proj-comment-mark:hover::after {
+  opacity: 1;
+}
+
+/* Tiny type label */
+sup.proj-comment-label {
+  font-size: 0.5em;
+  vertical-align: super;
+  color: var(--accent, #5b6af0);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}

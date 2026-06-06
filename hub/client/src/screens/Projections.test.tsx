@@ -1,18 +1,50 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Projections } from './Projections';
 import type { Projection } from '../types';
 
-function makeFetch(projections: Projection[], contentMap: Record<string, string> = {}) {
-  return vi.fn((url: string) => {
+interface CommentEntry {
+  id: string;
+  action: 'clarify' | 're-evaluate' | 'expand' | 'condense';
+  selectedText: string;
+  line: number;
+  note: string;
+  createdAt: string;
+}
+
+function makeFetch(
+  projections: Projection[],
+  contentMap: Record<string, string> = {},
+  initialComments: CommentEntry[] = [],
+) {
+  let comments = [...initialComments];
+  return vi.fn((url: string, init?: RequestInit) => {
+    // Comments PUT
+    if (/\/projections\/[^/]+\/comments$/.test(url) && init?.method === 'PUT') {
+      const body = JSON.parse(init.body as string) as CommentEntry[];
+      comments = body;
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(comments),
+      });
+    }
+    // Comments GET
+    if (/\/projections\/[^/]+\/comments$/.test(url)) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(comments),
+      });
+    }
+    // Projections list
     if (url.endsWith('/projections')) {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve(projections),
       });
     }
-    const nameMatch = /\/projections\/(.+)$/.exec(url);
+    // Projection content
+    const nameMatch = /\/projections\/([^/]+)$/.exec(url);
     if (nameMatch) {
       const name = nameMatch[1];
       if (name in contentMap) {
@@ -168,5 +200,238 @@ describe('Sidenav projections entry', () => {
     expect(specsIdx).toBeGreaterThanOrEqual(0);
     expect(projectionsIdx).toBeGreaterThan(specsIdx);
     expect(gapsIdx).toBeGreaterThan(projectionsIdx);
+  });
+});
+
+describe('Projections view — text-select comment feature (SPEC-scr-053)', () => {
+  const proj: Projection[] = [{ name: 'overview', lastModified: new Date().toISOString() }];
+  const mdContent = 'First line here.\n\nSecond line text.\n';
+
+  it('action menu renders clarify, re-evaluate, expand, condense buttons', async () => {
+    global.fetch = makeFetch(proj, { overview: mdContent });
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    // Simulate revealing the action menu directly (click the marker button if present, or fire custom event)
+    // Since selection API is limited in jsdom, we test the menu UI by setting state via the marker btn data-testid
+    // We trigger the menu by simulating a mouseup that results in selected text — but jsdom doesn't support
+    // real text selection, so we test the menu rendering path by firing a synthetic mouseup with Selection mocked.
+    const getSelectionOrig = window.getSelection;
+    window.getSelection = () => ({
+      toString: () => 'First line',
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 10, right: 80, top: 200, bottom: 216 }),
+      } as unknown as Range),
+      rangeCount: 1,
+    } as unknown as Selection);
+
+    const body = document.querySelector('.projections-body') as HTMLElement;
+    fireEvent.mouseUp(body);
+
+    window.getSelection = getSelectionOrig;
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="proj-marker"]')).not.toBeNull();
+    });
+
+    const marker = document.querySelector('[data-testid="proj-marker"]') as HTMLElement;
+    fireEvent.click(marker);
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="proj-action-menu"]')).not.toBeNull();
+    });
+
+    const actions = ['clarify', 're-evaluate', 'expand', 'condense'];
+    for (const a of actions) {
+      expect(document.querySelector(`[data-testid="proj-action-${a}"]`)).not.toBeNull();
+    }
+  });
+
+  it('selecting an action reveals note input and confirm button', async () => {
+    global.fetch = makeFetch(proj, { overview: mdContent });
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    const getSelectionOrig = window.getSelection;
+    window.getSelection = () => ({
+      toString: () => 'Second line',
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 10, right: 90, top: 300, bottom: 316 }),
+      } as unknown as Range),
+      rangeCount: 1,
+    } as unknown as Selection);
+
+    const body = document.querySelector('.projections-body') as HTMLElement;
+    fireEvent.mouseUp(body);
+    window.getSelection = getSelectionOrig;
+
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-marker"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-testid="proj-marker"]') as HTMLElement);
+
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-action-menu"]')).not.toBeNull());
+
+    fireEvent.click(document.querySelector('[data-testid="proj-action-clarify"]') as HTMLElement);
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="proj-note-input"]')).not.toBeNull();
+      expect(document.querySelector('[data-testid="proj-confirm"]')).not.toBeNull();
+    });
+  });
+
+  it('confirming an action calls PUT with the new entry and closes the menu', async () => {
+    const mockFetch = makeFetch(proj, { overview: mdContent });
+    global.fetch = mockFetch;
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    const getSelectionOrig = window.getSelection;
+    window.getSelection = () => ({
+      toString: () => 'First line',
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 10, right: 80, top: 200, bottom: 216 }),
+      } as unknown as Range),
+      removeAllRanges: vi.fn(),
+      rangeCount: 1,
+    } as unknown as Selection);
+
+    const body = document.querySelector('.projections-body') as HTMLElement;
+    fireEvent.mouseUp(body);
+    window.getSelection = getSelectionOrig;
+
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-marker"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-testid="proj-marker"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-action-menu"]')).not.toBeNull());
+
+    fireEvent.click(document.querySelector('[data-testid="proj-action-expand"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-confirm"]')).not.toBeNull());
+
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-testid="proj-confirm"]') as HTMLElement);
+    });
+
+    await waitFor(() => {
+      // Menu closes after confirm
+      expect(document.querySelector('[data-testid="proj-action-menu"]')).toBeNull();
+    });
+
+    // PUT was called with correct shape
+    const putCall = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => (call[1] as RequestInit)?.method === 'PUT'
+    );
+    expect(putCall).toBeDefined();
+    const body2 = JSON.parse((putCall![1] as RequestInit).body as string) as CommentEntry[];
+    expect(body2.length).toBe(1);
+    expect(body2[0].action).toBe('expand');
+    expect(body2[0].selectedText).toBe('First line');
+    expect(typeof body2[0].line).toBe('number');
+    expect(body2[0].line).toBeGreaterThanOrEqual(1);
+  });
+
+  it('line is derived from first occurrence of selectedText in raw markdown (1-based)', async () => {
+    const mockFetch = makeFetch(proj, { overview: 'line one\nline two\nline three\n' });
+    global.fetch = mockFetch;
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    const getSelectionOrig = window.getSelection;
+    window.getSelection = () => ({
+      toString: () => 'line two',
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 10, right: 80, top: 200, bottom: 216 }),
+      } as unknown as Range),
+      removeAllRanges: vi.fn(),
+      rangeCount: 1,
+    } as unknown as Selection);
+
+    fireEvent.mouseUp(document.querySelector('.projections-body') as HTMLElement);
+    window.getSelection = getSelectionOrig;
+
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-marker"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-testid="proj-marker"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-action-menu"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-testid="proj-action-condense"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-confirm"]')).not.toBeNull());
+
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-testid="proj-confirm"]') as HTMLElement);
+    });
+
+    const putCall = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => (call[1] as RequestInit)?.method === 'PUT'
+    );
+    const body = JSON.parse((putCall![1] as RequestInit).body as string) as CommentEntry[];
+    expect(body[0].line).toBe(2); // 'line two' is on line 2
+  });
+
+  it('comments loaded from server are reflected in the component state', async () => {
+    const existing: CommentEntry[] = [
+      {
+        id: 'cmt-existing',
+        action: 'clarify',
+        selectedText: 'First line',
+        line: 1,
+        note: 'pls clarify',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    global.fetch = makeFetch(proj, { overview: mdContent }, existing);
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    // The GET comments call should have been made
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls as string[][];
+    const commentsCalls = calls.filter((c) => /\/comments/.test(c[0]));
+    expect(commentsCalls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('multiple comments on same selectedText are supported additively', async () => {
+    const mockFetch = makeFetch(proj, { overview: mdContent });
+    global.fetch = mockFetch;
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    // Add first comment
+    const addComment = async (action: string) => {
+      const getSelectionOrig = window.getSelection;
+      window.getSelection = () => ({
+        toString: () => 'First line',
+        getRangeAt: () => ({
+          getBoundingClientRect: () => ({ left: 10, right: 80, top: 200, bottom: 216 }),
+        } as unknown as Range),
+        removeAllRanges: vi.fn(),
+        rangeCount: 1,
+      } as unknown as Selection);
+      fireEvent.mouseUp(document.querySelector('.projections-body') as HTMLElement);
+      window.getSelection = getSelectionOrig;
+
+      await waitFor(() => expect(document.querySelector('[data-testid="proj-marker"]')).not.toBeNull());
+      fireEvent.click(document.querySelector('[data-testid="proj-marker"]') as HTMLElement);
+      await waitFor(() => expect(document.querySelector('[data-testid="proj-action-menu"]')).not.toBeNull());
+      fireEvent.click(document.querySelector(`[data-testid="proj-action-${action}"]`) as HTMLElement);
+      await waitFor(() => expect(document.querySelector('[data-testid="proj-confirm"]')).not.toBeNull());
+      await act(async () => {
+        fireEvent.click(document.querySelector('[data-testid="proj-confirm"]') as HTMLElement);
+      });
+      await waitFor(() => expect(document.querySelector('[data-testid="proj-action-menu"]')).toBeNull());
+    };
+
+    await addComment('clarify');
+    await addComment('expand');
+
+    const putCalls = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (call: unknown[]) => (call[1] as RequestInit)?.method === 'PUT'
+    );
+    // Second PUT should have 2 entries
+    const lastPutBody = JSON.parse(
+      (putCalls[putCalls.length - 1][1] as RequestInit).body as string
+    ) as CommentEntry[];
+    expect(lastPutBody.length).toBe(2);
+    expect(lastPutBody.map((e: CommentEntry) => e.selectedText).every((t: string) => t === 'First line')).toBe(true);
   });
 });
