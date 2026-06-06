@@ -306,6 +306,95 @@ async function handleApi(
     return true;
   }
 
+  // ---- Projection comments: GET/PUT /projections/:name/comments, DELETE /:commentId --------
+
+  // Reject any `:name` containing path-traversal characters before reaching handlers
+  function sanitizeProjectionName(name: string): string | null {
+    if (/[/\\]|\.\./.test(name) || name.trim() === "") { return null; }
+    return name;
+  }
+
+  const projectionsCommentsMatch = /^\/workspaces\/([^/?]+)\/projections\/([^/?]+)\/comments$/.exec(url);
+  if (projectionsCommentsMatch) {
+    const ws = getWorkspaceById(projectionsCommentsMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    const safeName = sanitizeProjectionName(projectionsCommentsMatch[2]);
+    if (!safeName) {
+      json(res, 400, { error: "invalid projection name" });
+      return true;
+    }
+    const commentsPath = path.join(ws.path, ".sdd", "projections", `${safeName}.comments.json`);
+
+    if (method === "GET") {
+      if (!fs.existsSync(commentsPath)) {
+        json(res, 200, []);
+      } else {
+        try {
+          const data = JSON.parse(fs.readFileSync(commentsPath, "utf-8"));
+          json(res, 200, data);
+        } catch {
+          json(res, 200, []);
+        }
+      }
+      return true;
+    }
+
+    if (method === "PUT") {
+      let body = "";
+      req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+      req.on("end", () => {
+        try {
+          const entries = JSON.parse(body);
+          const projectionsDir = path.join(ws.path, ".sdd", "projections");
+          if (!fs.existsSync(projectionsDir)) {
+            fs.mkdirSync(projectionsDir, { recursive: true });
+          }
+          fs.writeFileSync(commentsPath, JSON.stringify(entries, null, 2), "utf-8");
+          json(res, 200, entries);
+        } catch {
+          json(res, 400, { error: "invalid JSON body" });
+        }
+      });
+      return true;
+    }
+  }
+
+  const projectionsCommentItemMatch = /^\/workspaces\/([^/?]+)\/projections\/([^/?]+)\/comments\/([^/?]+)$/.exec(url);
+  if (method === "DELETE" && projectionsCommentItemMatch) {
+    const ws = getWorkspaceById(projectionsCommentItemMatch[1]);
+    if (!ws) {
+      json(res, 404, { error: "workspace not found" });
+      return true;
+    }
+    const safeName = sanitizeProjectionName(projectionsCommentItemMatch[2]);
+    if (!safeName) {
+      json(res, 400, { error: "invalid projection name" });
+      return true;
+    }
+    const commentId = projectionsCommentItemMatch[3];
+    const commentsPath = path.join(ws.path, ".sdd", "projections", `${safeName}.comments.json`);
+    let entries: { id: string }[] = [];
+    if (fs.existsSync(commentsPath)) {
+      try {
+        entries = JSON.parse(fs.readFileSync(commentsPath, "utf-8"));
+      } catch {
+        entries = [];
+      }
+    }
+    const idx = entries.findIndex((e) => e.id === commentId);
+    if (idx === -1) {
+      json(res, 404, { error: "comment not found" });
+      return true;
+    }
+    entries.splice(idx, 1);
+    fs.writeFileSync(commentsPath, JSON.stringify(entries, null, 2), "utf-8");
+    json(res, 200, entries);
+    return true;
+  }
+
   const designsListMatch = /^\/workspaces\/([^/?]+)\/designs$/.exec(url);
   if (method === "GET" && designsListMatch) {
     const ws = getWorkspaceById(designsListMatch[1]);
