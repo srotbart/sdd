@@ -19,6 +19,8 @@ import { Standards } from './screens/Standards';
 import { CommandPalette } from './components/CommandPalette';
 import { PeekerProvider } from './components/PeekerContext';
 import { ArtifactPeeker } from './components/ArtifactPeeker';
+import { TerminalPanel } from './components/TerminalPanel';
+import './components/TerminalPanel.css';
 import type { WorkspaceData, Target, TargetStatus, Spec, Gap, WorkItem, ActivityLine, Agent, Issue, Improvement } from './types';
 
 const VALID_STATUSES = new Set<TargetStatus>([
@@ -162,6 +164,7 @@ export function App() {
     return workspaceId ? tab === 'plugin-reference' : false;
   });
   const [paletteOpen, setPaletteOpen] = useState<boolean>(false);
+  const [terminalOpen, setTerminalOpen] = useState<boolean>(false);
   const [hubConnected, setHubConnected] = useState<boolean>(false);
   const appRef = useRef<HTMLDivElement>(null);
   const activeWorkspaceIdRef = useRef<string | null>(activeWorkspaceId);
@@ -550,6 +553,21 @@ export function App() {
         improvements={liveImprovements}
         onNav={handleNav}
       />
+      {/* Floating terminal toggle button — always visible across the app shell */}
+      <button
+        className={`term-toggle-btn${terminalOpen ? ' term-toggle-btn--open' : ''}`}
+        onClick={() => setTerminalOpen((o) => !o)}
+        aria-label={terminalOpen ? 'Close terminal' : 'Open terminal'}
+        data-testid="term-toggle-btn"
+      >
+        {terminalOpen ? '×' : '>_'}
+      </button>
+      {terminalOpen && (
+        <TerminalPanel
+          workspacePath={activeWorkspace?.path}
+          onClose={() => setTerminalOpen(false)}
+        />
+      )}
     </div>
     </PeekerProvider>
   );
