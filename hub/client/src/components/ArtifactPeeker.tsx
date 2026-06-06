@@ -124,6 +124,13 @@ interface PeekerContentProps {
   improvements: Improvement[];
 }
 
+// Artifact IDs are case-insensitive identifiers, but the server's spec parser uppercases the
+// domain abbrev (SPEC-UIC-014) while references in markdown use the canonical lowercase form
+// (SPEC-uic-014). Compare case-insensitively so lookups resolve regardless of normalization.
+function idEq(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
 function PeekerContent({
   id,
   kind,
@@ -135,13 +142,13 @@ function PeekerContent({
   improvements,
 }: PeekerContentProps) {
   if (kind === 'TGT') {
-    const target = targets.find((t) => t.id === id);
+    const target = targets.find((t) => idEq(t.id, id));
     if (!target) return <GenericNotFound id={id} />;
     return <TargetPeekView target={target} />;
   }
 
   if (kind === 'SPEC') {
-    const item = specs.flatMap((s) => s.items).find((i) => i.id === id);
+    const item = specs.flatMap((s) => s.items).find((i) => idEq(i.id, id));
     if (!item) return <GenericNotFound id={id} />;
     return (
       <div className="peeker-spec">
@@ -156,25 +163,25 @@ function PeekerContent({
   }
 
   if (kind === 'GAP') {
-    const gap = gaps.find((g) => g.id === id);
+    const gap = gaps.find((g) => idEq(g.id, id));
     if (!gap) return <GenericNotFound id={id} />;
     return <GapPeekView gap={gap} />;
   }
 
   if (kind === 'WI') {
-    const wi = workItems.find((w) => w.id === id);
+    const wi = workItems.find((w) => idEq(w.id, id));
     if (!wi) return <GenericNotFound id={id} />;
     return <WorkItemPeekView wi={wi} />;
   }
 
   if (kind === 'ISS') {
-    const issue = issues.find((iss) => iss.id === id);
+    const issue = issues.find((iss) => idEq(iss.id, id));
     if (!issue) return <GenericNotFound id={id} />;
     return <IssuePeekView issue={issue} />;
   }
 
   if (kind === 'IMP') {
-    const imp = improvements.find((i) => i.id === id);
+    const imp = improvements.find((i) => idEq(i.id, id));
     if (!imp) return <GenericNotFound id={id} />;
     return <ImprovementPeekView imp={imp} />;
   }

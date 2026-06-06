@@ -271,6 +271,30 @@ describe('SPEC-uic-011 ArtifactPeeker — per-type rendering without crash', () 
     expect(document.body.textContent).toContain('not found in loaded data');
   });
 
+  it('resolves a SPEC item case-insensitively (server uppercases the abbrev, markdown refs use lowercase)', async () => {
+    // Production: the server's spec parser uppercases the abbrev (SPEC-UIC-014), but artifact
+    // references written in markdown use the canonical lowercase abbrev (SPEC-uic-014). The peeker
+    // lookup must match regardless of case, or every spec reference shows "not found".
+    const upperSpec: Spec = {
+      id: 'SPEC-uic',
+      domain: 'ui-components',
+      abbrev: 'uic',
+      version: '1',
+      items: [
+        { id: 'SPEC-UIC-014', title: 'Artifact IDs auto-link', status: 'active', body: 'b', refs: [], testStatus: { status: 'passing' } },
+      ],
+    };
+    render(
+      <PeekerProvider>
+        <OpenPeekerButton id="SPEC-uic-014" kind="SPEC" />
+        <ArtifactPeeker targets={[]} specs={[upperSpec]} gaps={[]} workItems={[]} issues={[]} improvements={[]} onNav={vi.fn()} />
+      </PeekerProvider>
+    );
+    await userEvent.click(screen.getByTestId('open-btn'));
+    expect(document.body.textContent).toContain('Artifact IDs auto-link');
+    expect(document.body.textContent).not.toContain('not found in loaded data');
+  });
+
   it('go-to-artifact for WI calls onNav with work items tab', async () => {
     const onNav = vi.fn();
     render(<Wrapper id="WI-uic-001" kind="WI" onNav={onNav} />);
