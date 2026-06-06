@@ -389,6 +389,81 @@ describe('Projections view — text-select comment feature (SPEC-scr-053)', () =
     expect(commentsCalls.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('renders a highlight <mark> for a comment whose selection is plain single-line text', async () => {
+    // Regression guard: the simple case (selectedText present verbatim in one text node) must keep working.
+    const existing: CommentEntry[] = [
+      { id: 'c1', action: 'clarify', selectedText: 'First line', line: 1, note: '', createdAt: new Date().toISOString() },
+    ];
+    global.fetch = makeFetch(proj, { overview: 'First line here.\n\nSecond line text.\n' }, existing);
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    await waitFor(() => {
+      const mark = document.querySelector('.proj-comment-mark');
+      expect(mark).not.toBeNull();
+      expect(mark!.textContent).toContain('First line');
+    });
+  });
+
+  it('highlights a selection that spans a soft-wrapped line (whitespace-normalized match)', async () => {
+    // The source paragraph soft-wraps between "soft" and "wrapped"; the browser selection
+    // serializes that newline as a single space, so the stored selectedText has a space while
+    // the rendered DOM text node still contains the literal "\n". The highlight must still apply.
+    const content = 'Intro.\n\nThis phrase spans a soft\nwrapped line here.\n';
+    const existing: CommentEntry[] = [
+      { id: 'c2', action: 'expand', selectedText: 'spans a soft wrapped line', line: 3, note: 'n', createdAt: new Date().toISOString() },
+    ];
+    global.fetch = makeFetch(proj, { overview: content }, existing);
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    await waitFor(() => {
+      const mark = document.querySelector('.proj-comment-mark');
+      expect(mark).not.toBeNull();
+      // The wrapped phrase is highlighted (textContent ignores the label sup's letters via normalization)
+      expect(mark!.textContent).toMatch(/spans a soft\s+wrapped line/);
+    });
+  });
+
+  it('derives the correct line when the selection spans a soft-wrapped line', async () => {
+    // Phrase starts on line 3 but wraps to line 4; normalized selection still maps to line 3.
+    const mockFetch = makeFetch(proj, { overview: 'a\nb\nThis phrase spans a soft\nwrapped line.\n' });
+    global.fetch = mockFetch;
+
+    render(<Projections workspaceId="ws-1" />);
+    await waitFor(() => expect(document.querySelector('.projections-body')).not.toBeNull());
+
+    const getSelectionOrig = window.getSelection;
+    window.getSelection = () => ({
+      toString: () => 'spans a soft wrapped line',
+      getRangeAt: () => ({
+        getBoundingClientRect: () => ({ left: 10, right: 80, top: 200, bottom: 216 }),
+      } as unknown as Range),
+      removeAllRanges: vi.fn(),
+      rangeCount: 1,
+    } as unknown as Selection);
+
+    fireEvent.mouseUp(document.querySelector('.projections-body') as HTMLElement);
+    window.getSelection = getSelectionOrig;
+
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-marker"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-testid="proj-marker"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-action-menu"]')).not.toBeNull());
+    fireEvent.click(document.querySelector('[data-testid="proj-action-condense"]') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-testid="proj-confirm"]')).not.toBeNull());
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-testid="proj-confirm"]') as HTMLElement);
+    });
+
+    const putCall = (mockFetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: unknown[]) => (call[1] as RequestInit)?.method === 'PUT'
+    );
+    const body = JSON.parse((putCall![1] as RequestInit).body as string) as CommentEntry[];
+    expect(body[0].line).toBe(3);
+  });
+
   it('multiple comments on same selectedText are supported additively', async () => {
     const mockFetch = makeFetch(proj, { overview: mdContent });
     global.fetch = mockFetch;

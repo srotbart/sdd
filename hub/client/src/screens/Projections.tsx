@@ -29,16 +29,23 @@ function fmtAgo(dateStr: string): string {
   return Math.floor(sec / 86400) + 'd ago';
 }
 
+/**
+ * Build a regex from `text` that escapes regex specials and treats every run of whitespace as
+ * flexible (`\s+`). A browser selection serializes soft line breaks / whitespace runs as single
+ * spaces, but the raw markdown source and the rendered DOM text nodes preserve the original
+ * newline — so exact matching fails on any selection that crosses a soft-wrapped line. Matching
+ * whitespace-flexibly bridges that gap.
+ */
+function buildFlexibleRegex(text: string): RegExp {
+  const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(escaped.replace(/\s+/g, '\\s+'));
+}
+
 /** Derive 1-based line number of first occurrence of selectedText in raw markdown. */
 function deriveLineNumber(raw: string, selectedText: string): number {
-  const lines = raw.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes(selectedText)) return i + 1;
-  }
-  // fallback: scan multi-line spans
-  const idx = raw.indexOf(selectedText);
-  if (idx === -1) return 1;
-  return raw.slice(0, idx).split('\n').length;
+  const m = buildFlexibleRegex(selectedText).exec(raw);
+  if (!m) return 1;
+  return raw.slice(0, m.index).split('\n').length;
 }
 
 /** Build a map of selectedText → comment entries for highlight rendering. */
@@ -67,31 +74,37 @@ function applyHighlights(container: HTMLElement, highlightMap: Map<string, Comme
     textNodes.push(node as Text);
   }
 
-  // Sort highlight keys longest-first to prefer more specific matches
-  const keys = [...highlightMap.keys()].sort((a, b) => b.length - a.length);
+  // Build matchers longest-key-first to prefer more specific matches. Each matcher tolerates
+  // whitespace differences (selection collapses newlines/runs to single spaces; the DOM text
+  // node preserves the original newline), so soft-wrapped selections still highlight.
+  const matchers = [...highlightMap.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map((key) => ({ re: buildFlexibleRegex(key), entries: highlightMap.get(key) ?? [] }));
 
   for (const textNode of textNodes) {
     // Skip if already inside a .proj-comment-mark
     if ((textNode.parentElement as HTMLElement)?.closest?.('.proj-comment-mark')) continue;
 
-    let value = textNode.nodeValue ?? '';
+    const value = textNode.nodeValue ?? '';
     let changed = false;
     const fragment = document.createDocumentFragment();
     let remaining = value;
 
     while (remaining.length > 0) {
-      let bestKey: string | null = null;
       let bestIdx = -1;
+      let bestMatch = '';
+      let bestEntries: CommentEntry[] = [];
 
-      for (const key of keys) {
-        const idx = remaining.indexOf(key);
-        if (idx !== -1 && (bestIdx === -1 || idx < bestIdx)) {
-          bestIdx = idx;
-          bestKey = key;
+      for (const { re, entries } of matchers) {
+        const m = re.exec(remaining);
+        if (m && m[0].length > 0 && (bestIdx === -1 || m.index < bestIdx)) {
+          bestIdx = m.index;
+          bestMatch = m[0];
+          bestEntries = entries;
         }
       }
 
-      if (bestKey === null || bestIdx === -1) {
+      if (bestIdx === -1) {
         fragment.appendChild(document.createTextNode(remaining));
         break;
       }
@@ -101,11 +114,11 @@ function applyHighlights(container: HTMLElement, highlightMap: Map<string, Comme
         fragment.appendChild(document.createTextNode(remaining.slice(0, bestIdx)));
       }
 
-      // The matched text wrapped in a mark
-      const entries = highlightMap.get(bestKey) ?? [];
+      // The matched text (with its original whitespace) wrapped in a mark
+      const entries = bestEntries;
       const mark = document.createElement('mark');
       mark.className = 'proj-comment-mark';
-      mark.textContent = bestKey;
+      mark.textContent = bestMatch;
 
       // Tooltip content (aggregate all comments on this text)
       const tooltipLines = entries.map(
@@ -123,7 +136,7 @@ function applyHighlights(container: HTMLElement, highlightMap: Map<string, Comme
       fragment.appendChild(mark);
       changed = true;
 
-      remaining = remaining.slice(bestIdx + bestKey.length);
+      remaining = remaining.slice(bestIdx + bestMatch.length);
     }
 
     if (changed && textNode.parentNode) {
@@ -189,11 +202,13 @@ export function Projections({ workspaceId, refreshToken }: ProjectionsProps) {
     const container = bodyRef.current;
     if (!container || comments.length === 0) return;
 
-    // Remove old marks first
+    // Remove old marks first. Drop the label <sup> before reading textContent so the original
+    // marked text is restored exactly (no fragile trailing-letter stripping).
     container.querySelectorAll('.proj-comment-mark').forEach((el) => {
       const parent = el.parentNode;
       if (parent) {
-        parent.replaceChild(document.createTextNode(el.textContent?.replace(/[cerx]$/u, '') ?? ''), el);
+        el.querySelector('.proj-comment-label')?.remove();
+        parent.replaceChild(document.createTextNode(el.textContent ?? ''), el);
         parent.normalize();
       }
     });
