@@ -836,6 +836,212 @@ describe('SPEC-ui-020 — inline script applies theme before first paint', () =>
 });
 
 // ---------------------------------------------------------------------------
+// SPEC-ui-023 — in-app back/forward navigation stack
+// ---------------------------------------------------------------------------
+describe('SPEC-ui-023 — in-app back/forward navigation', () => {
+  beforeEach(() => { fetchWithWorkspaces(); });
+
+  it('SPEC-ui-023: header renders back and forward buttons', async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="header-back-btn"]')).not.toBeNull();
+      expect(document.querySelector('[data-testid="header-forward-btn"]')).not.toBeNull();
+    });
+  });
+
+  it('SPEC-ui-023: back button is disabled at the initial entry (oldest entry)', async () => {
+    render(<App />);
+    await waitFor(() => {
+      const backBtn = document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement;
+      expect(backBtn.disabled).toBe(true);
+    });
+  });
+
+  it('SPEC-ui-023: forward button is disabled when there are no forward entries', async () => {
+    render(<App />);
+    await waitFor(() => {
+      const fwdBtn = document.querySelector('[data-testid="header-forward-btn"]') as HTMLButtonElement;
+      expect(fwdBtn.disabled).toBe(true);
+    });
+  });
+
+  it('SPEC-ui-023: navigating to a new tab enables back and disables forward', async () => {
+    render(<App />);
+    await selectWorkspace();
+    // Click a nav tab to trigger a navigation push.
+    await waitFor(() => {
+      const targetsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+        (el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+      );
+      expect(targetsRow).not.toBeNull();
+    });
+    const targetsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+    )!;
+    await userEvent.click(targetsRow);
+    await waitFor(() => {
+      const backBtn = document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement;
+      const fwdBtn = document.querySelector('[data-testid="header-forward-btn"]') as HTMLButtonElement;
+      expect(backBtn.disabled).toBe(false);
+      expect(fwdBtn.disabled).toBe(true);
+    });
+  });
+
+  it('SPEC-ui-023: clicking back returns to the previous tab; forward re-applies the newer one', async () => {
+    render(<App />);
+    await selectWorkspace();
+    // Navigate to targets tab.
+    await waitFor(() => {
+      const el = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+        (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+      );
+      expect(el).not.toBeNull();
+    });
+    const targetsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+    )!;
+    await userEvent.click(targetsRow);
+    // Navigate to specs tab.
+    await waitFor(() => {
+      const el = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+        (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'specs',
+      );
+      expect(el).not.toBeNull();
+    });
+    const specsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'specs',
+    )!;
+    await userEvent.click(specsRow);
+    // Verify specs active row.
+    await waitFor(() => {
+      const active = Array.from(document.querySelectorAll('.sidenav-nav-row--active'));
+      expect(active.some((el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'specs')).toBe(true);
+    });
+    // Click back — should land on targets.
+    const backBtn = document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement;
+    await userEvent.click(backBtn);
+    await waitFor(() => {
+      const active = Array.from(document.querySelectorAll('.sidenav-nav-row--active'));
+      expect(active.some((el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets')).toBe(true);
+    });
+    // Forward button should now be enabled, back still enabled.
+    await waitFor(() => {
+      const fwdBtn = document.querySelector('[data-testid="header-forward-btn"]') as HTMLButtonElement;
+      expect(fwdBtn.disabled).toBe(false);
+    });
+    // Click forward — should return to specs.
+    const fwdBtn = document.querySelector('[data-testid="header-forward-btn"]') as HTMLButtonElement;
+    await userEvent.click(fwdBtn);
+    await waitFor(() => {
+      const active = Array.from(document.querySelectorAll('.sidenav-nav-row--active'));
+      expect(active.some((el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'specs')).toBe(true);
+    });
+  });
+
+  it('SPEC-ui-023: new navigation after going back truncates the forward stack', async () => {
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const el = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+        (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+      );
+      expect(el).not.toBeNull();
+    });
+    const targetsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+    )!;
+    const specsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'specs',
+    )!;
+    // targets → specs → back (now at targets) → navigate to gaps (truncates specs).
+    await userEvent.click(targetsRow);
+    await userEvent.click(specsRow);
+    await waitFor(() => {
+      const backBtn = document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement;
+      expect(backBtn.disabled).toBe(false);
+    });
+    await userEvent.click(document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement);
+    const gapsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'gaps',
+    )!;
+    await userEvent.click(gapsRow);
+    // Forward should be disabled (forward stack was truncated).
+    await waitFor(() => {
+      const fwdBtn = document.querySelector('[data-testid="header-forward-btn"]') as HTMLButtonElement;
+      expect(fwdBtn.disabled).toBe(true);
+    });
+  });
+
+  it('SPEC-ui-023: Alt+ArrowLeft triggers back; Alt+ArrowRight triggers forward', async () => {
+    render(<App />);
+    await selectWorkspace();
+    await waitFor(() => {
+      const el = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+        (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+      );
+      expect(el).not.toBeNull();
+    });
+    const targetsRow = Array.from(document.querySelectorAll('.sidenav-nav-row')).find(
+      (r) => r.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets',
+    )!;
+    await userEvent.click(targetsRow);
+    // Press Alt+ArrowLeft — back to session.
+    await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    await waitFor(() => {
+      const active = Array.from(document.querySelectorAll('.sidenav-nav-row--active'));
+      expect(active.some((el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'session')).toBe(true);
+    });
+    // Press Alt+ArrowRight — forward to targets.
+    await userEvent.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    await waitFor(() => {
+      const active = Array.from(document.querySelectorAll('.sidenav-nav-row--active'));
+      expect(active.some((el) => el.querySelector('.sidenav-nav-label')?.textContent?.trim() === 'targets')).toBe(true);
+    });
+  });
+
+  it('SPEC-ui-023: Header back/forward props alone wire correctly (disabled state, aria-label)', () => {
+    render(
+      <Header
+        breadcrumb={['hub']}
+        agentCount={0}
+        hubAddress="localhost:22351"
+        onBack={vi.fn()}
+        onForward={vi.fn()}
+        canGoBack={false}
+        canGoForward={false}
+      />,
+    );
+    const backBtn = document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement;
+    const fwdBtn = document.querySelector('[data-testid="header-forward-btn"]') as HTMLButtonElement;
+    expect(backBtn).not.toBeNull();
+    expect(fwdBtn).not.toBeNull();
+    expect(backBtn.disabled).toBe(true);
+    expect(fwdBtn.disabled).toBe(true);
+    expect(backBtn.getAttribute('aria-label')).toBe('Back');
+    expect(fwdBtn.getAttribute('aria-label')).toBe('Forward');
+  });
+
+  it('SPEC-ui-023: Header back button enabled when canGoBack=true, calls onBack on click', async () => {
+    const onBack = vi.fn();
+    render(
+      <Header
+        breadcrumb={['hub']}
+        agentCount={0}
+        hubAddress="localhost:22351"
+        onBack={onBack}
+        onForward={vi.fn()}
+        canGoBack={true}
+        canGoForward={false}
+      />,
+    );
+    const backBtn = document.querySelector('[data-testid="header-back-btn"]') as HTMLButtonElement;
+    expect(backBtn.disabled).toBe(false);
+    await userEvent.click(backBtn);
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SPEC-ui-021 — component CSS uses tokens not hex literals
 // ---------------------------------------------------------------------------
 describe('SPEC-ui-021 — component CSS references tokens, not hex literals', () => {

@@ -23,6 +23,14 @@ import { TerminalPanel } from './components/TerminalPanel';
 import './components/TerminalPanel.css';
 import type { WorkspaceData, Target, TargetStatus, Spec, Gap, WorkItem, ActivityLine, Agent, Issue, Improvement } from './types';
 
+// In-app navigation history entry — mirrors the URL-synced view tuple.
+interface ViewState {
+  activeWorkspaceId: string | null;
+  activeTab: string;
+  selectedItemId: string | null;
+  pluginRefActive: boolean;
+}
+
 const VALID_STATUSES = new Set<TargetStatus>([
   'awaiting-user', 'awaiting-agent', 'ready', 'draft', 'accepted', 'archived',
 ]);
@@ -168,6 +176,15 @@ export function App() {
   const [hubConnected, setHubConnected] = useState<boolean>(false);
   const appRef = useRef<HTMLDivElement>(null);
   const activeWorkspaceIdRef = useRef<string | null>(activeWorkspaceId);
+
+  // In-app navigation history (SPEC-ui-023).
+  // Both fields live together so they update atomically.
+  const [navStack, setNavStack] = useState<{ history: ViewState[]; index: number }>(() => ({
+    history: [{ activeWorkspaceId, activeTab, selectedItemId, pluginRefActive }],
+    index: 0,
+  }));
+  // Guard: when true the view-state change was caused by back/forward — do not push a new entry.
+  const isNavJump = useRef<boolean>(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
   const [liveAgents, setLiveAgents] = useState<Agent[]>([]);
   const [liveSpecs, setLiveSpecs] = useState<Spec[]>([]);
@@ -190,6 +207,30 @@ export function App() {
   useEffect(() => {
     const tab = pluginRefActive ? 'plugin-reference' : activeTab;
     pushUrlState(activeWorkspaceId, tab, selectedItemId);
+    // Push a new nav-history entry for every user-triggered view change.
+    // Skip when the change itself came from back/forward (guard prevents re-push).
+    if (isNavJump.current) {
+      isNavJump.current = false;
+      return;
+    }
+    setNavStack((prev) => {
+      const current = prev.history[prev.index];
+      const next: ViewState = { activeWorkspaceId, activeTab, selectedItemId, pluginRefActive };
+      // Dedup: don't push if identical to the current entry.
+      if (
+        current &&
+        current.activeWorkspaceId === next.activeWorkspaceId &&
+        current.activeTab === next.activeTab &&
+        current.selectedItemId === next.selectedItemId &&
+        current.pluginRefActive === next.pluginRefActive
+      ) {
+        return prev;
+      }
+      // Truncate forward entries and append.
+      const newHistory = [...prev.history.slice(0, prev.index + 1), next];
+      return { history: newHistory, index: newHistory.length - 1 };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkspaceId, activeTab, selectedItemId, pluginRefActive]);
 
   const fetchWorkspaces = useCallback(() => {
@@ -317,10 +358,20 @@ export function App() {
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
+      // Alt+ArrowLeft / Alt+ArrowRight — in-app back/forward (SPEC-ui-023).
+      if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleBack();
+      }
+      if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleForward();
+      }
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navStack]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveSpecs([]); return; }
@@ -403,6 +454,31 @@ export function App() {
     breadcrumb.push(activeTab);
   }
 
+  const canGoBack = navStack.index > 0;
+  const canGoForward = navStack.index < navStack.history.length - 1;
+
+  function handleBack() {
+    if (!canGoBack) { return; }
+    const target = navStack.history[navStack.index - 1];
+    isNavJump.current = true;
+    setNavStack((prev) => ({ ...prev, index: prev.index - 1 }));
+    setActiveWorkspaceId(target.activeWorkspaceId);
+    setActiveTab(target.activeTab);
+    setSelectedItemId(target.selectedItemId);
+    setPluginRefActive(target.pluginRefActive);
+  }
+
+  function handleForward() {
+    if (!canGoForward) { return; }
+    const target = navStack.history[navStack.index + 1];
+    isNavJump.current = true;
+    setNavStack((prev) => ({ ...prev, index: prev.index + 1 }));
+    setActiveWorkspaceId(target.activeWorkspaceId);
+    setActiveTab(target.activeTab);
+    setSelectedItemId(target.selectedItemId);
+    setPluginRefActive(target.pluginRefActive);
+  }
+
   function handleSelectWorkspace(id: string) {
     localStorage.setItem('hub.activeWorkspaceId', id);
     setActiveWorkspaceId(id);
@@ -483,6 +559,10 @@ export function App() {
         breadcrumb={breadcrumb}
         agentCount={liveAgents.length}
         hubAddress="localhost:22351"
+        onBack={handleBack}
+        onForward={handleForward}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
       />
       <Sidenav
         workspaces={workspaces.map((ws) => ({

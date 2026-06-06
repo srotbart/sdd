@@ -88,3 +88,30 @@
   color: var(--ink);
   background: var(--paper-3);
 }
+
+.header-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.header-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-3);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.header-nav-btn:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--paper-3);
+}
+
+.header-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

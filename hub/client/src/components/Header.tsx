@@ -7,12 +7,17 @@ interface HeaderProps {
   breadcrumb: string[];
   agentCount: number;
   hubAddress: string;
+  // In-app navigation controls (SPEC-ui-023). Optional so isolated renders stay valid.
+  onBack?: () => void;
+  onForward?: () => void;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
 }
 
 const THEME_CYCLE: ThemeMode[] = ['light', 'dark', 'system'];
 const THEME_LABEL: Record<ThemeMode, string> = { light: '☀', dark: '☾', system: '⊙' };
 
-export function Header({ breadcrumb, agentCount, hubAddress }: HeaderProps) {
+export function Header({ breadcrumb, agentCount, hubAddress, onBack, onForward, canGoBack = false, canGoForward = false }: HeaderProps) {
   const [now, setNow] = useState(() => new Date());
   const { mode, setMode } = useTheme();
 
@@ -33,6 +38,28 @@ export function Header({ breadcrumb, agentCount, hubAddress }: HeaderProps) {
     <header className="header">
       <div className="header-left">
         <span className="header-logo">sdd-hub</span>
+        <div className="header-nav-btns">
+          <button
+            className="header-nav-btn"
+            onClick={onBack}
+            disabled={!canGoBack}
+            aria-label="Back"
+            title="Back (Alt+←)"
+            data-testid="header-back-btn"
+          >
+            ‹
+          </button>
+          <button
+            className="header-nav-btn"
+            onClick={onForward}
+            disabled={!canGoForward}
+            aria-label="Forward"
+            title="Forward (Alt+→)"
+            data-testid="header-forward-btn"
+          >
+            ›
+          </button>
+        </div>
         <nav className="header-breadcrumb">
           {breadcrumb.map((crumb, i) => (
             <span key={i}>
