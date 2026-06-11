@@ -4,7 +4,7 @@
   "description": "Spec-driven development for Claude Code",
   "owner": {
     "name": "Sergey Rotbart",
-    "email": "srotbart@ebay.com"
+    "email": ""
   },
   "plugins": [
     {
@@ -18,7 +18,7 @@
       "source": "./plugin",
       "category": "development",
       "tags": ["spec-driven", "workflow", "gaps", "audit", "agent-teams"],
-      "homepage": "https://github.corp.ebay.com/srotbart/sdd"
+      "homepage": "https://github.com/srotbart/sdd"
     }
   ]
 }
