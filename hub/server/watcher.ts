@@ -44,7 +44,13 @@ export function startWatcher(
 ): () => void {
   const sddPath = path.join(workspacePath, ".sdd");
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastChangedPath = sddPath;
+  // Pending state accumulated across a debounce window. Report and non-report changes are
+  // tracked separately so that if both kinds occur within one window, both callbacks fire
+  // — previously a single shared timer + last-event state dropped one of them.
+  let pendingChange = false;
+  let pendingChangePath = sddPath;
+  let pendingReport = false;
+  let pendingTestsJsonChanged = false;
 
   let watchedReportPaths = readReportPaths(sddPath);
 
@@ -61,18 +67,30 @@ export function startWatcher(
   }
 
   const scheduleDebounced = (filePath: string, isReport: boolean): void => {
-    lastChangedPath = filePath;
+    if (isReport) {
+      pendingReport = true;
+    } else {
+      pendingChange = true;
+      pendingChangePath = filePath;
+      if (filePath.endsWith(".tests.json")) { pendingTestsJsonChanged = true; }
+    }
     if (debounceTimer !== null) {
       clearTimeout(debounceTimer);
     }
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
-      if (isReport) {
-        onSpecsChanged?.();
-      } else {
-        onChange(lastChangedPath);
+      const flushChange = pendingChange;
+      const flushChangePath = pendingChangePath;
+      const flushReport = pendingReport;
+      const flushTestsJson = pendingTestsJsonChanged;
+      pendingChange = false;
+      pendingReport = false;
+      pendingTestsJsonChanged = false;
 
-        if (filePath.endsWith(".tests.json")) {
+      if (flushChange) {
+        onChange(flushChangePath);
+
+        if (flushTestsJson) {
           const newReportPaths = readReportPaths(sddPath);
           for (const reportPath of newReportPaths) {
             if (!watchedReportPaths.has(reportPath)) {
@@ -84,6 +102,9 @@ export function startWatcher(
           }
           watchedReportPaths = newReportPaths;
         }
+      }
+      if (flushReport) {
+        onSpecsChanged?.();
       }
     }, DEBOUNCE_MS);
   };

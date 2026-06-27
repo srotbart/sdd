@@ -196,6 +196,7 @@ export function App() {
   const [liveActivity, setLiveActivity] = useState<ActivityLine[]>([]);
   const [projectionsRefreshToken, setProjectionsRefreshToken] = useState<number>(0);
   const [designsRefreshToken, setDesignsRefreshToken] = useState<number>(0);
+  const [standardsRefreshToken, setStandardsRefreshToken] = useState<number>(0);
   const [liveProjectionsCount, setLiveProjectionsCount] = useState<number>(0);
   const [liveDesignsCount, setLiveDesignsCount] = useState<number>(0);
   const [liveStandardsCount, setLiveStandardsCount] = useState<number>(0);
@@ -325,6 +326,18 @@ export function App() {
           setProjectionsRefreshToken((n) => n + 1);
         } else if (artifact === 'designs') {
           setDesignsRefreshToken((n) => n + 1);
+        } else if (artifact === 'issues') {
+          fetch(`/workspaces/${workspaceId}/issues`)
+            .then((r) => r.json())
+            .then((data: Issue[]) => setLiveIssues(data))
+            .catch(() => {});
+        } else if (artifact === 'improvements') {
+          fetch(`/workspaces/${workspaceId}/improvements`)
+            .then((r) => r.json())
+            .then((data: Improvement[]) => setLiveImprovements(data))
+            .catch(() => {});
+        } else if (artifact === 'standards') {
+          setStandardsRefreshToken((n) => n + 1);
         }
       };
 
@@ -443,7 +456,7 @@ export function App() {
       .then((r) => r.json())
       .then((data: unknown[]) => setLiveStandardsCount(data.length))
       .catch(() => setLiveStandardsCount(0));
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, standardsRefreshToken]);
 
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId) ?? null;
   const isHubActive = activeWorkspaceId === null;
@@ -536,7 +549,7 @@ export function App() {
       case 'improvements':
         return <Improvements improvements={liveImprovements} initialImprovementId={selectedItemId ?? undefined} />;
       case 'standards':
-        return <Standards workspaceId={activeWorkspace?.id ?? null} />;
+        return <Standards workspaceId={activeWorkspace?.id ?? null} refreshToken={standardsRefreshToken} />;
       case 'activity':
         return <Activity lines={liveActivity} agents={liveAgents} />;
       case 'settings':

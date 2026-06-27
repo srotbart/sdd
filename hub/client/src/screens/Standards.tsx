@@ -8,6 +8,8 @@ interface StandardsFile {
 
 interface StandardsProps {
   workspaceId: string | null;
+  /** Bumped on a live `standards` sdd-changed event to force a re-fetch. */
+  refreshToken?: number;
 }
 
 function parseSections(content: string): Array<{ heading: string; body: string }> {
@@ -26,7 +28,7 @@ function parseSections(content: string): Array<{ heading: string; body: string }
   return sections;
 }
 
-export function Standards({ workspaceId }: StandardsProps) {
+export function Standards({ workspaceId, refreshToken }: StandardsProps) {
   const [files, setFiles] = useState<StandardsFile[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +48,7 @@ export function Standards({ workspaceId }: StandardsProps) {
         setFiles([]);
         setLoading(false);
       });
-  }, [workspaceId]);
+  }, [workspaceId, refreshToken]);
 
   if (loading) {
     return <div className="standards-empty">loading…</div>;

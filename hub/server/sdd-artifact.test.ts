@@ -45,6 +45,22 @@ describe("resolveArtifact", () => {
     expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}design${sep}foo${sep}design.md`)).toBe("designs");
   });
 
+  it("returns 'issues' for a file inside .sdd/issues/ (GAP-arch-044)", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}issues${sep}ISS-arch-001.md`)).toBe("issues");
+  });
+
+  it("returns 'issues' for a file inside .sdd/issues/archive/", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}issues${sep}archive${sep}ISS-arch-001.md`)).toBe("issues");
+  });
+
+  it("returns 'improvements' for a file inside .sdd/improvements/ (GAP-arch-044)", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}improvements${sep}IMP-arch-001.md`)).toBe("improvements");
+  });
+
+  it("returns 'standards' for a file inside .sdd/standards/ (GAP-arch-044)", () => {
+    expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}standards${sep}standards-template.md`)).toBe("standards");
+  });
+
   it("returns null for a path outside the tracked directories", () => {
     expect(resolveArtifact(`/home/user/project${sep}.sdd${sep}other${sep}some-file.md`)).toBeNull();
   });
