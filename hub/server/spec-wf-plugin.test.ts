@@ -106,22 +106,26 @@ describe("SPEC-wf-004: sdd-init describes the two-phase workflow", () => {
   });
 });
 
-describe("SPEC-wf-005: sdd-worker spawned via TeamCreate for Skill tool access", () => {
+describe("SPEC-wf-005: sdd-worker is spawned via the Agent tool with no team setup step", () => {
   const skill = read("plugin/skills/spawn-sdd-worker/SKILL.md");
 
-  it("SPEC-wf-005: calls TeamCreate before the Agent spawn parameters block", () => {
-    const teamCreateAt = skill.indexOf("TeamCreate");
-    const agentParamsAt = skill.indexOf("`team_name`");
-    expect(teamCreateAt).toBeGreaterThanOrEqual(0);
-    expect(agentParamsAt).toBeGreaterThan(teamCreateAt);
+  it("SPEC-wf-005: does not invoke TeamCreate", () => {
+    // The removed TeamCreate tool must not be called (prose may reference its removal).
+    expect(skill).not.toMatch(/TeamCreate\s*\(/);
   });
 
-  it("SPEC-wf-005: the Agent spawn passes a team_name parameter", () => {
-    expect(skill).toMatch(/team_name/);
+  it("SPEC-wf-005: does not invoke TeamDelete", () => {
+    expect(skill).not.toMatch(/TeamDelete\s*\(/);
   });
 
-  it("SPEC-wf-005: TeamDelete is called for cleanup after the worker completes", () => {
-    expect(skill).toMatch(/TeamDelete/);
+  it("SPEC-wf-005: the Agent spawn parameters do not include team_name", () => {
+    // No `team_name` bullet in the spawn parameter list.
+    expect(skill).not.toMatch(/^\s*-\s*`team_name`/m);
+  });
+
+  it("SPEC-wf-005: documents that team setup and cleanup are automatic", () => {
+    expect(skill).toMatch(/No team setup step is required/);
+    expect(skill.toLowerCase()).toMatch(/automatically when the session exits/);
   });
 });
 
@@ -147,20 +151,10 @@ describe("SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap
   });
 });
 
-describe("SPEC-wf-007: spawn-sdd-worker derives a unique team name from the project root", () => {
-  const skill = read("plugin/skills/spawn-sdd-worker/SKILL.md");
-
-  it("SPEC-wf-007: team name is derived from basename of the project root, not hardcoded", () => {
-    expect(skill).toMatch(/basename "\$PWD"/);
-    expect(skill).toMatch(/sdd-\{project-slug\}/);
-    // Must not pin a fixed collision-prone name.
-    expect(skill).not.toMatch(/TeamCreate\(\{\s*name:\s*"sdd-execution"\s*\}\)/);
-  });
-
-  it("SPEC-wf-007: the derived name is reused when sending additional domains via SendMessage", () => {
-    expect(skill).toMatch(/SendMessage/);
-  });
-});
+// SPEC-wf-007 (spawn-sdd-worker derives a unique team name from the project root) was
+// deprecated by TGT-117 and archived: as of Claude Code v2.1.178 TeamCreate was removed
+// and team_name is ignored, so no team name is derived. Spawn behavior is covered by
+// SPEC-wf-005 above.
 
 describe("SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer", () => {
   for (const name of PIPELINE_SKILLS) {
@@ -277,9 +271,11 @@ describe("SPEC-wf-012: SDD statusline counts use direct file operations with par
 describe("SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent", () => {
   const skill = read("plugin/skills/explain/SKILL.md");
 
-  it("SPEC-wf-020: creates team sdd-explain-{project-slug} and spawns sdd-explainer", () => {
-    expect(skill).toMatch(/sdd-explain-\{project-slug\}/);
+  it("SPEC-wf-020: spawns sdd-explainer via the Agent tool with no team setup", () => {
     expect(skill).toMatch(/name['"`:\s]+["`']?sdd-explainer/);
+    // No TeamCreate call and no team_name spawn-parameter bullet.
+    expect(skill).not.toMatch(/TeamCreate\s*\(/);
+    expect(skill).not.toMatch(/^\s*-\s*`team_name`/m);
   });
 
   it("SPEC-wf-020: pins the sonnet model for the explainer agent", () => {

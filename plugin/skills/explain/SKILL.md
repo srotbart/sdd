@@ -19,27 +19,13 @@ The subject becomes the filename stem: `.sdd/projections/authentication.md`.
 
 ## Procedure
 
-### 1. Derive team name and create team
-
-Derive the project slug from the current working directory:
-
-```bash
-basename "$PWD"   # e.g. "sdd-repo" → team name becomes "sdd-explain-sdd-repo"
-```
-
-The team name is `sdd-explain-{project-slug}`. Create the team:
-
-```
-TeamCreate({ name: "sdd-explain-{project-slug}" })
-```
-
-### 2. Ensure .sdd/projections/ exists
+### 1. Ensure .sdd/projections/ exists
 
 ```bash
 mkdir -p .sdd/projections
 ```
 
-### 3. Spawn the sdd-explainer agent
+### 2. Spawn the sdd-explainer agent
 
 Use the Agent tool with the following parameters:
 
@@ -47,9 +33,15 @@ Use the Agent tool with the following parameters:
 - `subagent_type`: `"general-purpose"`
 - `model`: `"sonnet"`
 - `run_in_background`: `true`
-- `team_name`: `"sdd-explain-{project-slug}"`
 
-Pass this prompt to the agent (substituting `{subject}`, `{project_root}`, and `{team_name}`):
+No team setup step is required. As of Claude Code v2.1.178 the `TeamCreate`/`TeamDelete`
+tools no longer exist: spawning the agent via the Agent tool sets up the team context
+automatically, and it is torn down automatically when the session exits. There is no
+project-root-derived team name to compute, and the `team_name` input is accepted but
+ignored, so it is not passed. The agent inherits the Skill tool from its `general-purpose`
+agent type.
+
+Pass this prompt to the agent (substituting `{subject}` and `{project_root}`):
 
 ```
 You are sdd-explainer, a documentation agent for the project at {project_root}.
@@ -120,7 +112,7 @@ sections are written, update the Contents list at the top, then shut down.
   proceed with code-only research.
 ```
 
-### 4. Confirm and report
+### 3. Confirm and report
 
 After spawning, print:
 
