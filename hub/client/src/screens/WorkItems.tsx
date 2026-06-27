@@ -4,6 +4,7 @@ import { StatusPill } from '../components/StatusPill';
 import { AgentChip } from '../components/AgentChip';
 import { ArchiveFooter } from '../components/ArchiveFooter';
 import { ArtifactIdLink } from '../components/ArtifactIdLink';
+import { Markdown } from '../components/Markdown';
 import type { WorkItem, Gap, Spec, Agent } from '../types';
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -166,12 +167,6 @@ function WorkItemDrawer({ workItem: wi, gaps, specs, agents, onClose, onNav }: W
     : undefined;
   const agent = wi.agent ? (agents.find((a) => a.id === wi.agent) ?? null) : null;
 
-  function renderScope(scope: string) {
-    return scope
-      .replace(/`([^`]+)`/g, '<span class="drawer-code">$1</span>')
-      .replace(/([a-z_/.]+\.[a-z]+)/, '<span class="drawer-path">$1</span>');
-  }
-
   return (
     <div className="wi-drawer">
       <div className="wi-drawer__header">
@@ -197,10 +192,7 @@ function WorkItemDrawer({ workItem: wi, gaps, specs, agents, onClose, onNav }: W
         )}
 
         <div className="wi-drawer__eyebrow">scope</div>
-        <div
-          className="wi-drawer__scope"
-          dangerouslySetInnerHTML={{ __html: renderScope(wi.scope) }}
-        />
+        <div className="wi-drawer__scope"><Markdown>{wi.scope}</Markdown></div>
 
         <div className="wi-drawer__eyebrow">acceptance criteria</div>
         <ul className="wi-drawer__criteria">

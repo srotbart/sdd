@@ -100,6 +100,16 @@ describe('SPEC-scr-051 Standards screen — with content', () => {
     expect(document.querySelector('.standards-section')).not.toBeNull();
   });
 
+  it('renders markdown content as formatted HTML, not raw text (GAP-uic-019)', async () => {
+    await act(async () => {
+      render(<Standards workspaceId="ws-001" />);
+    });
+    // The `- ` list items in the standards markdown render as real <li> elements
+    // (via the shared Markdown component), not literal dashes in plain text.
+    const items = Array.from(document.querySelectorAll('.standards-section li')).map((li) => li.textContent);
+    expect(items.some((t) => t?.includes('2-space indentation'))).toBe(true);
+  });
+
   it('renders the file source label', async () => {
     await act(async () => {
       render(<Standards workspaceId="ws-001" />);

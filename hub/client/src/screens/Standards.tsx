@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Markdown } from '../components/Markdown';
 import './Standards.css';
 
 interface StandardsFile {
@@ -85,11 +86,11 @@ export function Standards({ workspaceId, refreshToken }: StandardsProps) {
                   {sec.heading && (
                     <h2 className="standards-section__heading">{sec.heading}</h2>
                   )}
-                  <div className="standards-section__content">{sec.body}</div>
+                  <div className="standards-section__content"><Markdown>{sec.body}</Markdown></div>
                 </div>
               ))
             ) : (
-              <div className="standards-content">{file.content}</div>
+              <div className="standards-content"><Markdown>{file.content}</Markdown></div>
             )}
           </div>
         );
