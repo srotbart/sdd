@@ -41,6 +41,30 @@ domain: architecture
 This was accepted long ago.
 `;
 
+const MULTIPARAGRAPH_TARGET = `---
+id: TGT-004
+status: ready
+created: 2026-05-20
+domain: architecture
+---
+
+# Target: Rich statement
+
+## Current statement
+
+First paragraph introduces the intent.
+
+A second paragraph with a list:
+- item one
+- item two
+
+Final paragraph states the **last decision** to settle.
+
+## Dialog
+### 2026-05-20 — User
+Dialog content that must not leak into the statement.
+`;
+
 function makeGapsSddDir(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-gaps-test-"));
   fs.mkdirSync(path.join(root, "gaps"), { recursive: true });
@@ -348,6 +372,21 @@ describe("parseTargets", () => {
       domain: "ui-screens",
       statement: "Show the list of targets loaded from .sdd.",
     });
+  });
+
+  it("captures a multi-paragraph Current statement in full, not just the first line (GAP-arch-043)", () => {
+    const root = makeSddDir();
+    fs.writeFileSync(path.join(root, "targets", "TGT-004.md"), MULTIPARAGRAPH_TARGET);
+
+    const targets = parseTargets(root);
+    expect(targets).toHaveLength(1);
+    const statement = targets[0]!.statement;
+    // Full statement preserved across paragraphs/list…
+    expect(statement).toContain("First paragraph introduces the intent.");
+    expect(statement).toContain("- item two");
+    expect(statement).toContain("Final paragraph states the **last decision** to settle.");
+    // …and stops at the next `## ` heading without absorbing the dialog.
+    expect(statement).not.toContain("Dialog content that must not leak");
   });
 
   it("includes archive targets alongside active targets", () => {
