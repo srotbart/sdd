@@ -99,6 +99,38 @@ describe("startWatcher — test report file watching", () => {
     expect(specsChangedCalls.length).toBe(0);
   });
 
+  it("fires both onChange and onSpecsChanged when a report and a regular change land in one window (GAP-arch-045)", async () => {
+    const workspace = makeTmpWorkspace();
+    const reportPath = path.join(workspace, "test-results", "vitest.json");
+    fs.mkdirSync(path.join(workspace, "test-results"), { recursive: true });
+    fs.writeFileSync(reportPath, "{}");
+
+    const mapping = { runner: "vitest", report: "test-results/vitest.json", items: {} };
+    fs.mkdirSync(path.join(workspace, ".sdd", "specs", "architecture"), { recursive: true });
+    fs.writeFileSync(
+      path.join(workspace, ".sdd", "specs", "architecture", "SPEC-arch.tests.json"),
+      JSON.stringify(mapping)
+    );
+
+    const sddChangedCalls: string[] = [];
+    const specsChangedCalls: number[] = [];
+    const stop = startWatcher(
+      workspace,
+      (p) => sddChangedCalls.push(p),
+      () => specsChangedCalls.push(Date.now())
+    );
+
+    await wait(500);
+    // Both kinds of change within the same debounce window — neither may be dropped.
+    fs.writeFileSync(reportPath, '{"startTime":1}');
+    fs.writeFileSync(path.join(workspace, ".sdd", "targets", "TGT-009.md"), "# T");
+    await wait(DEBOUNCE_WAIT);
+
+    stop();
+    expect(sddChangedCalls.length).toBeGreaterThanOrEqual(1);
+    expect(specsChangedCalls.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("picks up new report paths when a .tests.json mapping file is added", async () => {
     const workspace = makeTmpWorkspace();
     const reportPath = path.join(workspace, "reports", "new-report.json");

@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import { getAllAgents, type Agent } from "./db/index.js";
 import { getWorkspacesEnriched, type WorkspaceData } from "./workspace-data.js";
 
-export type SddArtifact = "targets" | "specs" | "gaps" | "work-items" | "projections" | "designs";
+export type SddArtifact = "targets" | "specs" | "gaps" | "work-items" | "projections" | "designs" | "issues" | "improvements" | "standards";
 
 export interface StateSnapshot {
   type: "snapshot";
