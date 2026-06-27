@@ -2,12 +2,19 @@
 id: SPEC-wf-007
 domain: workflow
 abbrev: wf
-status: active
+status: deprecated
 aliases: []
-version: "28a4b3db"
+version: "0eb0e8bb"
 ---
 
 # SPEC-wf-007 — spawn-sdd-worker derives a unique team name from the project root
+
+> **Deprecated 2026-06-27 (TGT-117).** This invariant no longer holds. As of Claude Code
+> v2.1.178 the `TeamCreate` tool was removed and the Agent tool's `team_name` input is
+> ignored; the team is named automatically from the session, so there is no
+> project-root-derived team name to compute and cross-session collisions are handled by the
+> platform. `spawn-sdd-worker` no longer derives a team name. Spawn behavior is now governed
+> by SPEC-wf-005. Retained for history; not evaluated by spec-audit.
 
 ## Invariant
 

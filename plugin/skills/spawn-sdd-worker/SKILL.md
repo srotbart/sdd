@@ -31,37 +31,27 @@ If a domain argument was provided, use it. Otherwise, scan `.sdd/gaps/` for open
 
 ### 2. Spawn the sdd-worker agent
 
-First, derive a unique team name from the last path segment of the project root so
-that concurrent Claude sessions in different projects do not collide on the same team
-name:
-
-```bash
-basename "$PWD"   # e.g. "sdd-repo" → team name becomes "sdd-sdd-repo"
-```
-
-The team name is `sdd-{project-slug}` where `{project-slug}` is the final directory
-component of the working directory. Store it as `{team_name}`.
-
-Create the named team so the worker has access to the Skill tool:
-
-```
-TeamCreate({ name: "{team_name}" })
-```
-
-Then use the Agent tool with the following parameters:
+Use the Agent tool with the following parameters:
 
 - `name`: `"sdd-worker"`
 - `subagent_type`: `"general-purpose"`
 - `model`: `"sonnet"`
 - `run_in_background`: `true`
-- `team_name`: `"{team_name}"`
+
+No team setup step is required. As of Claude Code v2.1.178 the `TeamCreate` and
+`TeamDelete` tools no longer exist: spawning a teammate via the Agent tool sets up the
+team context automatically, and it is torn down automatically when the session exits. The
+team is named from the session, so there is no project-root-derived name to compute and no
+risk of cross-session collisions. The `team_name` input on the Agent tool is accepted but
+ignored, so it is not passed. The spawned worker inherits the Skill tool from its
+`general-purpose` agent type, so no setup step is needed to grant Skill access.
 
 The `model` is pinned to `sonnet` rather than inheriting the session model: the
 execution pipeline (audit → decompose → close) is deterministic given a clear spec,
 so sonnet is sufficient and avoids running the mechanical work on the more expensive
 model.
 
-Pass this prompt to the agent (substituting `{domain}`, `{project_root}`, and `{team_name}`):
+Pass this prompt to the agent (substituting `{domain}` and `{project_root}`):
 
 ```
 You are sdd-worker, an autonomous SDD execution agent for the project at {project_root}.
@@ -114,15 +104,12 @@ To send additional domains to the same worker:
   SendMessage to "sdd-worker" with the domain name.
 ```
 
-### 4. Clean up the team
+### 4. Clean up
 
-When the worker signals completion or is shut down, call TeamDelete to remove the team:
-
-```
-TeamDelete({ name: "{team_name}" })
-```
-
-This releases the team context. If additional domains are needed in the same session, the worker can be reused via SendMessage before cleanup — only call TeamDelete when no further execution work is expected.
+No explicit cleanup step is required. As of Claude Code v2.1.178 the team context is
+released automatically when the session exits, and the `TeamDelete` tool no longer exists.
+If additional domains are needed in the same session, reuse the running worker via
+SendMessage rather than spawning a new one.
 
 ## Notes
 
