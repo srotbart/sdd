@@ -158,4 +158,10 @@ describe("GET /workspaces/:id/designs/:name — SPEC-scr-042", () => {
     const res = await fetch(`http://127.0.0.1:${port}/workspaces/unknown/designs/auth-flow`);
     expect(res.status).toBe(404);
   });
+
+  it("rejects a path-traversal design name with 400 (SPEC-arch-042)", async () => {
+    vi.mocked(dbMocks.getWorkspaceById).mockReturnValue({ id: "ws-1", name: "Test", path: tmpRoot, description: null });
+    const res = await fetch(`http://127.0.0.1:${port}/workspaces/ws-1/designs/..%5C..%5Csecret`);
+    expect(res.status).toBe(400);
+  });
 });

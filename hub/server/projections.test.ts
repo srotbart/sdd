@@ -143,4 +143,12 @@ describe("GET /workspaces/:id/projections/:name — SPEC-scr-040", () => {
     const res = await fetch(`http://127.0.0.1:${port}/workspaces/unknown/projections/overview`);
     expect(res.status).toBe(404);
   });
+
+  it("rejects a path-traversal projection name with 400 (SPEC-arch-042)", async () => {
+    vi.mocked(dbMocks.getWorkspaceById).mockReturnValue({ id: "ws-1", name: "Test", path: tmpRoot, description: null });
+    // A name containing `..` (here with an encoded backslash) must be rejected
+    // before any path.join / filesystem access, not allowed to escape the dir.
+    const res = await fetch(`http://127.0.0.1:${port}/workspaces/ws-1/projections/..%5C..%5Csecret`);
+    expect(res.status).toBe(400);
+  });
 });
