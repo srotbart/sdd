@@ -177,6 +177,27 @@ describe('WorkItems — ArchiveFooter wiring', () => {
   });
 });
 
+describe('WorkItems — scope renders via the shared Markdown component (GAP-uic-020)', () => {
+  it('renders inline code in the scope as a <code> element, not via dangerouslySetInnerHTML', async () => {
+    const item = makeItem({
+      id: 'WI-md',
+      status: 'pending',
+      scope: 'edit `hub/server/ws-pty.ts` to guard cwd',
+    });
+    render(
+      <WorkItems workItems={[item]} gaps={gaps} specs={specs} agents={agents} onNav={onNav} />,
+    );
+    await userEvent.click(document.querySelector('.kcard')!);
+    const scope = document.querySelector('.wi-drawer__scope');
+    expect(scope).not.toBeNull();
+    // The shared Markdown component renders inline code as a real <code> element,
+    // replacing the old hand-rolled `.drawer-code` span injected via innerHTML.
+    expect(scope!.querySelector('code')).not.toBeNull();
+    expect(scope!.querySelector('code')!.textContent).toBe('hub/server/ws-pty.ts');
+    expect(scope!.querySelector('.drawer-code')).toBeNull();
+  });
+});
+
 describe('WorkItems — kanban fills full board width (SPEC-scr-038)', () => {
   it('kanban CSS rule does not contain align-self: start', async () => {
     const css = await import('./WorkItems.css?raw');
