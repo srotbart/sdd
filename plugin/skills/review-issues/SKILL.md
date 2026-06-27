@@ -6,7 +6,7 @@ version: 0.1.0
 
 # SDD Review Issues
 
-Spawn a team of 3 agents via `TeamCreate` to sweep the codebase and specs for
+Spawn 3 agents via the Agent tool to sweep the codebase and specs for
 problems. Each reviewer flags distinct findings as `ISS-{domain}-{seq}` artifacts
 under `.sdd/issues/`. Findings are de-duplicated before archival. **Reviewers
 never auto-fix issues.**
@@ -23,8 +23,11 @@ Accept one of:
 
 ### 1. Spawn the reviewer team
 
-Use `TeamCreate` to spawn exactly **3 reviewer agents**. Assign each reviewer a
-disjoint subset of the review surface to avoid duplicate coverage:
+Use the Agent tool to spawn exactly **3 reviewer agents** (no team setup step — as of
+Claude Code v2.1.178 the `TeamCreate`/`TeamDelete` tools no longer exist; team context is
+managed automatically). Each reviewer fans out independently and reports its findings back;
+this skill collects and de-duplicates them. Assign each reviewer a disjoint subset of the
+review surface to avoid duplicate coverage:
 
 - **Reviewer A** — code correctness: bugs, logic errors, error-handling gaps,
   security anti-patterns
@@ -110,8 +113,8 @@ Next: Engage findings with the user. Run `/sdd:review-engage ISS-auth-001` to pr
 
 ## Constraints
 
-- **Three reviewers via TeamCreate.** The skill must use exactly 3 agents, not
-  fewer. If TeamCreate is unavailable, complete the review serially and note the
+- **Three reviewers via the Agent tool.** The skill must use exactly 3 agents, not
+  fewer. If parallel agents are unavailable, complete the review serially and note the
   limitation in the report.
 - **Never auto-fix.** Reviewers flag; they do not modify code or spec files.
 - **One issue = one finding.** Do not combine multiple problems into one issue.

@@ -271,9 +271,11 @@ describe("SPEC-wf-012: SDD statusline counts use direct file operations with par
 describe("SPEC-wf-020: sdd:explain skill spawns a dedicated sdd-explainer agent", () => {
   const skill = read("plugin/skills/explain/SKILL.md");
 
-  it("SPEC-wf-020: creates team sdd-explain-{project-slug} and spawns sdd-explainer", () => {
-    expect(skill).toMatch(/sdd-explain-\{project-slug\}/);
+  it("SPEC-wf-020: spawns sdd-explainer via the Agent tool with no team setup", () => {
     expect(skill).toMatch(/name['"`:\s]+["`']?sdd-explainer/);
+    // No TeamCreate call and no team_name spawn-parameter bullet.
+    expect(skill).not.toMatch(/TeamCreate\s*\(/);
+    expect(skill).not.toMatch(/^\s*-\s*`team_name`/m);
   });
 
   it("SPEC-wf-020: pins the sonnet model for the explainer agent", () => {

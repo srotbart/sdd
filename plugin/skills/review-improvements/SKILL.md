@@ -6,7 +6,7 @@ version: 0.1.0
 
 # SDD Review Improvements
 
-Spawn a team of 3 agents via `TeamCreate` to sweep the codebase and specs for
+Spawn 3 agents via the Agent tool to sweep the codebase and specs for
 improvement opportunities — enhancements, refactors, simplifications, performance,
 ergonomics, and better patterns. Each proposal is written as an `IMP-{domain}-{seq}`
 artifact under `.sdd/improvements/`. This is the enhancement-focused sibling of
@@ -24,8 +24,11 @@ Accept one of:
 
 ### 1. Spawn the improvements team
 
-Use `TeamCreate` to spawn exactly **3 improvement-focused agents**. Assign each
-agent a disjoint improvement lens to avoid duplicate coverage:
+Use the Agent tool to spawn exactly **3 improvement-focused agents** (no team setup step —
+as of Claude Code v2.1.178 the `TeamCreate`/`TeamDelete` tools no longer exist; team context
+is managed automatically). Each agent fans out independently and reports its proposals back;
+this skill collects and de-duplicates them. Assign each agent a disjoint improvement lens to
+avoid duplicate coverage:
 
 - **Agent A** — refactoring and simplification: duplicated code, over-complex
   logic, abstractions that could be extracted or collapsed
@@ -116,8 +119,8 @@ Next: Engage proposals with the user. Run `/sdd:review-engage IMP-auth-001` to p
 
 ## Constraints
 
-- **Three agents via TeamCreate.** Exactly 3 improvement-focused agents. If
-  TeamCreate is unavailable, complete the review serially and note the limitation.
+- **Three agents via the Agent tool.** Exactly 3 improvement-focused agents. If
+  parallel agents are unavailable, complete the review serially and note the limitation.
 - **Focus on enhancements, not defects.** Bugs and correctness issues belong to
   `/sdd:review-issues`. Boundary: if the code is wrong, it is an issue; if it is
   correct but improvable, it is an improvement.
