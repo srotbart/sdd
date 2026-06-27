@@ -3,6 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import { spawn } from "node-pty";
 import { execSync } from "node:child_process";
 import { URL } from "node:url";
+import fs from "node:fs";
 import os from "node:os";
 
 export const PTY_WS_PATH = "/terminal";
@@ -45,6 +46,24 @@ function parseResizeMessage(raw: string): ResizeMessage | null {
   }
 }
 
+/** Attempt to spawn the PTY; returns null if spawn throws synchronously.
+ *  Prevents a PTY library error or other runtime failure from propagating as an
+ *  uncaught exception that would take down the hub process.
+ */
+function trySpawn(shell: string, cwdPath: string): ReturnType<typeof spawn> | null {
+  try {
+    return spawn(shell, [], {
+      name: "xterm-color",
+      cols: 80,
+      rows: 24,
+      cwd: cwdPath,
+      env: process.env as Record<string, string>,
+    });
+  } catch {
+    return null;
+  }
+}
+
 export function attachPtyWebSocketServer(httpServer: Server): void {
   const wss = new WebSocketServer({ server: httpServer, path: PTY_WS_PATH });
 
@@ -54,20 +73,22 @@ export function attachPtyWebSocketServer(httpServer: Server): void {
     try {
       const reqUrl = new URL(req.url ?? "", `http://127.0.0.1`);
       const cwdParam = reqUrl.searchParams.get("cwd");
-      if (cwdParam) { cwd = cwdParam; }
+      // Only accept the client-supplied cwd if it exists on disk; an invalid
+      // path would cause spawn to throw synchronously and crash the hub process.
+      if (cwdParam && fs.existsSync(cwdParam)) { cwd = cwdParam; }
     } catch {
       // ignore malformed URL — keep default cwd
     }
 
     const shell = resolveShell();
 
-    const pty = spawn(shell, [], {
-      name: "xterm-color",
-      cols: 80,
-      rows: 24,
-      cwd,
-      env: process.env as Record<string, string>,
-    });
+    const pty = trySpawn(shell, cwd);
+    if (!pty) {
+      // spawn failed synchronously (e.g. PTY library error); close the socket
+      // cleanly so the hub process is not taken down by an uncaught exception
+      ws.close();
+      return;
+    }
 
     // Stream PTY output → WebSocket client
     pty.onData((data) => {

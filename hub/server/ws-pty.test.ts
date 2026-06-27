@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import http from "node:http";
+import os from "node:os";
 import { WebSocket } from "ws";
 
 // ---- Mock node-pty ----
@@ -165,14 +166,50 @@ describe("ws-pty — PTY WebSocket endpoint (SPEC-arch-043)", () => {
 
   it("uses cwd from the query parameter when spawning the PTY", async () => {
     const { spawn: mockSpawn } = await import("node-pty");
-    const ws = await connect(port, "?cwd=/tmp/my-workspace");
+    // Use os.tmpdir() — a path that actually exists — so the fs.existsSync guard
+    // accepts it and passes it through to spawn.
+    const existingDir = os.tmpdir();
+    const ws = await connect(port, `?cwd=${encodeURIComponent(existingDir)}`);
     await waitFor();
 
     expect(mockSpawn).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(Array),
-      expect.objectContaining({ cwd: "/tmp/my-workspace" }),
+      expect.objectContaining({ cwd: existingDir }),
     );
     ws.close();
+  });
+
+  it("falls back to process.cwd() when the supplied cwd does not exist", async () => {
+    const { spawn: mockSpawn } = await import("node-pty");
+    const badCwd = "/nonexistent/sdd/test/path/xyz789";
+    const ws = await connect(port, `?cwd=${encodeURIComponent(badCwd)}`);
+    await waitFor();
+
+    // spawn must have been called, but NOT with the nonexistent path
+    expect(mockSpawn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Array),
+      expect.not.objectContaining({ cwd: badCwd }),
+    );
+
+    ws.close();
+  });
+
+  it("closes the socket cleanly when spawn throws instead of crashing the hub", async () => {
+    const { spawn: mockSpawn } = await import("node-pty");
+    vi.mocked(mockSpawn).mockImplementationOnce(() => {
+      throw new Error("PTY spawn failed");
+    });
+
+    // Do not use connect() here — it resolves on "open" then the socket may close
+    // immediately; we just need to observe "close" or "error" from the client.
+    await new Promise<void>((resolve, reject) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}${PTY_WS_PATH}`);
+      const timer = setTimeout(() => reject(new Error("socket did not close after spawn failure")), 2000);
+      ws.on("close", () => { clearTimeout(timer); resolve(); });
+      ws.on("error", () => { clearTimeout(timer); resolve(); });
+    });
+    // Reaching here means the socket closed gracefully; the hub is still alive
   });
 });

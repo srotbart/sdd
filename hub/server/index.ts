@@ -296,7 +296,12 @@ async function handleApi(
       json(res, 404, { error: "workspace not found" });
       return true;
     }
-    const filePath = path.join(ws.path, ".sdd", "projections", `${projectionsItemMatch[2]}.md`);
+    const safeName = sanitizeProjectionName(projectionsItemMatch[2]);
+    if (!safeName) {
+      json(res, 400, { error: "invalid projection name" });
+      return true;
+    }
+    const filePath = path.join(ws.path, ".sdd", "projections", `${safeName}.md`);
     if (!fs.existsSync(filePath)) {
       json(res, 404, { error: "projection not found" });
       return true;
@@ -426,7 +431,12 @@ async function handleApi(
       json(res, 404, { error: "workspace not found" });
       return true;
     }
-    const filePath = path.join(ws.path, ".sdd", "design", designsItemMatch[2], "design.md");
+    const safeName = sanitizeProjectionName(designsItemMatch[2]);
+    if (!safeName) {
+      json(res, 400, { error: "invalid design name" });
+      return true;
+    }
+    const filePath = path.join(ws.path, ".sdd", "design", safeName, "design.md");
     if (!fs.existsSync(filePath)) {
       json(res, 404, { error: "design not found" });
       return true;
