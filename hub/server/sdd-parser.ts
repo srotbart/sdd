@@ -140,7 +140,10 @@ function parseTargetFile(filePath: string): Target | null {
   const titleMatch = /^# Target:\s*(.+)$/m.exec(body);
   const title = titleMatch ? titleMatch[1].trim() : "";
 
-  const statementMatch = /^## Current statement\s*\n([\s\S]*?)(?=\n## |\s*$)/m.exec(body);
+  // Capture everything from the heading up to the next `## ` section (e.g. `## Dialog`)
+  // or end of file. No `/m` flag and no `\s*$` alternative: those made the lazy capture
+  // stop at the first line break, truncating multi-paragraph statements to one line.
+  const statementMatch = /## Current statement[ \t]*\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(body);
   const statement = statementMatch ? statementMatch[1].trim() : "";
 
   const dialog: DialogTurn[] = [];
