@@ -160,6 +160,22 @@ Full guide: references/artifacts/work-item.md
 
 Omit this block when running in zero-state (no `.sdd/` directory found, step 1).
 
+### 5c. Surface the coding standards
+
+This is the **proactive enforcement layer** for coding standards (SPEC-wf-029, layer 1):
+session-start is where the agent receives the standards rubric for the session, so it
+follows them while writing code — the rules are NOT duplicated into `CLAUDE.md`.
+
+If `.sdd/standards/` contains a rubric (e.g. `standards-template.md`), read it and emit a
+terse agent-facing summary of its rules (formatting, anti-patterns, conventions,
+architectural rules), capped at ~12 lines, prefixed with the source path so the agent knows
+the full rubric lives at `.sdd/standards/`. If the rubric is still the unfilled template
+(only `_[Fill in…]_` placeholders), note that no standards are authored yet and skip the
+summary.
+
+Keep this to the working rules an author needs at a glance; the `.sdd/standards/` file is the
+authoritative source for exhaustive detail. Omit in zero-state (step 1).
+
 ### 6. Next-action footer
 
 End with exactly one suggestion based on highest-priority state:
