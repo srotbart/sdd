@@ -1,88 +1,76 @@
 # Coding Standards
 
-<!-- 
-INSTRUCTIONS FOR THE USER:
-  Fill in each section below with your project's actual coding standards.
-  This file is the reviewer rubric used by `/sdd:review-issues` and
-  `/sdd:review-improvements` for judgement-based rules that linters cannot express.
-
-  Keep CLAUDE.md in sync — add the same standards there so Claude follows them
-  during authoring (proactive enforcement).
-
-  IMPORTANT: These are NOT spec items. Do not add SPEC-* references here.
-  Standards belong to the review/refactor phase, not to spec-audit.
+<!--
+  Reviewer rubric used by /sdd:review-issues and /sdd:review-improvements for
+  judgement-based rules linters cannot express. These are NOT spec items — they
+  belong to the review/refactor phase, not spec-audit. Keep CLAUDE.md in sync so
+  Claude follows them while authoring (proactive enforcement).
 -->
 
 ---
 
 ## Formatting and Style
 
-<!-- 
-  Rules for code formatting, indentation, line length, file structure.
-  Example:
-  - 2-space indentation; no tabs
-  - Max line length: 100 characters
-  - One blank line between functions; two between top-level declarations
-  - Import order: stdlib → third-party → local
--->
-
-_[Fill in your formatting and style rules]_
+- 2-space indentation; no tabs.
+- TypeScript runs in `strict` mode; `noUnusedLocals` and `noUnusedParameters` are on —
+  no unused imports, locals, or parameters.
+- Import order: Node/stdlib → third-party → local. Server (ESM) local imports use
+  explicit `.js` extensions.
+- Prefer `const`; use `let` only when reassigned. No `var`.
+- One concern per file; keep modules focused.
 
 ---
 
 ## Best Practices and Anti-Patterns
 
-<!--
-  Patterns to follow and patterns to avoid.
-  Example:
-  - Prefer explicit error handling over silent catches (no `catch {}` without log)
-  - Avoid mutation of function parameters
-  - Anti-pattern: using `any` type in TypeScript without a comment explaining why
-  - Prefer early return over deeply nested conditionals
--->
-
-_[Fill in best practices and anti-patterns for this project]_
+- **No `dangerouslySetInnerHTML`.** Render markdown through the shared `Markdown`
+  component; raw HTML stays disabled. _(ISS-scr-003)_
+- **Don't repeat a non-trivial code shape across 3+ sites.** Extract a shared helper or
+  component instead of copy-pasting. Two copies is a smell to watch; three is a refactor.
+  _(ISS-arch-004, ISS-arch-006, ISS-arch-007, ISS-ui-001, ISS-scr-002)_
+- Prefer explicit error handling. No silent `catch {}` without a comment explaining intent.
+- Avoid `any` without a short comment justifying it.
+- Prefer early return over deeply nested conditionals.
+- Validate/​sanitise externally-supplied input (paths, query params) before use.
 
 ---
 
 ## Project-Specific Conventions
 
-<!--
-  Naming conventions, file organisation, domain-specific rules.
-  Example:
-  - Component files: PascalCase.tsx; util files: camelCase.ts
-  - All async functions prefixed with "fetch" or "load" when they make network calls
-  - Domain objects: immutable value types; service objects: class instances
--->
-
-_[Fill in project-specific conventions]_
+- Component files: `PascalCase.tsx` under `components/`; screens under `screens/`;
+  utility modules: `camelCase.ts`. Co-locate `*.test.tsx`/`*.test.ts` with the unit.
+- **Reuse the shared components** rather than re-implementing their concern:
+  `Markdown`, `StatusPill`, `ArtifactList`, `ArtifactIdLink`, `ArchiveFooter`,
+  `TestStatusDot`. A new screen that renders a list/markdown/status should compose these.
+  _(ISS-scr-001, ISS-scr-003, ISS-scr-004)_
+- Two screens that are structural clones (e.g. Issues/Improvements) should share a
+  parametrised component, not be maintained in lockstep by hand. _(ISS-scr-001)_
+- Each spec item links its verifying tests via a `**Tests:**` block; a spec with backing
+  tests should not omit it. _(ISS-ui-002, ISS-wf-001)_
+- ID sequences (gaps, work items, issues) are globally unique within a domain and must be
+  numbered from both active and `archive/` — never recycled. _(ISS-wf-002)_
 
 ---
 
 ## Architectural Rules
 
-<!--
-  High-level structural rules: which layers may import which, where state lives,
-  how side effects are isolated, etc.
-  Example:
-  - UI components must not import directly from database layer
-  - All side effects (network, file I/O) must be in service classes
-  - No business logic in route handlers — delegate to domain services
--->
-
-_[Fill in architectural rules]_
+- **Thin route handlers.** No god-functions: a request dispatcher should not be a giant
+  if-chain with copy-pasted guard clauses. Extract per-route handlers and shared guards
+  (e.g. workspace-lookup + 404). _(ISS-arch-005)_
+- **One source per repeated mechanism.** Directory-walk/parse scaffolds, watcher-callback
+  wiring, and per-artifact client fetch effects should each be defined once and
+  parametrised, not duplicated per artifact type. _(ISS-arch-004, ISS-arch-006, ISS-ui-001)_
+- A display/derivation rule used on both server and client (e.g. domain-abbrev) has one
+  definition, not two that can drift. _(ISS-arch-007)_
+- Side effects (file I/O, network, process spawning) are guarded so a single failure
+  cannot crash the process. _(ISS-arch-001)_
 
 ---
 
 ## Reviewer Notes
 
-<!--
-  Notes for the review-issues and review-improvements skills about how to apply
-  these standards. Add exceptions, priority guidance, or context here.
-  Example:
-  - Legacy files under src/legacy/ are exempt from line-length rules
-  - Architectural violations are always high-severity issues
-  - Style violations are always low-severity unless they affect readability
--->
-
-_[Fill in reviewer guidance]_
+- Architectural-rule violations: **high** severity. Correctness/security: **high**.
+- Duplication across 3+ sites or a clear anti-pattern: **medium**.
+- Style nits and naming suggestions: **low** unless they impair readability.
+- These standards are the refactor rubric; they are enforced at review time and as
+  proactive guidance, never via `/sdd:spec-audit`.
