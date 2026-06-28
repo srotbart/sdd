@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "a9fa903d"
+version: "e785b833"
 ---
 
 # SPEC-wf-025 — Issues are a reviewer-team-produced artifact type
@@ -23,6 +23,8 @@ SDD includes an **issues** artifact type produced by a dedicated reviewer team. 
 - The reviewer team does not auto-fix the issues it finds
 
 **Tests:**
-- `plugin/skills/review-issues/SKILL.md` spawns 3 reviewer agents via the Agent tool, not `TeamCreate` — "review-issues uses the Agent tool to spawn 3 reviewers"
-- `.sdd/issues/` directory exists — "issues artifact storage location is scaffolded"
-- `.sdd/issues/archive/` directory exists — "issues archive storage location is scaffolded"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: review-issues spawns exactly 3 reviewer agents via the Agent tool` — "3 reviewers spawned via the Agent tool"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: review-issues does not spawn via the removed TeamCreate tool` — "no TeamCreate invocation"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: findings are ISS-{domain}-{seq} under .sdd/issues/ recording location, problem, rationale, severity` — "issue artifact shape"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: reviewers never auto-fix findings` — "reviewers never auto-fix"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: issues storage and archive directories are scaffolded` — "issues storage + archive scaffolded"
