@@ -3,6 +3,7 @@ import './Gaps.css';
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactIdLink } from '../components/ArtifactIdLink';
+import { dayOf } from '../util/date';
 import type { Gap, Spec, WorkItem } from '../types';
 
 interface GapsProps {
@@ -165,7 +166,7 @@ function GapDetail({ gap, specs, workItems, fmtAgo, onNav }: GapDetailProps) {
           <div className="gap-audit-meta">
             <div>
               <span className="gap-audit-meta__key">discovered</span>{' '}
-              {gap.discovered.split('T')[0]} ({fmtAgo(gap.discovered)} ago)
+              {dayOf(gap.discovered)} ({fmtAgo(gap.discovered)} ago)
             </div>
             <div>
               <span className="gap-audit-meta__key">spec version</span>{' '}

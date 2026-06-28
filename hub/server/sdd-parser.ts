@@ -126,6 +126,12 @@ interface Target {
   dialog: DialogTurn[];
 }
 
+// Derives a short abbreviation from a domain slug ("ui-screens" → "uisc").
+// Intentionally mirrored in hub/client/src/App.tsx > mapApiTarget; keep in sync.
+function deriveDomainAbbrev(domain: string): string {
+  return domain.split("-").map((p) => p.slice(0, 2)).join("").slice(0, 6) || domain;
+}
+
 function parseTargetFile(filePath: string): Target | null {
   let content: string;
   try {
@@ -160,7 +166,8 @@ function parseTargetFile(filePath: string): Target | null {
   }
 
   const domain = meta["domain"] ?? "";
-  const domainAbbrev = domain.split("-").map((p) => p.slice(0, 2)).join("").slice(0, 6) || domain;
+  // Intentionally mirrored in hub/client/src/App.tsx > mapApiTarget; keep in sync.
+  const domainAbbrev = deriveDomainAbbrev(domain);
 
   return {
     id: meta["id"],

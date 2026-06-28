@@ -6,6 +6,7 @@ import type { Target, TargetStatus } from '../types';
 import { StatusPill } from '../components/StatusPill';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactIdLink } from '../components/ArtifactIdLink';
+import { dayOf } from '../util/date';
 
 function fmtAgo(dateStr: string): string {
   const d = new Date(dateStr);
@@ -106,7 +107,7 @@ export function TargetDetail({ target }: TargetDetailProps) {
             {target.domain}
           </span>
           <span className="target-detail__created">
-            created {target.created.split('T')[0]}
+            created {dayOf(target.created)}
           </span>
         </div>
         <h2 className={`target-detail__title${!target.title ? ' target-detail__title--unnamed' : ''}`}>
