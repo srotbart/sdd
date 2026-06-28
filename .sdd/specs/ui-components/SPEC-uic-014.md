@@ -4,7 +4,7 @@ domain: ui-components
 abbrev: uic
 status: active
 aliases: []
-version: "2d68725c"
+version: "cadf0cb6"
 ---
 
 # SPEC-uic-014 — Artifact IDs in markdown content auto-render as ArtifactPeeker links
@@ -21,13 +21,12 @@ The shared `Markdown` component (SPEC-uic-013) automatically renders artifact ID
 - Unknown or unloaded IDs fall back to plain text (existing `ArtifactIdLink` behavior)
 - The behavior applies on every screen that renders markdown, with no per-site wiring
 
-## Tests
+**Tests:**
 
-- `hub/client/src/components/Markdown.test.tsx` — `Markdown component — artifact ID linkification (SPEC-uic-014)`
-  - `(a) an artifact ID in a paragraph renders as an artifact-id-link button`
-  - `(a) multi-segment IDs (SPEC-uic-014, GAP-uic-001, WI-uic-001) also linkify`
-  - `(a) all supported prefixes linkify: TGT SPEC GAP WI ISS IMP`
-  - `(b) an artifact ID inside a fenced code block is NOT linkified`
-  - `(b) an artifact ID inside inline code is NOT linkified`
-  - `(c) a normal markdown link still renders as a plain <a> element`
-  - `(d) GFM table still renders correctly alongside artifact linkification (regression)`
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (a) an artifact ID in a paragraph renders as an artifact-id-link button` — an artifact ID in a paragraph linkifies
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (a) multi-segment IDs (SPEC-uic-014, GAP-uic-001, WI-uic-001) also linkify` — multi-segment IDs linkify
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (a) all supported prefixes linkify: TGT SPEC GAP WI ISS IMP` — all artifact prefixes linkify
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (b) an artifact ID inside a fenced code block is NOT linkified` — IDs in fenced code are not linkified
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (b) an artifact ID inside inline code is NOT linkified` — IDs in inline code are not linkified
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (c) a normal markdown link still renders as a plain <a> element` — normal links stay plain
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — artifact ID linkification (SPEC-uic-014) > (d) GFM table still renders correctly alongside artifact linkification (regression)` — GFM tables still render

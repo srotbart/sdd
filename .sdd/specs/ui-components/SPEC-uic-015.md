@@ -4,7 +4,7 @@ domain: ui-components
 abbrev: uic
 status: active
 aliases: []
-version: "1d510278"
+version: "e840cce7"
 ---
 
 # SPEC-uic-015 — Fenced code blocks in the shared Markdown component render with themed syntax highlighting
@@ -38,3 +38,11 @@ remain non-linkified (SPEC-uic-014 preserved).
   NOT linkified (SPEC-uic-014 regression holds)
 - `rehype-highlight` (with highlight.js) is added as a dependency in `hub/client`; the
   highlight.js `common` language set is used with no lazy grammar loading
+
+**Tests:**
+
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — syntax highlighting (SPEC-uic-015) > a fenced code block with a language tag renders hljs class and token spans` — highlighted code gets the hljs class and token spans
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — syntax highlighting (SPEC-uic-015) > a fenced code block with no language tag renders without error and no token spans` — no language tag renders plain code with no error
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — syntax highlighting (SPEC-uic-015) > a fenced code block with an unknown language tag degrades gracefully` — unknown language degrades to plain code without throwing
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — syntax highlighting (SPEC-uic-015) > rehype-raw is NOT in the rehypePlugins list (SPEC-uic-013 safety regression)` — raw HTML is still escaped; rehype-raw is absent
+- `hub/client/src/components/Markdown.test.tsx > Markdown component — syntax highlighting (SPEC-uic-015) > artifact IDs inside fenced code blocks are still NOT linkified (SPEC-uic-014 regression)` — artifact IDs inside code blocks remain plain text

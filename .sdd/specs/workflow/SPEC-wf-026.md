@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "a743560e"
+version: "ede02159"
 ---
 
 # SPEC-wf-026 — Improvements are a team-produced enhancement artifact type
@@ -23,6 +23,8 @@ SDD includes an **improvements** artifact type, the enhancement-focused sibling 
 - Issues and improvements share the same artifact mechanics, differing only in intent
 
 **Tests:**
-- `plugin/skills/review-improvements/SKILL.md` spawns 3 agents via the Agent tool, not `TeamCreate` — "review-improvements uses the Agent tool to spawn 3 agents"
-- `.sdd/improvements/` directory exists — "improvements artifact storage location is scaffolded"
-- `.sdd/improvements/archive/` directory exists — "improvements archive storage location is scaffolded"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: review-improvements spawns exactly 3 agents via the Agent tool` — "3 agents spawned via the Agent tool"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: review-improvements does not spawn via the removed TeamCreate tool` — "no TeamCreate invocation"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: proposals are IMP-{domain}-{seq} under .sdd/improvements/ recording effort and impact` — "improvement artifact shape"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: the team never auto-applies improvements` — "never auto-applies"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: improvements storage and archive directories are scaffolded` — "improvements storage + archive scaffolded"

@@ -4,7 +4,7 @@ domain: architecture
 abbrev: arch
 status: active
 aliases: []
-version: "b4fb72b1"
+version: "ed33021c"
 ---
 
 # SPEC-arch-042 — Hub server reads, writes, and deletes co-located projection comments JSON
@@ -34,3 +34,19 @@ workspace's `.sdd/projections/` directory.
   `.sdd/projections/` directory
 - The comments JSON is co-located with the projection markdown (same directory), named
   `<name>.comments.json`
+
+**Tests:**
+
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > GET returns [] when comments file is absent` — GET returns empty array when the comments JSON file is missing
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > GET returns [] when .sdd/projections/ does not exist at all` — GET returns empty array when the projections directory is absent
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > PUT writes entries; subsequent GET returns them` — PUT persists entries to file and GET reads them back
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > PUT creates .sdd/projections/ directory if absent` — PUT creates the directory if it does not exist
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > DELETE removes the correct entry by id; GET confirms removal` — DELETE removes the entry by id and GET confirms
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > DELETE returns 404 for unknown commentId` — DELETE returns 404 when the id is not found
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > path traversal in :name returns 400` — path-traversal in the name segment is rejected with 400
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > unknown workspace id returns 404 on GET` — unknown workspace returns 404 on GET
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > unknown workspace id returns 404 on PUT` — unknown workspace returns 404 on PUT
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > unknown workspace id returns 404 on DELETE` — unknown workspace returns 404 on DELETE
+- `hub/server/projections-comments.test.ts > Projection comments endpoints — SPEC-arch-042 > PUT returns 400 for invalid JSON body` — malformed JSON body is rejected with 400
+- `hub/server/designs.test.ts > GET /workspaces/:id/designs/:name — SPEC-scr-042 > rejects a path-traversal design name with 400 (SPEC-arch-042)` — path-traversal in the design name is rejected with 400
+- `hub/server/projections.test.ts > GET /workspaces/:id/projections/:name — SPEC-scr-040 > rejects a path-traversal projection name with 400 (SPEC-arch-042)` — path-traversal in the projection name is rejected with 400

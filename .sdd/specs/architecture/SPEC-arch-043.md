@@ -4,7 +4,7 @@ domain: architecture
 abbrev: arch
 status: active
 aliases: []
-version: "542c72a3"
+version: "3a3aafc3"
 ---
 
 # SPEC-arch-043 — Hub server provides a node-pty terminal over a localhost WebSocket
@@ -34,3 +34,16 @@ full workspace filesystem access and the ability to spawn agents.
 - The PTY process is killed when the WebSocket closes
 - The endpoint is bound to `127.0.0.1` only (no remote exposure) and adds no auth weaker than the
   existing WebSocket servers
+
+**Tests:**
+
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > spawns a PTY on connection` — a node-pty PTY is spawned when a client connects
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > forwards PTY output to the WebSocket client` — PTY output is sent as WebSocket messages to the client
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > writes client text messages to the PTY` — client text messages are written to the PTY input
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > handles resize messages by resizing the PTY` — resize messages call PTY resize with cols/rows
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > kills the PTY when the WebSocket closes` — PTY is killed on WebSocket close
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > closes the socket when the PTY exits` — socket is closed when the PTY process exits
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > resize messages are not written to the PTY as raw input` — JSON resize messages are not forwarded as raw PTY input
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > uses cwd from the query parameter when spawning the PTY` — the cwd query param sets the PTY working directory
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > falls back to process.cwd() when the supplied cwd does not exist` — nonexistent cwd falls back to process.cwd
+- `hub/server/ws-pty.test.ts > ws-pty — PTY WebSocket endpoint (SPEC-arch-043) > closes the socket cleanly when spawn throws instead of crashing the hub` — PTY spawn failure closes the socket without crashing the server

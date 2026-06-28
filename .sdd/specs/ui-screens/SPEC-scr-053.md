@@ -4,7 +4,7 @@ domain: ui-screens
 abbrev: scr
 status: active
 aliases: []
-version: "b3d1df5b"
+version: "02eaa91d"
 ---
 
 # SPEC-scr-053 — Projection view supports selecting text and attaching typed comments
@@ -39,3 +39,15 @@ Multiple comments on the same or overlapping text are supported additively.
 - The highlight set reflects the persisted comments and updates reactively; a removed/pruned
   entry's highlight disappears
 - Multiple / overlapping comments on the same text are supported (additive)
+
+**Tests:**
+
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > action menu renders clarify, re-evaluate, expand, condense buttons` — the action menu shows all four action buttons
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > selecting an action reveals note input and confirm button` — selecting an action reveals the note field and confirm button
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > confirming an action calls PUT with the new entry and closes the menu` — confirm persists entry via PUT and closes the menu
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > line is derived from first occurrence of selectedText in raw markdown (1-based)` — line number is the 1-based position of selectedText in the markdown source
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > comments loaded from server are reflected in the component state` — existing comments are fetched on mount
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > renders a highlight <mark> for a comment whose selection is plain single-line text` — persisted comment selection is highlighted in the rendered content
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > highlights a selection that spans a soft-wrapped line (whitespace-normalized match)` — soft-wrapped selections match with whitespace normalization
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > derives the correct line when the selection spans a soft-wrapped line` — line derivation handles soft-wrapped phrases correctly
+- `hub/client/src/screens/Projections.test.tsx > Projections view — text-select comment feature (SPEC-scr-053) > multiple comments on same selectedText are supported additively` — multiple comments on the same text are added cumulatively

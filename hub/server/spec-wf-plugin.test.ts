@@ -349,3 +349,62 @@ describe("SPEC-wf-034: projection-comments skill addresses comments and prunes h
     expect(skill.toLowerCase()).toMatch(/per projection|does not.*other projection|operate.*per/);
   });
 });
+
+describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () => {
+  const skill = read("plugin/skills/review-issues/SKILL.md");
+
+  it("SPEC-wf-025: review-issues spawns exactly 3 reviewer agents via the Agent tool", () => {
+    expect(skill).toMatch(/exactly \*\*3 reviewer agents/);
+    expect(skill).toMatch(/Agent tool/);
+  });
+
+  it("SPEC-wf-025: review-issues does not spawn via the removed TeamCreate tool", () => {
+    expect(skill).not.toMatch(/TeamCreate\s*\(/);
+  });
+
+  it("SPEC-wf-025: findings are ISS-{domain}-{seq} under .sdd/issues/ recording location, problem, rationale, severity", () => {
+    expect(skill).toMatch(/ISS-\{domain\}-\{seq\}/);
+    expect(skill).toMatch(/\.sdd\/issues\//);
+    expect(skill.toLowerCase()).toMatch(/location/);
+    expect(skill.toLowerCase()).toMatch(/rationale/);
+    expect(skill.toLowerCase()).toMatch(/severity/);
+  });
+
+  it("SPEC-wf-025: reviewers never auto-fix findings", () => {
+    expect(skill.toLowerCase()).toMatch(/never auto-fix/);
+  });
+
+  it("SPEC-wf-025: issues storage and archive directories are scaffolded", () => {
+    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "issues"))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "issues", "archive"))).toBe(true);
+  });
+});
+
+describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact type", () => {
+  const skill = read("plugin/skills/review-improvements/SKILL.md");
+
+  it("SPEC-wf-026: review-improvements spawns exactly 3 agents via the Agent tool", () => {
+    expect(skill).toMatch(/exactly \*\*3 improvement-focused agents/);
+    expect(skill).toMatch(/Agent tool/);
+  });
+
+  it("SPEC-wf-026: review-improvements does not spawn via the removed TeamCreate tool", () => {
+    expect(skill).not.toMatch(/TeamCreate\s*\(/);
+  });
+
+  it("SPEC-wf-026: proposals are IMP-{domain}-{seq} under .sdd/improvements/ recording effort and impact", () => {
+    expect(skill).toMatch(/IMP-\{domain\}-\{seq\}/);
+    expect(skill).toMatch(/\.sdd\/improvements\//);
+    expect(skill.toLowerCase()).toMatch(/effort/);
+    expect(skill.toLowerCase()).toMatch(/impact/);
+  });
+
+  it("SPEC-wf-026: the team never auto-applies improvements", () => {
+    expect(skill.toLowerCase()).toMatch(/never auto-appl/);
+  });
+
+  it("SPEC-wf-026: improvements storage and archive directories are scaffolded", () => {
+    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements"))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements", "archive"))).toBe(true);
+  });
+});

@@ -4,7 +4,7 @@ domain: ui-layout
 abbrev: ui
 status: active
 aliases: []
-version: "58c87c4c"
+version: "8aa323f3"
 ---
 
 # SPEC-ui-023 — App shell back/forward buttons navigate an in-app view history
@@ -36,3 +36,15 @@ buttons is out of scope for this item.
 - Back is disabled when at the oldest entry; forward is disabled when at the newest entry
 - `Alt+ArrowLeft` triggers back and `Alt+ArrowRight` triggers forward (no-ops when disabled)
 - The URL reflects the restored view state after a back/forward navigation (existing URL sync)
+
+**Tests:**
+
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: header renders back and forward buttons` — back and forward buttons render in the header
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: back button is disabled at the initial entry (oldest entry)` — back is disabled at the first history entry
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: forward button is disabled when there are no forward entries` — forward is disabled at the newest entry
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: navigating to a new tab enables back and disables forward` — a new navigation enables back and keeps forward disabled
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: clicking back returns to the previous tab; forward re-applies the newer one` — back/forward navigate through history correctly
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: new navigation after going back truncates the forward stack` — navigating after going back clears the forward entries
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: Alt+ArrowLeft triggers back; Alt+ArrowRight triggers forward` — keyboard shortcuts Alt+← and Alt+→ trigger back and forward
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: Header back/forward props alone wire correctly (disabled state, aria-label)` — Header back/forward buttons render with correct disabled state and aria-label
+- `hub/client/src/spec-ui.test.tsx > SPEC-ui-023 — in-app back/forward navigation > SPEC-ui-023: Header back button enabled when canGoBack=true, calls onBack on click` — enabled back button fires the onBack callback
