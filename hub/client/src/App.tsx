@@ -129,6 +129,12 @@ function mapApiWorkItem(raw: Record<string, unknown>): WorkItem {
   };
 }
 
+// Derives a short abbreviation from a domain slug ("ui-screens" → "uisc").
+// Intentionally mirrored in hub/server/sdd-parser.ts > parseTargetFile; keep in sync.
+function deriveDomainAbbrev(domain: string): string {
+  return domain.split('-').map((p) => p.slice(0, 2)).join('').slice(0, 6) || domain;
+}
+
 function mapApiTarget(raw: Record<string, unknown>): Target {
   const status = VALID_STATUSES.has(raw['status'] as TargetStatus)
     ? (raw['status'] as TargetStatus)
@@ -136,7 +142,7 @@ function mapApiTarget(raw: Record<string, unknown>): Target {
   const domain = typeof raw['domain'] === 'string' ? raw['domain'] : '';
   const domainAbbrev = typeof raw['domainAbbrev'] === 'string'
     ? raw['domainAbbrev']
-    : domain.split('-').map((p: string) => p.slice(0, 2)).join('').slice(0, 6) || domain;
+    : deriveDomainAbbrev(domain);
   const statement = typeof raw['statement'] === 'string' ? raw['statement'] : '';
   return {
     id: typeof raw['id'] === 'string' ? raw['id'] : '',
@@ -153,6 +159,26 @@ function mapApiTarget(raw: Record<string, unknown>): Target {
 
 
 
+
+// Fetches /workspaces/{workspaceId}/{artifact}, maps the JSON response with
+// `opts.map` (default: identity cast), and calls `set`. On error calls
+// `opts.onErr` (default: `() => set(empty)` — clears state on initial load).
+// Pass `onErr: () => {}` for WS-triggered re-fetches where stale state is
+// preferable to a clear on transient failure.
+function fetchInto<T>(
+  workspaceId: string,
+  artifact: string,
+  set: (v: T) => void,
+  empty: T,
+  opts: { map?: (raw: unknown) => T; onErr?: () => void } = {},
+): void {
+  const map = opts.map ?? ((d) => d as T);
+  const onErr = opts.onErr ?? (() => set(empty));
+  fetch(`/workspaces/${workspaceId}/${artifact}`)
+    .then((r) => r.json())
+    .then((data: unknown) => set(map(data)))
+    .catch(onErr);
+}
 
 export function App() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => {
@@ -302,40 +328,30 @@ export function App() {
         if (m.type !== 'sdd-changed') { return; }
         const { workspaceId, artifact } = m as { workspaceId: string; artifact: string };
         if (workspaceId !== activeWorkspaceIdRef.current) { return; }
+        // WS re-fetch: onErr is a no-op so a transient failure doesn't clear live state.
+        const noOp = { onErr: () => {} };
         if (artifact === 'targets') {
-          fetch(`/workspaces/${workspaceId}/targets`)
-            .then((r) => r.json())
-            .then((data: Record<string, unknown>[]) => setLiveTargets(data.map(mapApiTarget)))
-            .catch(() => {});
+          fetchInto(workspaceId, 'targets', setLiveTargets, [], {
+            map: (d) => (d as Record<string, unknown>[]).map(mapApiTarget), ...noOp,
+          });
         } else if (artifact === 'specs') {
-          fetch(`/workspaces/${workspaceId}/specs`)
-            .then((r) => r.json())
-            .then((data: Spec[]) => setLiveSpecs(data))
-            .catch(() => {});
+          fetchInto(workspaceId, 'specs', setLiveSpecs, [], noOp);
         } else if (artifact === 'gaps') {
-          fetch(`/workspaces/${workspaceId}/gaps`)
-            .then((r) => r.json())
-            .then((data: Record<string, unknown>[]) => setLiveGaps(data.map(mapApiGap)))
-            .catch(() => {});
+          fetchInto(workspaceId, 'gaps', setLiveGaps, [], {
+            map: (d) => (d as Record<string, unknown>[]).map(mapApiGap), ...noOp,
+          });
         } else if (artifact === 'work-items') {
-          fetch(`/workspaces/${workspaceId}/work-items`)
-            .then((r) => r.json())
-            .then((data: Record<string, unknown>[]) => setLiveWorkItems(data.map(mapApiWorkItem)))
-            .catch(() => {});
+          fetchInto(workspaceId, 'work-items', setLiveWorkItems, [], {
+            map: (d) => (d as Record<string, unknown>[]).map(mapApiWorkItem), ...noOp,
+          });
         } else if (artifact === 'projections') {
           setProjectionsRefreshToken((n) => n + 1);
         } else if (artifact === 'designs') {
           setDesignsRefreshToken((n) => n + 1);
         } else if (artifact === 'issues') {
-          fetch(`/workspaces/${workspaceId}/issues`)
-            .then((r) => r.json())
-            .then((data: Issue[]) => setLiveIssues(data))
-            .catch(() => {});
+          fetchInto(workspaceId, 'issues', setLiveIssues, [], noOp);
         } else if (artifact === 'improvements') {
-          fetch(`/workspaces/${workspaceId}/improvements`)
-            .then((r) => r.json())
-            .then((data: Improvement[]) => setLiveImprovements(data))
-            .catch(() => {});
+          fetchInto(workspaceId, 'improvements', setLiveImprovements, [], noOp);
         } else if (artifact === 'standards') {
           setStandardsRefreshToken((n) => n + 1);
         }
@@ -388,74 +404,59 @@ export function App() {
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveSpecs([]); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/specs`)
-      .then((r) => r.json())
-      .then((data: Spec[]) => setLiveSpecs(data))
-      .catch(() => setLiveSpecs([]));
+    fetchInto(activeWorkspaceId, 'specs', setLiveSpecs, []);
   }, [activeWorkspaceId]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveTargets([]); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/targets`)
-      .then((r) => r.json())
-      .then((data: Record<string, unknown>[]) => setLiveTargets(data.map(mapApiTarget)))
-      .catch(() => setLiveTargets([]));
+    fetchInto(activeWorkspaceId, 'targets', setLiveTargets, [], {
+      map: (d) => (d as Record<string, unknown>[]).map(mapApiTarget),
+    });
   }, [activeWorkspaceId]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveGaps([]); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/gaps`)
-      .then((r) => r.json())
-      .then((data: Record<string, unknown>[]) => setLiveGaps(data.map(mapApiGap)))
-      .catch(() => setLiveGaps([]));
+    fetchInto(activeWorkspaceId, 'gaps', setLiveGaps, [], {
+      map: (d) => (d as Record<string, unknown>[]).map(mapApiGap),
+    });
   }, [activeWorkspaceId]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveWorkItems([]); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/work-items`)
-      .then((r) => r.json())
-      .then((data: Record<string, unknown>[]) => setLiveWorkItems(data.map(mapApiWorkItem)))
-      .catch(() => setLiveWorkItems([]));
+    fetchInto(activeWorkspaceId, 'work-items', setLiveWorkItems, [], {
+      map: (d) => (d as Record<string, unknown>[]).map(mapApiWorkItem),
+    });
   }, [activeWorkspaceId]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveIssues([]); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/issues`)
-      .then((r) => r.json())
-      .then((data: Issue[]) => setLiveIssues(data))
-      .catch(() => setLiveIssues([]));
+    fetchInto(activeWorkspaceId, 'issues', setLiveIssues, []);
   }, [activeWorkspaceId]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveImprovements([]); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/improvements`)
-      .then((r) => r.json())
-      .then((data: Improvement[]) => setLiveImprovements(data))
-      .catch(() => setLiveImprovements([]));
+    fetchInto(activeWorkspaceId, 'improvements', setLiveImprovements, []);
   }, [activeWorkspaceId]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveProjectionsCount(0); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/projections`)
-      .then((r) => r.json())
-      .then((data: unknown[]) => setLiveProjectionsCount(data.length))
-      .catch(() => setLiveProjectionsCount(0));
+    fetchInto(activeWorkspaceId, 'projections', setLiveProjectionsCount, 0, {
+      map: (d) => (d as unknown[]).length,
+    });
   }, [activeWorkspaceId, projectionsRefreshToken]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveDesignsCount(0); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/designs`)
-      .then((r) => r.json())
-      .then((data: unknown[]) => setLiveDesignsCount(data.length))
-      .catch(() => setLiveDesignsCount(0));
+    fetchInto(activeWorkspaceId, 'designs', setLiveDesignsCount, 0, {
+      map: (d) => (d as unknown[]).length,
+    });
   }, [activeWorkspaceId, designsRefreshToken]);
 
   useEffect(() => {
     if (!activeWorkspaceId) { setLiveStandardsCount(0); return; }
-    fetch(`/workspaces/${activeWorkspaceId}/standards`)
-      .then((r) => r.json())
-      .then((data: unknown[]) => setLiveStandardsCount(data.length))
-      .catch(() => setLiveStandardsCount(0));
+    fetchInto(activeWorkspaceId, 'standards', setLiveStandardsCount, 0, {
+      map: (d) => (d as unknown[]).length,
+    });
   }, [activeWorkspaceId, standardsRefreshToken]);
 
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId) ?? null;

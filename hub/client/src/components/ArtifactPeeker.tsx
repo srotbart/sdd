@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import './ArtifactPeeker.css';
 import { usePeeker } from './PeekerContext';
 import { StatusPill } from './StatusPill';
+import { dayOf } from '../util/date';
 import type { Target, Spec, Gap, WorkItem, Issue, Improvement } from '../types';
 
 interface ArtifactPeekerProps {
@@ -204,7 +205,7 @@ function TargetPeekView({ target }: { target: Target }) {
       <div className="peeker-target__meta">
         <StatusPill status={target.status} />
         <span className="peeker-target__domain">{target.domain}</span>
-        <span className="peeker-target__created">{target.created.split('T')[0]}</span>
+        <span className="peeker-target__created">{dayOf(target.created)}</span>
       </div>
       <h3 className="peeker-target__title">{target.title || '(unnamed draft)'}</h3>
       {target.statement && (
