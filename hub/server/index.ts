@@ -48,6 +48,23 @@ export function swapWatcher(
   watcherRegistry.set(workspaceId, cleanup);
 }
 
+/**
+ * Build the `[onChange, onSpecsChanged]` watcher callbacks for a workspace:
+ * broadcast a UI update + the resolved sdd-changed artifact on any change, and a
+ * specs sdd-changed on a test-report change. Spread into startWatcher/swapWatcher.
+ */
+function watcherCallbacks(workspaceId: string): [(changedPath: string) => void, () => void] {
+  const onChange = (changedPath: string): void => {
+    broadcastUpdate(changedPath);
+    const artifact = resolveArtifact(changedPath);
+    if (artifact !== null) {
+      broadcastSddChanged(workspaceId, artifact);
+    }
+  };
+  const onSpecsChanged = (): void => broadcastSddChanged(workspaceId, "specs");
+  return [onChange, onSpecsChanged];
+}
+
 function serveStatic(
   req: http.IncomingMessage,
   res: http.ServerResponse
@@ -175,6 +192,23 @@ function json(res: http.ServerResponse, status: number, data: unknown): void {
   res.end(payload);
 }
 
+/**
+ * Resolve a workspace by id, or respond 404 and return null. Lets each route
+ * guard with `const ws = requireWorkspace(res, m[1]); if (!ws) return true;`
+ * instead of repeating the lookup-and-404 block.
+ */
+function requireWorkspace(
+  res: http.ServerResponse,
+  id: string,
+): NonNullable<ReturnType<typeof getWorkspaceById>> | null {
+  const ws = getWorkspaceById(id);
+  if (!ws) {
+    json(res, 404, { error: "workspace not found" });
+    return null;
+  }
+  return ws;
+}
+
 async function handleApi(
   req: http.IncomingMessage,
   res: http.ServerResponse
@@ -194,88 +228,64 @@ async function handleApi(
 
   const specsMatch = /^\/workspaces\/([^/?]+)\/specs$/.exec(url);
   if (method === "GET" && specsMatch) {
-    const ws = getWorkspaceById(specsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, specsMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseSpecs(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const workItemsMatch = /^\/workspaces\/([^/?]+)\/work-items$/.exec(url);
   if (method === "GET" && workItemsMatch) {
-    const ws = getWorkspaceById(workItemsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, workItemsMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseWorkItems(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const gapsMatch = /^\/workspaces\/([^/?]+)\/gaps$/.exec(url);
   if (method === "GET" && gapsMatch) {
-    const ws = getWorkspaceById(gapsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, gapsMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseGaps(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const targetsMatch = /^\/workspaces\/([^/?]+)\/targets$/.exec(url);
   if (method === "GET" && targetsMatch) {
-    const ws = getWorkspaceById(targetsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, targetsMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseTargets(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const issuesMatch = /^\/workspaces\/([^/?]+)\/issues$/.exec(url);
   if (method === "GET" && issuesMatch) {
-    const ws = getWorkspaceById(issuesMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, issuesMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseIssues(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const improvementsMatch = /^\/workspaces\/([^/?]+)\/improvements$/.exec(url);
   if (method === "GET" && improvementsMatch) {
-    const ws = getWorkspaceById(improvementsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, improvementsMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseImprovements(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const standardsMatch = /^\/workspaces\/([^/?]+)\/standards$/.exec(url);
   if (method === "GET" && standardsMatch) {
-    const ws = getWorkspaceById(standardsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, standardsMatch[1]);
+    if (!ws) { return true; }
     json(res, 200, parseStandards(path.join(ws.path, ".sdd")));
     return true;
   }
 
   const projectionsListMatch = /^\/workspaces\/([^/?]+)\/projections$/.exec(url);
   if (method === "GET" && projectionsListMatch) {
-    const ws = getWorkspaceById(projectionsListMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, projectionsListMatch[1]);
+    if (!ws) { return true; }
     const projectionsDir = path.join(ws.path, ".sdd", "projections");
     const result: { name: string; lastModified: string }[] = [];
     if (fs.existsSync(projectionsDir)) {
@@ -291,11 +301,8 @@ async function handleApi(
 
   const projectionsItemMatch = /^\/workspaces\/([^/?]+)\/projections\/([^/?]+)$/.exec(url);
   if (method === "GET" && projectionsItemMatch) {
-    const ws = getWorkspaceById(projectionsItemMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, projectionsItemMatch[1]);
+    if (!ws) { return true; }
     const safeName = sanitizeProjectionName(projectionsItemMatch[2]);
     if (!safeName) {
       json(res, 400, { error: "invalid projection name" });
@@ -322,11 +329,8 @@ async function handleApi(
 
   const projectionsCommentsMatch = /^\/workspaces\/([^/?]+)\/projections\/([^/?]+)\/comments$/.exec(url);
   if (projectionsCommentsMatch) {
-    const ws = getWorkspaceById(projectionsCommentsMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, projectionsCommentsMatch[1]);
+    if (!ws) { return true; }
     const safeName = sanitizeProjectionName(projectionsCommentsMatch[2]);
     if (!safeName) {
       json(res, 400, { error: "invalid projection name" });
@@ -370,11 +374,8 @@ async function handleApi(
 
   const projectionsCommentItemMatch = /^\/workspaces\/([^/?]+)\/projections\/([^/?]+)\/comments\/([^/?]+)$/.exec(url);
   if (method === "DELETE" && projectionsCommentItemMatch) {
-    const ws = getWorkspaceById(projectionsCommentItemMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, projectionsCommentItemMatch[1]);
+    if (!ws) { return true; }
     const safeName = sanitizeProjectionName(projectionsCommentItemMatch[2]);
     if (!safeName) {
       json(res, 400, { error: "invalid projection name" });
@@ -403,11 +404,8 @@ async function handleApi(
 
   const designsListMatch = /^\/workspaces\/([^/?]+)\/designs$/.exec(url);
   if (method === "GET" && designsListMatch) {
-    const ws = getWorkspaceById(designsListMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, designsListMatch[1]);
+    if (!ws) { return true; }
     const designsDir = path.join(ws.path, ".sdd", "design");
     const result: { name: string; lastModified: string }[] = [];
     if (fs.existsSync(designsDir)) {
@@ -426,11 +424,8 @@ async function handleApi(
 
   const designsItemMatch = /^\/workspaces\/([^/?]+)\/designs\/([^/?]+)$/.exec(url);
   if (method === "GET" && designsItemMatch) {
-    const ws = getWorkspaceById(designsItemMatch[1]);
-    if (!ws) {
-      json(res, 404, { error: "workspace not found" });
-      return true;
-    }
+    const ws = requireWorkspace(res, designsItemMatch[1]);
+    if (!ws) { return true; }
     const safeName = sanitizeProjectionName(designsItemMatch[2]);
     if (!safeName) {
       json(res, 400, { error: "invalid design name" });
@@ -503,17 +498,7 @@ async function handleApi(
       }
       throw err;
     }
-    const cleanup = startWatcher(
-      wsPath,
-      (changedPath) => {
-        broadcastUpdate(changedPath);
-        const artifact = resolveArtifact(changedPath);
-        if (artifact !== null) {
-          broadcastSddChanged(id, artifact);
-        }
-      },
-      () => broadcastSddChanged(id, "specs")
-    );
+    const cleanup = startWatcher(wsPath, ...watcherCallbacks(id));
     watcherRegistry.set(id, cleanup);
     json(res, 201, getWorkspaceById(id));
     return true;
@@ -553,18 +538,7 @@ async function handleApi(
     updateWorkspace(id, updates);
 
     if (updates.path !== undefined && updates.path !== existing.path) {
-      swapWatcher(
-        id,
-        updates.path,
-        (changedPath) => {
-          broadcastUpdate(changedPath);
-          const artifact = resolveArtifact(changedPath);
-          if (artifact !== null) {
-            broadcastSddChanged(id, artifact);
-          }
-        },
-        () => broadcastSddChanged(id, "specs")
-      );
+      swapWatcher(id, updates.path, ...watcherCallbacks(id));
     }
 
     json(res, 200, getWorkspaceById(id));
@@ -590,17 +564,7 @@ getDb();
 function startWatchers(): void {
   const workspaces = getAllWorkspaces();
   for (const workspace of workspaces) {
-    const cleanup = startWatcher(
-      workspace.path,
-      (changedPath) => {
-        broadcastUpdate(changedPath);
-        const artifact = resolveArtifact(changedPath);
-        if (artifact !== null) {
-          broadcastSddChanged(workspace.id, artifact);
-        }
-      },
-      () => broadcastSddChanged(workspace.id, "specs")
-    );
+    const cleanup = startWatcher(workspace.path, ...watcherCallbacks(workspace.id));
     watcherRegistry.set(workspace.id, cleanup);
   }
 }

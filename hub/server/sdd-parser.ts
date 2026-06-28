@@ -174,35 +174,54 @@ function parseTargetFile(filePath: string): Target | null {
   };
 }
 
+/**
+ * Read every matching artifact file in `.sdd/{subdir}/` and its `archive/`
+ * subdirectory, parsing each with `parseFile`. Missing directories yield no
+ * entries; files that fail to parse (parseFile returns null) are skipped.
+ * `fromArchive`, when given, transforms entries read from `archive/` (e.g. to
+ * stamp `status: "archived"`). Shared scaffold for the flat artifact lists
+ * (targets, gaps, work-items, issues, improvements).
+ */
+function collectArtifacts<T>(
+  sddPath: string,
+  subdir: string,
+  matches: (file: string) => boolean,
+  parseFile: (filePath: string) => T | null,
+  fromArchive?: (item: T) => T,
+): T[] {
+  const dir = path.join(sddPath, subdir);
+  const out: T[] = [];
+
+  const readDir = (d: string): string[] => {
+    try {
+      return fs.readdirSync(d).filter(matches);
+    } catch {
+      return [];
+    }
+  };
+
+  for (const file of readDir(dir)) {
+    const parsed = parseFile(path.join(dir, file));
+    if (parsed) out.push(parsed);
+  }
+
+  const archiveDir = path.join(dir, "archive");
+  for (const file of readDir(archiveDir)) {
+    const parsed = parseFile(path.join(archiveDir, file));
+    if (parsed) out.push(fromArchive ? fromArchive(parsed) : parsed);
+  }
+
+  return out;
+}
+
 export function parseTargets(sddPath: string): Target[] {
-  const targetsDir = path.join(sddPath, "targets");
-  let files: string[];
-  try {
-    files = fs.readdirSync(targetsDir).filter((f) => f.endsWith(".md"));
-  } catch {
-    return [];
-  }
-
-  const targets: Target[] = [];
-  for (const file of files) {
-    const parsed = parseTargetFile(path.join(targetsDir, file));
-    if (parsed) targets.push(parsed);
-  }
-
-  const archiveDir = path.join(targetsDir, "archive");
-  let archiveFiles: string[];
-  try {
-    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.endsWith(".md"));
-  } catch {
-    return targets;
-  }
-
-  for (const file of archiveFiles) {
-    const parsed = parseTargetFile(path.join(archiveDir, file));
-    if (parsed) targets.push({ ...parsed, status: "archived" });
-  }
-
-  return targets;
+  return collectArtifacts(
+    sddPath,
+    "targets",
+    (f) => f.endsWith(".md"),
+    parseTargetFile,
+    (t) => ({ ...t, status: "archived" }),
+  );
 }
 
 export interface Gap {
@@ -270,35 +289,12 @@ function parseGapFile(filePath: string): Gap | null {
 }
 
 export function parseGaps(sddPath: string): Gap[] {
-  const gapsDir = path.join(sddPath, "gaps");
-  const gaps: Gap[] = [];
-
-  let files: string[];
-  try {
-    files = fs.readdirSync(gapsDir).filter((f) => f.startsWith("GAP-") && f.endsWith(".md"));
-  } catch {
-    return gaps;
-  }
-
-  for (const file of files) {
-    const parsed = parseGapFile(path.join(gapsDir, file));
-    if (parsed) gaps.push(parsed);
-  }
-
-  const archiveDir = path.join(gapsDir, "archive");
-  let archiveFiles: string[];
-  try {
-    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.startsWith("GAP-") && f.endsWith(".md"));
-  } catch {
-    return gaps;
-  }
-
-  for (const file of archiveFiles) {
-    const parsed = parseGapFile(path.join(archiveDir, file));
-    if (parsed) gaps.push(parsed);
-  }
-
-  return gaps;
+  return collectArtifacts(
+    sddPath,
+    "gaps",
+    (f) => f.startsWith("GAP-") && f.endsWith(".md"),
+    parseGapFile,
+  );
 }
 
 export interface WorkItem {
@@ -378,35 +374,12 @@ function parseWorkItemFile(filePath: string): WorkItem | null {
 }
 
 export function parseWorkItems(sddPath: string): WorkItem[] {
-  const workItemsDir = path.join(sddPath, "work-items");
-  const items: WorkItem[] = [];
-
-  let files: string[];
-  try {
-    files = fs.readdirSync(workItemsDir).filter((f) => f.startsWith("WI-") && f.endsWith(".md"));
-  } catch {
-    return items;
-  }
-
-  for (const file of files) {
-    const parsed = parseWorkItemFile(path.join(workItemsDir, file));
-    if (parsed) items.push(parsed);
-  }
-
-  const archiveDir = path.join(workItemsDir, "archive");
-  let archiveFiles: string[];
-  try {
-    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.startsWith("WI-") && f.endsWith(".md"));
-  } catch {
-    return items;
-  }
-
-  for (const file of archiveFiles) {
-    const parsed = parseWorkItemFile(path.join(archiveDir, file));
-    if (parsed) items.push(parsed);
-  }
-
-  return items;
+  return collectArtifacts(
+    sddPath,
+    "work-items",
+    (f) => f.startsWith("WI-") && f.endsWith(".md"),
+    parseWorkItemFile,
+  );
 }
 
 // ---- Issues (ISS-*) -------------------------------------------------------
@@ -444,30 +417,12 @@ function parseIssueFile(filePath: string): Issue | null {
 }
 
 export function parseIssues(sddPath: string): Issue[] {
-  const issuesDir = path.join(sddPath, "issues");
-  const issues: Issue[] = [];
-  let files: string[];
-  try {
-    files = fs.readdirSync(issuesDir).filter((f) => f.startsWith("ISS-") && f.endsWith(".md"));
-  } catch {
-    return issues;
-  }
-  for (const file of files) {
-    const parsed = parseIssueFile(path.join(issuesDir, file));
-    if (parsed) issues.push(parsed);
-  }
-  const archiveDir = path.join(issuesDir, "archive");
-  let archiveFiles: string[];
-  try {
-    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.startsWith("ISS-") && f.endsWith(".md"));
-  } catch {
-    return issues;
-  }
-  for (const file of archiveFiles) {
-    const parsed = parseIssueFile(path.join(archiveDir, file));
-    if (parsed) issues.push(parsed);
-  }
-  return issues;
+  return collectArtifacts(
+    sddPath,
+    "issues",
+    (f) => f.startsWith("ISS-") && f.endsWith(".md"),
+    parseIssueFile,
+  );
 }
 
 // ---- Improvements (IMP-*) -------------------------------------------------
@@ -507,30 +462,12 @@ function parseImprovementFile(filePath: string): Improvement | null {
 }
 
 export function parseImprovements(sddPath: string): Improvement[] {
-  const improvementsDir = path.join(sddPath, "improvements");
-  const improvements: Improvement[] = [];
-  let files: string[];
-  try {
-    files = fs.readdirSync(improvementsDir).filter((f) => f.startsWith("IMP-") && f.endsWith(".md"));
-  } catch {
-    return improvements;
-  }
-  for (const file of files) {
-    const parsed = parseImprovementFile(path.join(improvementsDir, file));
-    if (parsed) improvements.push(parsed);
-  }
-  const archiveDir = path.join(improvementsDir, "archive");
-  let archiveFiles: string[];
-  try {
-    archiveFiles = fs.readdirSync(archiveDir).filter((f) => f.startsWith("IMP-") && f.endsWith(".md"));
-  } catch {
-    return improvements;
-  }
-  for (const file of archiveFiles) {
-    const parsed = parseImprovementFile(path.join(archiveDir, file));
-    if (parsed) improvements.push(parsed);
-  }
-  return improvements;
+  return collectArtifacts(
+    sddPath,
+    "improvements",
+    (f) => f.startsWith("IMP-") && f.endsWith(".md"),
+    parseImprovementFile,
+  );
 }
 
 // ---- Standards (readable docs from .sdd/standards/) ----------------------
