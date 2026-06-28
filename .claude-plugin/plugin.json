@@ -1,6 +1,6 @@
 {
   "name": "sdd",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "description": "Spec-driven development: declare what must be true, let agents find and close the gaps.",
   "author": {
     "name": ""
