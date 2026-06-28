@@ -53,7 +53,9 @@ State the decomposition choice and reasoning before writing any files.
 ### 3. Write work-item files
 
 For each work item, create `.sdd/work-items/WI-{abbrev}-{seq}.md` using the next
-available sequence number for the domain.
+available sequence number for the domain. Compute `{seq}` from the max across **both**
+`.sdd/work-items/WI-{abbrev}-*.md` **and** `.sdd/work-items/archive/WI-{abbrev}-*.md` — IDs
+are globally stable and never recycled, so an ID already present in `archive/` is taken.
 
 Use the schema in `references/schemas.md` (Work Items section). Set:
 - `gap-id` — the referenced gap ID (or an array for many-to-one)

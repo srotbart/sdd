@@ -94,7 +94,9 @@ referencing the same spec item.
 ### 5. Write new gap files
 
 For each new gap found, create `.sdd/gaps/GAP-{abbrev}-{seq}.md` using the next
-available sequence number for the domain.
+available sequence number for the domain. Compute `{seq}` from the max across **both**
+`.sdd/gaps/GAP-{abbrev}-*.md` **and** `.sdd/gaps/archive/GAP-{abbrev}-*.md` — IDs are globally
+stable and never recycled, so an ID already present in `archive/` is taken.
 
 Use the schema in `references/schemas.md` (Gaps section). Set:
 - `spec-item` — the spec item ID

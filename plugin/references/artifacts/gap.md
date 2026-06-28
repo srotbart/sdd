@@ -11,7 +11,8 @@ Each gap records exactly one divergence with a one-line justification.
 
 **File path:** `.sdd/gaps/GAP-{abbrev}-{seq}.md`
 **ID pattern:** `GAP-{abbrev}-{seq}` — abbreviation matches the spec domain
-(e.g., `auth`, `wf`); sequence is globally stable within the domain.
+(e.g., `auth`, `wf`); sequence is globally stable within the domain and never recycled —
+number from the max across **both** `.sdd/gaps/` and `.sdd/gaps/archive/`.
 
 **Required frontmatter:**
 
@@ -90,7 +91,9 @@ already set, report the anomaly rather than overwriting.
 2. Locate the decision point: the file and line where the invariant is violated.
 3. Write one line of reasoning explaining the violation specifically enough that
    a future reader can verify it without re-reading the code.
-4. Assign the next sequential ID: `GAP-{abbrev}-{next-seq}`.
+4. Assign the next sequential ID: `GAP-{abbrev}-{next-seq}`. Compute `{next-seq}` from the
+   max across **both** `.sdd/gaps/` and `.sdd/gaps/archive/` — IDs are never recycled, so an
+   ID present in `archive/` is already taken.
 5. Set `audit-spec-version` to the spec item's current `version`.
 6. Set `status: open`, `closed-by: null`, `deferred-reason: null`.
 

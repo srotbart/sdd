@@ -11,7 +11,8 @@ before the item is considered done. Work items are produced exclusively by
 
 **File path:** `.sdd/work-items/WI-{abbrev}-{seq}.md`
 **ID pattern:** `WI-{abbrev}-{seq}` — abbreviation matches the spec domain
-(e.g., `auth`, `wf`); sequence is globally stable within the domain.
+(e.g., `auth`, `wf`); sequence is globally stable within the domain and never recycled —
+number from the max across **both** `.sdd/work-items/` and `.sdd/work-items/archive/`.
 
 **Required frontmatter:**
 

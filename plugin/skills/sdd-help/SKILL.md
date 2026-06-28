@@ -145,6 +145,9 @@ invokes `/sdd:install-statusline` or asks to "install the SDD statusline", "set 
 ### `/sdd:next` — Next
 says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all domains with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill
 
+### `/sdd:projection-comments` — Projection Comments
+says "address projection comments for <name>", "process comments on <name>", or wants to apply and prune pending comments on a projection document
+
 ### `/sdd:review-engage` — Review Engage
 says "engage issue ISS-auth-001", "engage improvement IMP-auth-001", "discuss this finding", "accept this issue", "dismiss this improvement", "what should I do about ISS-X", or wants to interactively decide what to do with an issue or improvement artifact
 
@@ -180,7 +183,6 @@ says "engage target TGT-XXX", "respond to this target", "process this target", "
 
 ### `/sdd:work-item-close` — Work Item Close
 says "close work item WI-auth-001", "implement WI-auth-001", "work on WI-auth-001", "close the next work item", or wants to implement a specific work item including tests
-
 ## Schema Reference
 
 For artifact file formats, frontmatter fields, ID conventions, and state machines:
