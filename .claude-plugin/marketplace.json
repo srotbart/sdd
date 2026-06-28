@@ -10,7 +10,7 @@
     {
       "name": "sdd",
       "description": "Spec-driven development: declare what must be true, let agents find and close the gaps. Six skills covering the full pipeline — target negotiation, spec reconciliation, gap auditing, work item decomposition, implementation, and spec cleanup.",
-      "version": "0.1.0",
+      "version": "0.1.6",
       "author": {
         "name": "Sergey Rotbart",
         "email": "srotbart@ebay.com"
