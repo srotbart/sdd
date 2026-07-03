@@ -4,9 +4,24 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "3b75790b"
+version: "5a022567"
 ---
 
 # SPEC-wf-017 — Spec item files require Invariant and Acceptance Criteria sections
 
-Each spec item file body must contain three structured sections in order: (1) `# {id} — {title}` heading, (2) `## Invariant` — a concise statement of the rule or behavior the item asserts, (3) `## Acceptance criteria` — a plain bullet list of verifiable conditions that must hold for the invariant to be satisfied. The optional `**Tests:**` block, when present, follows `## Acceptance criteria`. Skills that write spec items (`sdd:target-engage`, `sdd:gap-to-work-items`, `sdd:work-item-close`, `sdd:spec-audit`) must produce this structure for every spec item they create or update. The Hub API spec parser must extract and expose both sections. `references/schemas.md` must document the required sections.
+## Invariant
+
+Each spec item file body must contain `## Invariant` and `## Acceptance criteria` sections in order after the title heading; the optional `**Tests:**` block, when present, follows `## Acceptance criteria`.
+
+## Acceptance criteria
+
+- The file body opens with `# {id} — {title}` as the first heading
+- `## Invariant` section is present with a concise statement of the rule or behaviour the item asserts
+- `## Acceptance criteria` section is present with a plain bullet list of verifiable conditions that must hold for the invariant to be satisfied
+- When a `**Tests:**` block is present, it appears after `## Acceptance criteria`
+- Skills that create or update spec items (`sdd:target-engage`, `sdd:gap-to-work-items`, `sdd:work-item-close`, `sdd:spec-audit`) produce this structure for every spec item they write
+- The Hub API spec parser extracts and exposes both `## Invariant` and `## Acceptance criteria` sections
+- `references/schemas.md` documents the required section structure
+
+**Tests:**
+- `hub/server/spec-wf.test.ts` — `SPEC-wf-017` — extracts invariant and criteria from spec item with both sections

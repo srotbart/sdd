@@ -123,6 +123,45 @@ describe("SPEC-wf-014: each spec item file carries its own domain metadata and p
   });
 });
 
+describe("SPEC-wf-017: spec item files require Invariant and Acceptance Criteria sections", () => {
+  it("SPEC-wf-017: extracts invariant and criteria from spec item with both sections", () => {
+    const { sddPath } = makeWorkspace();
+    writeSpecItem(
+      sddPath,
+      "workflow",
+      "wf",
+      "SPEC-wf-017",
+      "Spec item files require Invariant and Acceptance Criteria sections",
+      "## Invariant\n\nEach spec item body must contain Invariant and Acceptance criteria sections.\n\n## Acceptance criteria\n\n- `## Invariant` section is present\n- `## Acceptance criteria` section is present"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs[0]!.items.find((i) => i.id === "SPEC-WF-017")!;
+    expect(item.invariant).toBe("Each spec item body must contain Invariant and Acceptance criteria sections.");
+    expect(item.criteria).toEqual([
+      "`## Invariant` section is present",
+      "`## Acceptance criteria` section is present",
+    ]);
+  });
+
+  it("SPEC-wf-017: spec item without Invariant and Acceptance criteria sections yields empty invariant and criteria", () => {
+    const { sddPath } = makeWorkspace();
+    writeSpecItem(
+      sddPath,
+      "workflow",
+      "wf",
+      "SPEC-wf-017",
+      "Missing sections",
+      "This body has no structured sections — just prose."
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs[0]!.items.find((i) => i.id === "SPEC-WF-017")!;
+    expect(item.invariant).toBe("");
+    expect(item.criteria).toEqual([]);
+  });
+});
+
 describe("SPEC-wf-015: gap audit-spec-version and stale-audit detection are per spec item", () => {
   it("SPEC-wf-015: a gap stores the audit-spec-version of the specific spec item it was found against", () => {
     const { sddPath } = makeWorkspace();
