@@ -2,10 +2,10 @@
 id: GAP-wf-ed8f339
 spec-item: SPEC-wf-042
 domain: workflow
-status: open
+status: closed
 discovered: "2026-07-03T00:00:00Z"
 audit-spec-version: "2adea2b9"
-closed-by: null
+closed-by: WI-wf-2934c6e
 deferred-reason: null
 ---
 

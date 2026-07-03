@@ -96,6 +96,22 @@ Do not block archiving on missing spec tests; only block on failing ones.
 Proceed to mark the work item done only once every acceptance criterion is verified
 against the code and the diff is clean against all provided cross-domain items.
 
+### 6c. Scope backfill — mechanical write to the spec item (permitted)
+
+After the implementation diff is final, back-fill or refine the governing spec
+item's `scope:` field from the actual diff. This is a mechanical write — not
+subject to the escalation rule for spec item edits (SPEC-wf-038):
+
+1. Derive globs from the files changed by this work item.
+2. If the spec item has no `scope:` field, add one with the derived globs;
+   if it already has one, extend it to cover any paths not yet included.
+3. Recompute the spec item's `version:` hash (SHA-256 of the full file content,
+   first 8 hex chars) and update it.
+4. Include the scope backfill in the terminal-state commit (step 8).
+
+**Never touch `## Invariant` or `## Acceptance criteria` content.** Scope backfill
+modifies only the frontmatter `scope:` field and `version:` hash.
+
 ### 7. Mark work item done and close the linked gap(s)
 
 In one edit to the work item file, set `status: done`. For each linked gap, set

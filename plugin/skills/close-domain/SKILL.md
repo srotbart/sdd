@@ -103,6 +103,10 @@ After all work items are closed and their tests pass, before reporting complete:
    - **Pre-existing violations** (not from this run's diff): **report them to the
      lead as candidate gaps** — do not fix them inline and do not block completion
      on them.
+   - **Scope-drift flagging** (SPEC-wf-042): when a file changed by this run
+     is not covered by the governing spec item's `scope:` glob, flag it as
+     scope drift for correction — this does not block completion and is not an
+     own-run violation requiring an inline fix.
 5. **Report complete only on a clean guardian audit.**
 
 ## Stop conditions and reporting

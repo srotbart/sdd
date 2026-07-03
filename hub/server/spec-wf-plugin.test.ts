@@ -719,6 +719,26 @@ describe("SPEC-wf-042: spec items may declare an optional scope of governed code
       fs.rmSync(fixtureDir, { recursive: true, force: true });
     }
   });
+
+  it("SPEC-wf-042: work-item-close documents scope backfill from the closing diff", () => {
+    const skill = read("plugin/skills/work-item-close/SKILL.md");
+    const lower = skill.toLowerCase();
+    // Must instruct scope backfill from the diff
+    expect(lower).toMatch(/scope.*backfill|backfill.*scope/);
+    // Must reference the scope: field
+    expect(lower).toMatch(/`scope:`|scope: field/);
+    // Must distinguish from invariant/AC content (mechanical write only)
+    expect(lower).toMatch(/invariant/);
+    expect(lower).toMatch(/mechanical write/);
+  });
+
+  it("SPEC-wf-042: close-domain Phase 4 documents scope-drift flagging as non-blocking", () => {
+    const skill = read("plugin/skills/close-domain/SKILL.md").toLowerCase();
+    // Must mention scope drift flagging
+    expect(skill).toMatch(/scope.drift|scope-drift/);
+    // Must state it does not block completion
+    expect(skill).toMatch(/does not block completion/);
+  });
 });
 
 describe("SPEC-wf-038: close-domain skill drives the full execution loop for a domain", () => {
