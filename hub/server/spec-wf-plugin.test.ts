@@ -390,9 +390,12 @@ describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () =>
     expect(skill.toLowerCase()).toMatch(/never auto-fix/);
   });
 
-  it("SPEC-wf-025: issues storage and archive directories are scaffolded", () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "issues"))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "issues", "archive"))).toBe(true);
+  it("SPEC-wf-025: issue storage path and archive-subdirectory convention are documented", () => {
+    // Per SPEC-wf-035, ephemeral archive dirs are gitignored and may be absent on a
+    // fresh clone/worktree; no tool (tests included) may depend on their presence.
+    // Assert the documented storage shape, not on-disk directory existence.
+    expect(skill).toMatch(/\.sdd\/issues\/ISS-\{domain\}-\{(?:seq|7hex)\}\.md/);
+    expect(skill).toMatch(/\.sdd\/issues\/archive\//);
   });
 });
 
@@ -420,9 +423,12 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
     expect(skill.toLowerCase()).toMatch(/never auto-appl/);
   });
 
-  it("SPEC-wf-026: improvements storage and archive directories are scaffolded", () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements"))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements", "archive"))).toBe(true);
+  it("SPEC-wf-026: improvement storage path and archive-subdirectory convention are documented", () => {
+    // Per SPEC-wf-035, ephemeral archive dirs are gitignored and may be absent on a
+    // fresh clone/worktree; no tool (tests included) may depend on their presence.
+    // Assert the documented storage shape, not on-disk directory existence.
+    expect(skill).toMatch(/\.sdd\/improvements\/IMP-\{domain\}-\{(?:seq|7hex)\}\.md/);
+    expect(skill).toMatch(/\.sdd\/improvements\/archive\//);
   });
 });
 
