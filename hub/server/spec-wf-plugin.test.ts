@@ -363,8 +363,10 @@ describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () =>
     expect(skill).not.toMatch(/TeamCreate\s*\(/);
   });
 
-  it("SPEC-wf-025: findings are ISS-{domain}-{seq} under .sdd/issues/ recording location, problem, rationale, severity", () => {
-    expect(skill).toMatch(/ISS-\{domain\}-\{seq\}/);
+  it("SPEC-wf-025: findings are ISS-{domain}-{seq|7hex} under .sdd/issues/ recording location, problem, rationale, severity", () => {
+    // Per SPEC-wf-037 the suffix may be sequential ({seq}) or a 7-hex hash ({7hex});
+    // consumers accept both forms.
+    expect(skill).toMatch(/ISS-\{domain\}-\{(?:seq|7hex)\}/);
     expect(skill).toMatch(/\.sdd\/issues\//);
     expect(skill.toLowerCase()).toMatch(/location/);
     expect(skill.toLowerCase()).toMatch(/rationale/);
@@ -393,8 +395,9 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
     expect(skill).not.toMatch(/TeamCreate\s*\(/);
   });
 
-  it("SPEC-wf-026: proposals are IMP-{domain}-{seq} under .sdd/improvements/ recording effort and impact", () => {
-    expect(skill).toMatch(/IMP-\{domain\}-\{seq\}/);
+  it("SPEC-wf-026: proposals are IMP-{domain}-{seq|7hex} under .sdd/improvements/ recording effort and impact", () => {
+    // Per SPEC-wf-037 the suffix may be sequential ({seq}) or a 7-hex hash ({7hex}).
+    expect(skill).toMatch(/IMP-\{domain\}-\{(?:seq|7hex)\}/);
     expect(skill).toMatch(/\.sdd\/improvements\//);
     expect(skill.toLowerCase()).toMatch(/effort/);
     expect(skill.toLowerCase()).toMatch(/impact/);
@@ -519,5 +522,32 @@ describe("SPEC-wf-036: Terminal artifact state is committed before archiving", (
       expect(guide).toMatch(/squash/);
       expect(guide).toMatch(/merge-commit/);
     }
+  });
+});
+
+describe("SPEC-wf-037: consumers and docs accept both {seq} and {7hex} ID suffix forms", () => {
+  it("SPEC-wf-037: session-start documents the {7hex} form, TGT history-scan, and duplicate-ID warning", () => {
+    const skill = read("plugin/skills/session-start/SKILL.md");
+    expect(skill).toMatch(/\{7hex\}/);
+    expect(skill).toMatch(/git log --diff-filter=A -- \.sdd\/targets\//);
+    expect(skill.toLowerCase()).toMatch(/duplicate active id/);
+  });
+
+  it("SPEC-wf-037: schemas.md documents both suffix forms and local-only archive semantics", () => {
+    const schemas = read("plugin/references/schemas.md");
+    expect(schemas).toMatch(/\{7hex\}/);
+    expect(schemas).toMatch(/\{seq\}/);
+    expect(schemas.toLowerCase()).toMatch(/local-only cache/);
+  });
+
+  it("SPEC-wf-037: hub ARTIFACT_ID_RE matches both sequential and 7-hex suffix forms", () => {
+    const src = read("hub/client/src/components/Markdown.tsx");
+    const m = src.match(/ARTIFACT_ID_RE\s*=\s*\/(.+?)\/[a-z]*;/);
+    expect(m).not.toBeNull();
+    const re = new RegExp(m![1]);
+    // Legacy sequential and new hash forms both linkify.
+    expect(re.test("ISS-auth-001")).toBe(true);
+    expect(re.test("GAP-wf-3f9c2a1")).toBe(true);
+    expect(re.test("WI-auth-9cfd75f")).toBe(true);
   });
 });
