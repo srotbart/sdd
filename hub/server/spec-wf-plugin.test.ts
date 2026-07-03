@@ -551,3 +551,24 @@ describe("SPEC-wf-037: consumers and docs accept both {seq} and {7hex} ID suffix
     expect(re.test("WI-auth-9cfd75f")).toBe(true);
   });
 });
+
+describe("SPEC-wf-037: ephemeral minting skills mint {7hex} hash IDs, not archive-scanned {seq}", () => {
+  const CASES = [
+    { skill: "plugin/skills/spec-audit/SKILL.md", mint: /GAP-\{abbrev\}-\{7hex\}/, oldScan: /gaps\/archive\/GAP-\{abbrev\}-\*\.md/ },
+    { skill: "plugin/skills/gap-to-work-items/SKILL.md", mint: /WI-\{abbrev\}-\{7hex\}/, oldScan: /work-items\/archive\/WI-\{abbrev\}-\*\.md/ },
+    { skill: "plugin/skills/review-issues/SKILL.md", mint: /ISS-\{domain\}-\{7hex\}/, oldScan: /next available sequence number/i },
+    { skill: "plugin/skills/review-improvements/SKILL.md", mint: /IMP-\{domain\}-\{7hex\}/, oldScan: /next available sequence number/i },
+  ];
+
+  for (const { skill, mint, oldScan } of CASES) {
+    const name = skill.split("/")[2];
+
+    it(`SPEC-wf-037: ${name} mints the {7hex} hash form`, () => {
+      expect(read(skill)).toMatch(mint);
+    });
+
+    it(`SPEC-wf-037: ${name} no longer instructs an archive/sequence scan for minting`, () => {
+      expect(read(skill)).not.toMatch(oldScan);
+    });
+  }
+});
