@@ -12,28 +12,55 @@ finds where reality diverges from the declaration and closes the gaps. This prod
 - A traceable audit trail from intent → spec → gap → fix
 - Work items scoped to a specific divergence, not a vague task
 
+## What's in This Repo
+
+| Path | What it is |
+|---|---|
+| `plugin/` | The Claude Code plugin: skills, artifact guides, statusline, drift-check scripts |
+| `hub/` | The SDD Hub — a local web app (Node 22, Express + React) that visualises `.sdd/` state live |
+| `.sdd/` | This repo's own SDD state — the project is built with its own workflow |
+
 ## The Pipeline
 
 ```
-Write a target → negotiate it → fold into spec → audit codebase → decompose gaps → close work items
+target (intent) → negotiate → fold into spec → audit codebase → gaps → work items → close
+                                     ↑                                                │
+                                     └──── review (issues / improvements) ← refactor ─┘
 ```
+
+Concrete skill chain: `target-engage` → `spec-audit` → `gap-to-work-items` →
+`work-item-close`, with `review-issues` / `review-improvements` / `review-engage`
+feeding findings back in. `session-start` snapshots the whole state;
+`spawn-sdd-worker` hands the execution phase to an autonomous agent.
 
 Terminal state: no open gaps, no pending work items.
 
-## The Four Artifacts
+## The Artifacts
 
 All state lives under `.sdd/` at the project root:
 
 | Directory | Purpose | Who writes it |
 |---|---|---|
 | `.sdd/targets/` | User-written intent. Negotiated in-document. | User (agent responds) |
-| `.sdd/specs/` | Canonical, structured specifications. The source of truth. | Agent (from targets) |
-| `.sdd/gaps/` | Audit reports — where the codebase diverges from the spec. | Agent (from audit) |
+| `.sdd/specs/` | Canonical, structured spec items. The source of truth. | Agent (from targets) |
+| `.sdd/gaps/` | Audit findings — where the codebase diverges from the spec. | Agent (from audit) |
 | `.sdd/work-items/` | Scoped tasks that close gaps. | Agent (from gaps) |
+| `.sdd/issues/` | Reviewer-flagged problems. | Agent (review skills) |
+| `.sdd/improvements/` | Reviewer-proposed enhancements. | Agent (review skills) |
 
-**Specs are durable** — they never archive. Everything else has an `archive/`
-subdirectory; terminal-state artifacts move there immediately, preserving provenance
-via frontmatter references back to the spec.
+Supporting directories: `.sdd/design/` (optional pre-target design docs),
+`.sdd/standards/` (user-authored coding standards — the review rubric),
+`.sdd/projections/` (synthesised explanation documents from `/sdd:explain`).
+
+**IDs.** Sequential for durable artifacts (`TGT-{seq}`, `SPEC-{abbrev}-{seq}`); ephemeral
+artifacts mint collision-free hash IDs (`GAP-wf-b861c4b`, `WI-wf-dc57a5a`). Legacy
+sequential ephemeral IDs remain valid.
+
+**Archiving.** Terminal-state artifacts are committed first, then moved to a local
+`archive/` subdirectory that is gitignored — git history is the durable archive, the
+local copy is a convenience cache. Spec archives are the exception: deprecated/aliased
+spec items stay tracked because alias resolution depends on them. Specs are never
+deleted, only archived.
 
 ## Skills
 
@@ -57,19 +84,39 @@ via frontmatter references back to the spec.
 | Target Engage | `/sdd:target-engage` | says "engage target TGT-XXX", "respond to this target", "process this target", "reconcile TGT-XXX with spec", "fold target into spec", or otherwise asks the agent to act on a target file in the SDD workflow |
 | Work Item Close | `/sdd:work-item-close` | says "close work item WI-auth-001", "implement WI-auth-001", "work on WI-auth-001", "close the next work item", or wants to implement a specific work item including tests |
 
+This table is generated from each skill's `SKILL.md` frontmatter by
+`plugin/scripts/gen-skills-table.js --update` and checked by
+`plugin/scripts/check-skills-drift.js` — don't edit it by hand.
+
+## The Hub
+
+`hub/` is a local web app that renders the `.sdd/` directory live: dashboard, targets,
+specs (with per-item detail and test coverage), gaps, work items, issues, improvements,
+designs, projections, standards, and session activity. The server binds a fixed
+`127.0.0.1:22351` and enforces a single running instance.
+
+```
+cd hub
+npm install
+npm run dev     # server + client (Vite dev client on :22400)
+```
+
 ## Getting Started
 
 ```
-/sdd:init add two-factor authentication for admin actions
-/sdd:target-engage TGT-001
+/sdd:sdd-init                      # scaffold .sdd/ and capture your first target
+/sdd:target-engage TGT-001         # negotiate the target in-document
 # [answer agent questions in TGT-001.md, flip status to awaiting-agent]
-/sdd:target-engage TGT-001       # agent proposes Current statement, flips to ready
-/sdd:target-engage TGT-001       # agent folds into spec, archives target
-/sdd:spec-audit authentication   # find gaps in codebase
+/sdd:target-engage TGT-001         # agent proposes Current statement, flips to ready
+/sdd:target-engage TGT-001         # agent folds into spec, archives target
+/sdd:spec-audit authentication     # find gaps in the codebase
 /sdd:gap-to-work-items authentication
-/sdd:work-item-close WI-auth-001
-/sdd:session-start               # check remaining state
+/sdd:work-item-close WI-auth-a1b2c3d
+/sdd:session-start                 # check remaining state
 ```
+
+Or hand the execution phase (audit → gaps → work items → close) to an autonomous
+worker: `/sdd:spawn-sdd-worker authentication`.
 
 ## Target Status Lifecycle
 
@@ -89,39 +136,66 @@ draft → awaiting-agent → awaiting-user → ready → accepted → [archive]
 | Artifact | Archives on | Stays active |
 |---|---|---|
 | Target | `accepted`, `archived` | `draft`, `awaiting-agent`, `awaiting-user`, `ready` |
+| Spec item | `deprecated`, `aliased` | `active` |
 | Gap | `closed`, `accepted`, `deferred` | `open` |
 | Work item | `done`, `abandoned` | `pending`, `in-progress`, `blocked` |
+| Issue / Improvement | `accepted`, `dismissed` | `open`, `awaiting-user`, `awaiting-agent` |
 
 Note: `blocked` work items stay active and visible in `session-start` — they need a
 decision, not burial.
 
 ## Design Decisions
 
-**One file per artifact (gaps and work-items).** Archiving is a file move, not an edit.
-This makes terminal-state transitions atomic and reversible.
+**One file per artifact.** Archiving is a file move, not an edit. This makes
+terminal-state transitions atomic and reversible.
+
+**History is the archive (ephemeral artifacts).** Terminal state is committed before
+the file moves into a gitignored local `archive/`. The repo stays slim; provenance
+lives in git history. Fresh clones start with empty archives, and no skill may depend
+on archive contents being present.
+
+**Hash IDs for ephemeral artifacts.** Gaps, work items, issues, and improvements mint
+`{prefix}-{abbrev}-{7hex}` IDs, so parallel branches and empty local archives can't
+cause ID collisions. Sequential types (targets, specs) scan git history for the next
+number.
 
 **Alias-at-read for spec-collapse.** When spec items are merged or renamed, old IDs
-become aliases in the surviving item's status line. Existing gap files are never
+become aliases in the surviving item's frontmatter. Existing gap files are never
 updated — resolution happens at read time by scanning for the alias. Spec-collapse is
 safely rejectable with no cascade writes required.
 
-**Content hash for spec versioning.** Each spec file carries a `version` field computed
-as `grep -v "^version:" SPEC-domain.md | shasum -a 256 | cut -c1-8`. Stripping the
-version line before hashing avoids a circular dependency. Session-start uses this to
-detect stale gap audits.
+**Content hash for spec versioning.** Each spec item file carries a `version` field
+computed as `grep -v "^version:" SPEC-{abbrev}-{seq}.md | shasum -a 256 | cut -c1-8`.
+Stripping the version line before hashing avoids a circular dependency. Session-start
+uses this to detect stale gap audits.
 
-**Atomic writes in target-engage.** Dialog entry and status flip happen in a single file
-edit with no confirmation step. Prevents half-written state.
+**Atomic writes in target-engage.** Dialog entry and status flip happen in a single
+file edit with no confirmation step. Prevents half-written state.
 
-**~3 round soft cap in target-engage.** After round 3, the agent commits to a best-effort
-Current statement rather than continuing to ask clarifying questions.
+**~3 round soft cap in target-engage.** After round 3, the agent commits to a
+best-effort Current statement rather than continuing to ask clarifying questions.
 
 **Conflict files as siblings.** When a ready target contradicts the spec, a
 `.sdd/targets/TGT-007.conflict.md` file is created alongside the target. The user
 resolves it and deletes the file, then re-runs `target-engage`.
 
+**User-authored standards, three enforcement layers.** Coding standards live in
+`.sdd/standards/` and are enforced proactively (surfaced at session-start), mechanically
+(`plugin/scripts/lint-check.sh`), and at review time (the `review-issues` rubric).
+
+## Roadmap
+
+Where the project is heading — shipped, in flight, and aspirational — lives in
+[`ROADMAP.md`](ROADMAP.md). It is derived from `.sdd/targets/` and git history, not a
+wishlist.
+
 ## Artifact Schemas
 
-Full schemas, ID conventions, and state machines: [`references/schemas.md`](references/schemas.md)
+Full schemas, ID conventions, and state machines:
+[`plugin/references/schemas.md`](plugin/references/schemas.md)
 
-Pipeline overview and skill responsibilities: [`references/sdd-pipeline.md`](references/sdd-pipeline.md)
+Per-artifact operating guides:
+[`plugin/references/artifacts/`](plugin/references/artifacts/)
+
+Pipeline overview and skill responsibilities:
+[`plugin/references/sdd-pipeline.md`](plugin/references/sdd-pipeline.md)
