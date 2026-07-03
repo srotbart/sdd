@@ -38,13 +38,12 @@ describe("SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent", 
     expect(skill).toMatch(/name['"`:\s]+["`']?sdd-worker/);
   });
 
-  it("SPEC-wf-002: the worker prompt sequences spec-audit then gap-to-work-items then work-item-close", () => {
-    const auditAt = skill.indexOf("sdd:spec-audit");
-    const decomposeAt = skill.indexOf("sdd:gap-to-work-items");
-    const closeAt = skill.indexOf("sdd:work-item-close");
-    expect(auditAt).toBeGreaterThanOrEqual(0);
-    expect(decomposeAt).toBeGreaterThan(auditAt);
-    expect(closeAt).toBeGreaterThan(decomposeAt);
+  it("SPEC-wf-002: the worker prompt's first action is to invoke sdd:close-domain, with no embedded pipeline", () => {
+    // The loop lives in close-domain (SPEC-wf-038), not in the prompt.
+    expect(skill).toMatch(/first action[^]*sdd:close-domain \{domain\}/i);
+    // The old three-step audit→decompose→close procedure is gone from the prompt.
+    expect(skill).not.toMatch(/1\.\s*Run \/sdd:spec-audit/);
+    expect(skill).not.toMatch(/Run \/sdd:gap-to-work-items \{domain\}/);
   });
 
   it("SPEC-wf-002: documents reuse via SendMessage for additional domains without re-spawning", () => {
@@ -147,8 +146,22 @@ describe("SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap
     expect(skill.toLowerCase()).toMatch(/nothing to do/);
   });
 
-  it("SPEC-wf-006: prompt instructs sending the gap report to the team lead after the audit", () => {
-    expect(skill.toLowerCase()).toMatch(/listing every gap\s+found/);
+  it("SPEC-wf-006: prompt's only imperative is invoking sdd:close-domain (no embedded procedure)", () => {
+    expect(skill).toMatch(/sdd:close-domain \{domain\}/);
+    expect(skill).not.toMatch(/1\.\s*Run \/sdd:spec-audit/);
+  });
+
+  it("SPEC-wf-006: prompt restricts lead reports to completion, 'nothing to do', or blocker", () => {
+    expect(skill.toLowerCase()).toMatch(
+      /report to your team lead only at genuine completion, "nothing to do", or a real\s+blocker/,
+    );
+  });
+
+  it("SPEC-wf-006: prompt instructs surfacing lead-instruction-vs-spec conflicts instead of complying", () => {
+    const lower = skill.toLowerCase();
+    expect(lower).toMatch(/conflicts with an active spec item/);
+    expect(lower).toMatch(/do not comply/);
+    expect(lower).toMatch(/quote the\s+spec item/);
   });
 });
 
@@ -377,9 +390,12 @@ describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () =>
     expect(skill.toLowerCase()).toMatch(/never auto-fix/);
   });
 
-  it("SPEC-wf-025: issues storage and archive directories are scaffolded", () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "issues"))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "issues", "archive"))).toBe(true);
+  it("SPEC-wf-025: issue storage path and archive-subdirectory convention are documented", () => {
+    // Per SPEC-wf-035, ephemeral archive dirs are gitignored and may be absent on a
+    // fresh clone/worktree; no tool (tests included) may depend on their presence.
+    // Assert the documented storage shape, not on-disk directory existence.
+    expect(skill).toMatch(/\.sdd\/issues\/ISS-\{domain\}-\{(?:seq|7hex)\}\.md/);
+    expect(skill).toMatch(/\.sdd\/issues\/archive\//);
   });
 });
 
@@ -407,9 +423,12 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
     expect(skill.toLowerCase()).toMatch(/never auto-appl/);
   });
 
-  it("SPEC-wf-026: improvements storage and archive directories are scaffolded", () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements"))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements", "archive"))).toBe(true);
+  it("SPEC-wf-026: improvement storage path and archive-subdirectory convention are documented", () => {
+    // Per SPEC-wf-035, ephemeral archive dirs are gitignored and may be absent on a
+    // fresh clone/worktree; no tool (tests included) may depend on their presence.
+    // Assert the documented storage shape, not on-disk directory existence.
+    expect(skill).toMatch(/\.sdd\/improvements\/IMP-\{domain\}-\{(?:seq|7hex)\}\.md/);
+    expect(skill).toMatch(/\.sdd\/improvements\/archive\//);
   });
 });
 
@@ -571,4 +590,274 @@ describe("SPEC-wf-037: ephemeral minting skills mint {7hex} hash IDs, not archiv
       expect(read(skill)).not.toMatch(oldScan);
     });
   }
+});
+
+describe("SPEC-wf-039: spec-index.js builds a deterministic, ephemeral full-corpus index", () => {
+  const SCRIPT = path.join(REPO_ROOT, "plugin", "scripts", "spec-index.js");
+
+  function runIndex(): string {
+    return execFileSync("node", [SCRIPT], { cwd: REPO_ROOT, encoding: "utf8" });
+  }
+
+  it("SPEC-wf-039: the spec-index.js script exists", () => {
+    expect(fs.existsSync(SCRIPT)).toBe(true);
+  });
+
+  it("SPEC-wf-039: prints one tab-separated line per active item with id, domain, title, scope", () => {
+    const lines = runIndex().split("\n").filter(Boolean);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      const cols = line.split("\t");
+      expect(cols.length).toBe(4); // id, domain, title, scope (4th may be empty)
+      expect(cols[0]).toMatch(/^SPEC-/);
+      expect(cols[1].length).toBeGreaterThan(0);
+      expect(cols[2].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("SPEC-wf-039: includes an active item and excludes archived items", () => {
+    const out = runIndex();
+    expect(out).toMatch(/^SPEC-wf-038\t/m); // active
+    expect(out).not.toMatch(/^SPEC-wf-007\t/m); // archived at .sdd/specs/workflow/archive/
+  });
+
+  it("SPEC-wf-039: emits scope globs comma-separated when present, empty when absent (SPEC-wf-042)", () => {
+    const fixtureDir = path.join(REPO_ROOT, ".sdd", "specs", "__indextest__");
+    const withScope = path.join(fixtureDir, "SPEC-idx-001.md");
+    const noScope = path.join(fixtureDir, "SPEC-idx-002.md");
+    try {
+      fs.mkdirSync(fixtureDir, { recursive: true });
+      fs.writeFileSync(
+        withScope,
+        '---\nid: SPEC-idx-001\ndomain: indextest\nabbrev: idx\nstatus: active\naliases: []\nscope: [hub/client/src/**, plugin/**]\nversion: "00000000"\n---\n\n# SPEC-idx-001 — fixture item with scope\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n',
+      );
+      fs.writeFileSync(
+        noScope,
+        '---\nid: SPEC-idx-002\ndomain: indextest\nabbrev: idx\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-idx-002 — fixture item without scope\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n',
+      );
+      const out = runIndex();
+      const withLine = out.split("\n").find((l) => l.startsWith("SPEC-idx-001\t"));
+      const noLine = out.split("\n").find((l) => l.startsWith("SPEC-idx-002\t"));
+      expect(withLine).toBeDefined();
+      expect(noLine).toBeDefined();
+      expect(withLine!.split("\t")[3]).toBe("hub/client/src/**,plugin/**");
+      expect(noLine!.split("\t")[3]).toBe("");
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  it("SPEC-wf-039: excludes non-active items", () => {
+    const fixtureDir = path.join(REPO_ROOT, ".sdd", "specs", "__indextest__");
+    const deprecated = path.join(fixtureDir, "SPEC-idx-003.md");
+    try {
+      fs.mkdirSync(fixtureDir, { recursive: true });
+      fs.writeFileSync(
+        deprecated,
+        '---\nid: SPEC-idx-003\ndomain: indextest\nabbrev: idx\nstatus: deprecated\naliases: []\nversion: "00000000"\n---\n\n# SPEC-idx-003 — deprecated fixture\n\n## Invariant\nx\n',
+      );
+      const out = runIndex();
+      expect(out).not.toMatch(/^SPEC-idx-003\t/m);
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  it("SPEC-wf-039: writes only to stdout — no index file is committed to the repo", () => {
+    runIndex();
+    const tracked = execFileSync(
+      "git",
+      ["ls-files", "--", ".sdd/spec-index*", "plugin/scripts/spec-index.txt", "spec-index.*"],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    ).trim();
+    expect(tracked).toBe("");
+  });
+});
+
+describe("SPEC-wf-042: spec items may declare an optional scope of governed code paths", () => {
+  it("SPEC-wf-042: schemas.md documents the optional scope: field with path-glob semantics", () => {
+    const schemas = read("plugin/references/schemas.md");
+    expect(schemas).toMatch(/scope:/);
+    expect(schemas.toLowerCase()).toMatch(/path glob/);
+    expect(schemas).toMatch(/SPEC-wf-042/);
+  });
+
+  it("SPEC-wf-042: the spec artifact guide documents the optional scope: field with path-glob semantics", () => {
+    const guide = read("plugin/references/artifacts/spec.md");
+    expect(guide).toMatch(/scope:/);
+    expect(guide.toLowerCase()).toMatch(/path glob/);
+    expect(guide).toMatch(/SPEC-wf-042/);
+  });
+
+  it("SPEC-wf-042: docs state scope is opt-in, recall-oriented, no-backfill, and authoritative inclusion", () => {
+    for (const rel of ["plugin/references/schemas.md", "plugin/references/artifacts/spec.md"]) {
+      const doc = read(rel).toLowerCase();
+      expect(doc).toMatch(/opt-in/);
+      expect(doc).toMatch(/recall-oriented/);
+      expect(doc).toMatch(/no backfill/);
+      expect(doc).toMatch(/authoritative/);
+      // Absence of scope never means the item is out of play.
+      expect(doc).toMatch(/absence of `scope:`/);
+    }
+  });
+
+  it("SPEC-wf-042: spec-index emits scope globs for an item carrying scope:", () => {
+    const SCRIPT = path.join(REPO_ROOT, "plugin", "scripts", "spec-index.js");
+    const fixtureDir = path.join(REPO_ROOT, ".sdd", "specs", "__scopetest__");
+    const scoped = path.join(fixtureDir, "SPEC-scp-001.md");
+    try {
+      fs.mkdirSync(fixtureDir, { recursive: true });
+      fs.writeFileSync(
+        scoped,
+        '---\nid: SPEC-scp-001\ndomain: scopetest\nabbrev: scp\nstatus: active\naliases: []\nscope: [hub/**, plugin/scripts/**]\nversion: "00000000"\n---\n\n# SPEC-scp-001 — scoped fixture\n\n## Invariant\nx\n',
+      );
+      const out = execFileSync("node", [SCRIPT], { cwd: REPO_ROOT, encoding: "utf8" });
+      const line = out.split("\n").find((l) => l.startsWith("SPEC-scp-001\t"));
+      expect(line).toBeDefined();
+      expect(line!.split("\t")[3]).toBe("hub/**,plugin/scripts/**");
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("SPEC-wf-038: close-domain skill drives the full execution loop for a domain", () => {
+  const rel = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-038: close-domain/SKILL.md exists in the plugin", () => {
+    expect(fs.existsSync(path.join(SKILLS, "close-domain", "SKILL.md"))).toBe(true);
+  });
+
+  it("SPEC-wf-038: the skill contains all five phases in order (orient, audit, decompose, close, guardian)", () => {
+    const skill = read(rel);
+    const p0 = skill.indexOf("### Phase 0");
+    const p1 = skill.indexOf("### Phase 1");
+    const p2 = skill.indexOf("### Phase 2");
+    const p3 = skill.indexOf("### Phase 3");
+    const p4 = skill.indexOf("### Phase 4");
+    expect(p0).toBeGreaterThan(-1);
+    expect(p1).toBeGreaterThan(p0);
+    expect(p2).toBeGreaterThan(p1);
+    expect(p3).toBeGreaterThan(p2);
+    expect(p4).toBeGreaterThan(p3);
+    const lower = skill.toLowerCase();
+    for (const word of ["orient", "audit", "decompose", "close", "guardian"]) {
+      expect(lower).toMatch(new RegExp(word));
+    }
+  });
+
+  it("SPEC-wf-038: Phase 0 runs the spec-index script and sends a first-report handshake", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/spec-index\.js/);
+    expect(skill.toLowerCase()).toMatch(/first-report handshake/);
+  });
+
+  it("SPEC-wf-038: the skill states inner Next: footers are advisory", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/footers? (are )?advisory/);
+  });
+
+  it("SPEC-wf-038: stop conditions are exactly nothing-to-do, complete-and-clean, escalation", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/nothing to do/);
+    expect(skill).toMatch(/complete and clean/);
+    expect(skill).toMatch(/escalation/);
+  });
+});
+
+describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () => {
+  const rel = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-041: records the run's git start point at Phase 0 and diffs changed files at Phase 4", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/git rev-parse HEAD/);
+    expect(skill).toMatch(/git diff --name-only/);
+  });
+
+  it("SPEC-wf-041: maps changed files to spec items across all domains", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/across all domains/);
+  });
+
+  it("SPEC-wf-041: own-run violations are fixed inline with no gap artifacts", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/fix inline/);
+    expect(skill).toMatch(/do \*\*not\*\* write gap artifacts|not write gap artifacts/);
+  });
+
+  it("SPEC-wf-041: escalation triggers are stated (tension, out-of-scope, or 2 non-converging cycles)", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/in tension/);
+    expect(skill).toMatch(/outside this run's scope|out of scope/);
+    expect(skill).toMatch(/without\s+convergence/);
+  });
+
+  it("SPEC-wf-041: pre-existing violations are reported as candidate gaps, not fixed, not blocking", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/pre-existing violations/);
+    expect(skill).toMatch(/candidate gaps/);
+  });
+
+  it("SPEC-wf-041: complete is reported only on a clean guardian audit", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/report complete only on a clean guardian audit/);
+  });
+});
+
+describe("SPEC-wf-008: close-domain footer + advisory-footer rule", () => {
+  const rel = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-008: close-domain ends with a '---' divider and a 'Next:' footer line", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/\n---\n/);
+    expect(skill).toMatch(/\nNext: /);
+  });
+
+  it("SPEC-wf-008: close-domain completion footer routes to session-start; escalation footer is the blocker", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/\/sdd:session-start/);
+    expect(skill.toLowerCase()).toMatch(/on escalation[^]*blocker description/);
+  });
+
+  it("SPEC-wf-008: close-domain states inner-skill footers are advisory", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/footers? (are )?advisory/);
+  });
+});
+
+describe("SPEC-wf-040: work items are closed with cross-domain spec context and self-check", () => {
+  const wic = "plugin/skills/work-item-close/SKILL.md";
+  const cd = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-040: work-item-close verifies each acceptance criterion against the code before done", () => {
+    const skill = read(wic).toLowerCase();
+    expect(skill).toMatch(/re-read the gap's spec item[^]*acceptance criteria[^]*against the code/);
+    expect(skill).toMatch(/"tests pass" alone is not completion/);
+  });
+
+  it("SPEC-wf-040: work-item-close instructs a cross-domain diff self-check from close-domain", () => {
+    const skill = read(wic).toLowerCase();
+    expect(skill).toMatch(/cross-domain self-check/);
+    expect(skill).toMatch(/every cross-domain spec item provided/);
+  });
+
+  it("SPEC-wf-040: close-domain selects relevant spec items across all domains before implementing", () => {
+    const skill = read(cd).toLowerCase();
+    expect(skill).toMatch(/select the governing spec items/);
+    expect(skill).toMatch(/across all domains/);
+    // Discovery: index/scope first, read-only subagent only when inconclusive, fallback reported.
+    expect(skill).toMatch(/spec-discovery subagent/);
+    expect(skill).toMatch(/never silently skipped/);
+  });
+});
+
+describe("SPEC-wf-031/033: close-domain is documented (docs-sync drift-free)", () => {
+  it("does not drift: check-skills-drift.js exits 0 with close-domain present", () => {
+    // Throws on non-zero exit; a clean run proves README + sdd-help list close-domain.
+    const out = execFileSync("node", [path.join(REPO_ROOT, "plugin", "scripts", "check-skills-drift.js")], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    });
+    expect(out).toMatch(/close-domain/);
+  });
 });

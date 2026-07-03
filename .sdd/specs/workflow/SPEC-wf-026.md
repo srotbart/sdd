@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "c0790616"
+version: "0019d315"
 ---
 
 # SPEC-wf-026 — Improvements are a team-produced enhancement artifact type
@@ -27,4 +27,4 @@ SDD includes an **improvements** artifact type, the enhancement-focused sibling 
 - `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: review-improvements does not spawn via the removed TeamCreate tool` — "no TeamCreate invocation"
 - `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: proposals are IMP-{domain}-{seq} under .sdd/improvements/ recording effort and impact` — "improvement artifact shape"
 - `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: the team never auto-applies improvements` — "never auto-applies"
-- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: improvements storage and archive directories are scaffolded` — "improvements storage + archive scaffolded"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-026: Improvements are a team-produced enhancement artifact type > SPEC-wf-026: improvement storage path and archive-subdirectory convention are documented` — "improvement storage path and archive-subdirectory convention documented"

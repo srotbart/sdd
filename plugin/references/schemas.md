@@ -102,6 +102,7 @@ domain: authentication
 abbrev: auth
 status: active        # active | deprecated | aliased
 aliases: []           # former spec IDs, populated by spec-collapse
+scope: []             # optional (SPEC-wf-042); path globs of the code this item governs
 version: "a3f9c812"  # SHA-256[:8] of this file's content; recompute on every write
 ---
 
@@ -147,6 +148,21 @@ Items without a `**Tests:**` block are considered uncovered and surfaced by
 
 **Version field:** SHA-256 first 8 hex chars of the item file's own content. Recompute
 and update on every write. Used for per-item stale-audit detection.
+
+**Scope field (optional, SPEC-wf-042):** `scope:` is an optional list of **path glob
+patterns** (minimatch/`.gitignore` syntax, repo-root-relative, e.g.
+`scope: [hub/client/src/**]`) naming the code areas the item governs. Path globs — not
+tags or descriptions — because the guardian audit's core operation is *changed file →
+candidate spec items*, and globs make that deterministic. Scope is **opt-in for
+genuinely cross-cutting items** (architectural rules that bind any code in matching
+paths), authored at target-engage time going forward; there is **no backfill** of
+existing items. Globs are **recall-oriented, not precision-oriented**: a cross-cutting
+rule correctly carries a broad glob so it is always a candidate when that area changes —
+precision comes afterward, from the agent pruning candidates by title. Discovery
+(SPEC-wf-040) and the guardian audit (SPEC-wf-041) treat a matching scope glob as
+**authoritative inclusion** in the candidate set; **absence of `scope:` means relevance
+is decided by reasoning — never that the item is out of play.** The `spec-index` script
+emits scope globs comma-separated (empty field when absent).
 
 To compute:
 ```bash

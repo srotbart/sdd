@@ -7,7 +7,6 @@
     "SPEC-WF-004": ["SPEC-wf-004"],
     "SPEC-WF-005": ["SPEC-wf-005"],
     "SPEC-WF-006": ["SPEC-wf-006"],
-    "SPEC-WF-007": ["SPEC-wf-007"],
     "SPEC-WF-008": ["SPEC-wf-008"],
     "SPEC-WF-009": ["SPEC-wf-009"],
     "SPEC-WF-011": ["SPEC-wf-011"],
@@ -19,6 +18,17 @@
     "SPEC-WF-018": ["SPEC-wf-018"],
     "SPEC-WF-020": ["SPEC-wf-020"],
     "SPEC-WF-021": ["SPEC-wf-021"],
-    "SPEC-WF-022": ["SPEC-wf-022"]
+    "SPEC-WF-022": ["SPEC-wf-022"],
+    "SPEC-WF-025": ["SPEC-wf-025"],
+    "SPEC-WF-026": ["SPEC-wf-026"],
+    "SPEC-WF-034": ["SPEC-wf-034"],
+    "SPEC-WF-035": ["SPEC-wf-035"],
+    "SPEC-WF-036": ["SPEC-wf-036"],
+    "SPEC-WF-037": ["SPEC-wf-037"],
+    "SPEC-WF-038": ["SPEC-wf-038"],
+    "SPEC-WF-039": ["SPEC-wf-039"],
+    "SPEC-WF-040": ["SPEC-wf-040"],
+    "SPEC-WF-041": ["SPEC-wf-041"],
+    "SPEC-WF-042": ["SPEC-wf-042"]
   }
 }

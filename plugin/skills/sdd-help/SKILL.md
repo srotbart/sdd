@@ -133,6 +133,9 @@ draft → awaiting-agent → awaiting-user → ready → accepted → [archive]
 
 ## All Skills
 
+### `/sdd:close-domain` — Close Domain
+says "close the domain", "run the full execution loop for X", "drive the pipeline for authentication", or wants a single skill to drive the entire execution phase (audit, decompose, close, guardian audit) for one domain
+
 ### `/sdd:explain` — Explain
 asks to "explain how X works", "document X", "write an explanation of X", or wants a deep-dive document on a component, concept, or subsystem in the current project
 
