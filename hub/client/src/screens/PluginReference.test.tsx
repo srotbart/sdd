@@ -46,6 +46,7 @@ describe('PluginReference screen (WI-scr-008)', () => {
     const link = document.querySelector('.pr-toolbar__github');
     expect(link).not.toBeNull();
     expect(link!.textContent).toContain('view source on github');
+    expect(link!.getAttribute('href')).toBe('https://github.com/srotbart/sdd');
   });
 
   it('toolbar contains the ❡ glyph and "plugin reference" title', () => {

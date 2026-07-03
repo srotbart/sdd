@@ -144,7 +144,7 @@ export function PluginReference() {
         <span className="pr-toolbar__sub">— SDD workflow, artifacts, and skills</span>
         <a
           className="pr-toolbar__github"
-          href="https://github.com/anthropics/claude-code"
+          href="https://github.com/srotbart/sdd"
           target="_blank"
           rel="noopener noreferrer"
         >
