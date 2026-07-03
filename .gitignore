@@ -22,3 +22,14 @@ dist/
 .vitest-report.json
 hub/.vitest-report.json
 hub/*/.vitest-report.json
+
+# SDD ephemeral artifact archives (SPEC-wf-035): local-only safety net, never
+# version-controlled. Terminal targets/gaps/work-items/issues/improvements are
+# mv'd here after their final state is committed; git history is the permanent
+# archive. Spec archives (.sdd/specs/**/archive/) are deliberately NOT ignored —
+# they are permanent truth needed for alias resolution.
+.sdd/targets/archive/
+.sdd/gaps/archive/
+.sdd/work-items/archive/
+.sdd/issues/archive/
+.sdd/improvements/archive/

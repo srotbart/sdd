@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // These tests assert that committed plugin artifacts (SKILL.md files and the
@@ -406,5 +407,44 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
   it("SPEC-wf-026: improvements storage and archive directories are scaffolded", () => {
     expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements"))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements", "archive"))).toBe(true);
+  });
+});
+
+describe("SPEC-wf-035: Ephemeral artifact archives are local-only, never version-controlled", () => {
+  const gitignore = read(".gitignore");
+  const EPHEMERAL_ARCHIVES = [
+    ".sdd/targets/archive/",
+    ".sdd/gaps/archive/",
+    ".sdd/work-items/archive/",
+    ".sdd/issues/archive/",
+    ".sdd/improvements/archive/",
+  ];
+
+  it("SPEC-wf-035: .gitignore covers all five ephemeral archive paths", () => {
+    for (const p of EPHEMERAL_ARCHIVES) {
+      expect(gitignore).toMatch(new RegExp("^" + p.replace(/[.]/g, "\\$&"), "m"));
+    }
+  });
+
+  it("SPEC-wf-035: .gitignore does NOT ignore the spec archive (permanent truth)", () => {
+    expect(gitignore).not.toMatch(/^\.sdd\/specs\/.*archive/m);
+  });
+
+  it("SPEC-wf-035: no tracked files exist under any ephemeral archive path", () => {
+    const tracked = execFileSync(
+      "git",
+      ["ls-files", "--", ...EPHEMERAL_ARCHIVES],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    ).trim();
+    expect(tracked).toBe("");
+  });
+
+  it("SPEC-wf-035: the spec archive remains tracked", () => {
+    const tracked = execFileSync(
+      "git",
+      ["ls-files", "--", ".sdd/specs/"],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    );
+    expect(tracked).toMatch(/\/archive\//);
   });
 });
