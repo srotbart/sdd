@@ -592,6 +592,28 @@ describe("SPEC-wf-037: ephemeral minting skills mint {7hex} hash IDs, not archiv
   }
 });
 
+describe("SPEC-wf-037: artifact guides (gap.md, work-item.md) document hash ID minting, not sequential", () => {
+  it("SPEC-wf-037: gap.md shows GAP-{abbrev}-{7hex} in the file path and ID pattern lines", () => {
+    const guide = read("plugin/references/artifacts/gap.md");
+    expect(guide).toMatch(/GAP-\{abbrev\}-\{7hex\}/);
+  });
+
+  it("SPEC-wf-037: work-item.md shows WI-{abbrev}-{7hex} in the file path and ID pattern lines", () => {
+    const guide = read("plugin/references/artifacts/work-item.md");
+    expect(guide).toMatch(/WI-\{abbrev\}-\{7hex\}/);
+  });
+
+  it("SPEC-wf-037: neither gap.md nor work-item.md contains sequential-ID minting instructions", () => {
+    const gap = read("plugin/references/artifacts/gap.md");
+    const wi = read("plugin/references/artifacts/work-item.md");
+    // These phrases were the old sequential-ID minting instructions; neither guide may contain them.
+    expect(gap).not.toMatch(/next sequential ID/);
+    expect(gap).not.toMatch(/from the max across/);
+    expect(wi).not.toMatch(/next sequential ID/);
+    expect(wi).not.toMatch(/from the max across/);
+  });
+});
+
 describe("SPEC-wf-039: spec-index.js builds a deterministic, ephemeral full-corpus index", () => {
   const SCRIPT = path.join(REPO_ROOT, "plugin", "scripts", "spec-index.js");
 

@@ -9,10 +9,10 @@ Each gap records exactly one divergence with a one-line justification.
 
 ## 1. Schema / ID Convention
 
-**File path:** `.sdd/gaps/GAP-{abbrev}-{seq}.md`
-**ID pattern:** `GAP-{abbrev}-{seq}` — abbreviation matches the spec domain
-(e.g., `auth`, `wf`); sequence is globally stable within the domain and never recycled —
-number from the max across **both** `.sdd/gaps/` and `.sdd/gaps/archive/`.
+**File path:** `.sdd/gaps/GAP-{abbrev}-{7hex}.md`
+**ID pattern:** `GAP-{abbrev}-{7hex}` — abbreviation matches the spec domain
+(e.g., `auth`, `wf`); the 7-hex suffix is generated at mint time (`openssl rand -hex 4 | cut -c1-7`);
+no sequence scan and no archive lookup — collision-free by construction.
 
 **Required frontmatter:**
 
@@ -91,9 +91,9 @@ already set, report the anomaly rather than overwriting.
 2. Locate the decision point: the file and line where the invariant is violated.
 3. Write one line of reasoning explaining the violation specifically enough that
    a future reader can verify it without re-reading the code.
-4. Assign the next sequential ID: `GAP-{abbrev}-{next-seq}`. Compute `{next-seq}` from the
-   max across **both** `.sdd/gaps/` and `.sdd/gaps/archive/` — IDs are never recycled, so an
-   ID present in `archive/` is already taken.
+4. Mint a hash ID: `GAP-{abbrev}-{7hex}`. Generate the suffix with
+   `openssl rand -hex 4 | cut -c1-7` (or equivalent random 7 lowercase hex chars).
+   No sequence scan and no archive lookup — collision-free by construction.
 5. Set `audit-spec-version` to the spec item's current `version`.
 6. Set `status: open`, `closed-by: null`, `deferred-reason: null`.
 
