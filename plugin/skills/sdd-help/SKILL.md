@@ -144,7 +144,7 @@ runs them (audit → decompose → close, then a guardian audit) in one invocati
 ## All Skills
 
 ### `/sdd:close-domain` — Close Domain
-says "close the domain", "run the full execution loop for X", "drive the pipeline for authentication", or wants a single skill to drive the entire execution phase (audit, decompose, close, guardian audit) for one domain
+The sdd-worker's operating loop — drives the full execution pipeline for one domain (audit → decompose → close → guardian audit)
 
 ### `/sdd:explain` — Explain
 asks to "explain how X works", "document X", "write an explanation of X", or wants a deep-dive document on a component, concept, or subsystem in the current project

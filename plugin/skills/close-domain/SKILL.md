@@ -1,19 +1,20 @@
 ---
 name: close-domain
-description: Use when the user invokes `/sdd:close-domain`, says "close the domain", "run the full execution loop for X", "drive the pipeline for authentication", or wants a single skill to drive the entire execution phase (audit, decompose, close, guardian audit) for one domain. This is also the one skill the sdd-worker invokes — the execution loop is structural here, not carried in any agent prompt.
+description: The sdd-worker's operating loop — drives the full execution pipeline for one domain (audit → decompose → close → guardian audit). If you are in a lead or main session, run `/sdd:spawn-sdd-worker {domain}` instead. This skill is reserved for the sdd-worker; the loop is structural here, not carried in any agent prompt.
 version: 0.1.0
 ---
 
 # SDD Close Domain
 
-Drive the entire execution pipeline for one domain, end to end, without stopping
-for interactive confirmation between stages. This skill **is** the loop: audit →
-decompose → close (with cross-domain compliance) → guardian audit. It is the sole
-procedure the `sdd-worker` runs, and it is equally usable by a human driver who
-wants the whole pipeline in one invocation.
+This skill is the `sdd-worker`'s operating loop. It drives the entire execution
+pipeline for one domain, end to end, without stopping for interactive confirmation
+between stages. The loop is structural: encoded here in the skill, never in agent
+memory or a spawn prompt. An agent that forgets the steps re-reads this file; it
+does not improvise them.
 
-The loop lives here, in the skill — never in agent memory or a spawn prompt. An
-agent that forgets the steps re-reads this file; it does not improvise them.
+**If you are the lead or in a main session:** do not run this skill directly.
+Invoke `/sdd:spawn-sdd-worker {domain}` instead — the worker will call close-domain
+as its first action.
 
 ## Input
 
@@ -113,6 +114,14 @@ Stop only on one of:
 
 Report to the team lead at exactly these moments (plus the Phase 0 handshake and
 the Phase 1 gap list). Do not send interactive-style status pings between stages.
+
+## Constraints
+
+**Execution never modifies spec item files.** A fix requiring a spec item edit is
+an escalation — report it to the lead rather than closing inline. The only permitted
+spec-file writes during execution are the mechanical annotations (`**Tests:**`
+linking and `scope:` backfill per SPEC-wf-042) and their version-hash recomputation;
+these never touch invariant or acceptance-criteria content and are excepted.
 
 ---
 Next: Review the resulting SDD state. Run `/sdd:session-start` to review state.

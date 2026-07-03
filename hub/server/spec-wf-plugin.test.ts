@@ -763,6 +763,26 @@ describe("SPEC-wf-038: close-domain skill drives the full execution loop for a d
     expect(skill).toMatch(/complete and clean/);
     expect(skill).toMatch(/escalation/);
   });
+
+  it("SPEC-wf-038: description and preamble identify close-domain as the sdd-worker operating loop and redirect lead/main to spawn-sdd-worker", () => {
+    const skill = read(rel);
+    // description/preamble must name it as the sdd-worker's operating loop
+    expect(skill).toMatch(/sdd-worker's operating loop/i);
+    // must redirect lead/main sessions to spawn-sdd-worker
+    expect(skill).toMatch(/spawn-sdd-worker \{domain\}/);
+    // "equally usable by a human driver" framing must be gone
+    expect(skill).not.toMatch(/equally usable by a human driver/i);
+  });
+
+  it("SPEC-wf-038: skill states spec-item edits are escalations with mechanical Tests/scope writes excepted", () => {
+    const skill = read(rel);
+    const lower = skill.toLowerCase();
+    // Must state that a fix requiring a spec item edit is an escalation
+    expect(lower).toMatch(/fix requiring a spec item edit is\s+an escalation/);
+    // Must name the excepted mechanical annotations
+    expect(skill).toMatch(/\*\*Tests:\*\*/);
+    expect(skill).toMatch(/`scope:`/);
+  });
 });
 
 describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () => {
