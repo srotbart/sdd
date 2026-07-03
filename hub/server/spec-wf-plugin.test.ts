@@ -490,3 +490,34 @@ describe("SPEC-wf-035: Ephemeral artifact archives are local-only, never version
     expect(skill.toLowerCase()).toMatch(/cache[^.]*when it is present/);
   });
 });
+
+describe("SPEC-wf-036: Terminal artifact state is committed before archiving", () => {
+  const ARCHIVING_SKILLS = [
+    "plugin/skills/work-item-close/SKILL.md",
+    "plugin/skills/target-engage/SKILL.md",
+    "plugin/skills/review-engage/SKILL.md",
+  ];
+
+  for (const rel of ARCHIVING_SKILLS) {
+    const name = rel.split("/")[2];
+
+    it(`SPEC-wf-036: ${name} states the commit-before-mv ordering (terminal state → commit → mv)`, () => {
+      const skill = read(rel);
+      expect(skill).toMatch(/→\s*commit\s*→\s*`mv`/);
+    });
+
+    it(`SPEC-wf-036: ${name} forbids staging files under an archive path`, () => {
+      const skill = read(rel).toLowerCase();
+      expect(skill).toMatch(/never stage[^\n]*archive/);
+    });
+  }
+
+  it("SPEC-wf-036: the merge-strategy caveat is documented in the artifact operating guides", () => {
+    const wi = read("plugin/references/artifacts/work-item.md").toLowerCase();
+    const tgt = read("plugin/references/artifacts/target.md").toLowerCase();
+    for (const guide of [wi, tgt]) {
+      expect(guide).toMatch(/squash/);
+      expect(guide).toMatch(/merge-commit/);
+    }
+  });
+});

@@ -96,6 +96,14 @@ Compare the Current statement against every active spec item in the domain. Clas
 
 ### 4. Execute the outcome
 
+**Archiving convention (SPEC-wf-035/036):** whenever an outcome below archives the
+target — flips it to `accepted`/`archived` and moves it into `.sdd/targets/archive/`
+— **write terminal state → commit → `mv`**: first commit the target's terminal
+state (status flip, final dialog, and any spec items written) at its active path,
+then move the file. The archive dir is a gitignored local-only cache, so the move
+is a plain deletion to git; the prior commit is what preserves the target's final
+content in history. Never stage files under `.sdd/targets/archive/`.
+
 #### No-op
 - Flip the target's status to `accepted` in frontmatter
 - Move the target file to `.sdd/targets/archive/`
