@@ -970,4 +970,21 @@ describe("SPEC-wf-043: the shipped plugin never references this repository's own
       fs.rmSync(probeDir, { recursive: true, force: true });
     }
   });
+
+  it("SPEC-wf-043: no SPEC-wf-[0-9] citations remain under plugin/ (clean-state check)", () => {
+    // grep exits 1 when no matches are found — that is the clean state we want.
+    // If grep exits 0 it found citations and we fail, showing the offending lines.
+    let output = "";
+    try {
+      output = execFileSync("grep", ["-rn", "SPEC-wf-[0-9]", "plugin"], {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+      });
+    } catch {
+      // Exit 1 = no matches found. This is the expected clean state — pass.
+      return;
+    }
+    // If we reach here, grep exited 0, meaning it found citations — test fails.
+    throw new Error(`SPEC-wf-* citations remain under plugin/:\n${output}`);
+  });
 });

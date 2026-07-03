@@ -77,7 +77,7 @@ If any section exceeds 10 entries, show the first 5 then `… and N more`.
 Before the artifact operating contract, emit a concise **high-level orientation**
 for the agent. This is the brief "map" layer — the contract in step 5b is the
 detail layer. The orientation shares its source of truth with `sdd-help` and
-the SPEC-wf-023 artifact guides (it references them; it is not a divergent copy).
+the artifact operating guides (it references them; it is not a divergent copy).
 
 **Orientation content:**
 
@@ -164,7 +164,7 @@ Omit this block when running in zero-state (no `.sdd/` directory found, step 1).
 
 ### 5c. Surface the coding standards
 
-This is the **proactive enforcement layer** for coding standards (SPEC-wf-029, layer 1):
+This is the **proactive enforcement layer** for coding standards:
 session-start is where the agent receives the standards rubric for the session, so it
 follows them while writing code — the rules are NOT duplicated into `CLAUDE.md`.
 
@@ -248,7 +248,7 @@ Next: Engage the highest-priority target. Run `/sdd:target-engage TGT-007` to pr
 
 **Orphaned gap** — gap references a `spec-item` ID not found in any spec file (including aliases). Flag with: `⚠ GAP-auth-005 references SPEC-auth-009 which no longer exists — verify spec-collapse ran alias correctly.`
 
-**Orphaned work item** — work item references a `gap-id` not found among the active gap files. Because ephemeral archives are local-only (SPEC-wf-035), resolution scans the active gaps directory plus the local `gaps/archive/` cache *when it is present*. Two outcomes:
+**Orphaned work item** — work item references a `gap-id` not found among the active gap files. Because ephemeral archives are local-only, resolution scans the active gaps directory plus the local `gaps/archive/` cache *when it is present*. Two outcomes:
 - Reference absent **and** the local archive cache is present (and does not contain it): a genuine orphan — flag with `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
 - Reference absent **and** the archive cache is empty or absent (e.g. a fresh clone or worktree): report as unverifiable, not an error — `WI-auth-007 references GAP-auth-004 — unverifiable (archive is local-only).`
 
