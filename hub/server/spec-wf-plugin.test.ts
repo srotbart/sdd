@@ -701,3 +701,118 @@ describe("SPEC-wf-042: spec items may declare an optional scope of governed code
     }
   });
 });
+
+describe("SPEC-wf-038: close-domain skill drives the full execution loop for a domain", () => {
+  const rel = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-038: close-domain/SKILL.md exists in the plugin", () => {
+    expect(fs.existsSync(path.join(SKILLS, "close-domain", "SKILL.md"))).toBe(true);
+  });
+
+  it("SPEC-wf-038: the skill contains all five phases in order (orient, audit, decompose, close, guardian)", () => {
+    const skill = read(rel);
+    const p0 = skill.indexOf("### Phase 0");
+    const p1 = skill.indexOf("### Phase 1");
+    const p2 = skill.indexOf("### Phase 2");
+    const p3 = skill.indexOf("### Phase 3");
+    const p4 = skill.indexOf("### Phase 4");
+    expect(p0).toBeGreaterThan(-1);
+    expect(p1).toBeGreaterThan(p0);
+    expect(p2).toBeGreaterThan(p1);
+    expect(p3).toBeGreaterThan(p2);
+    expect(p4).toBeGreaterThan(p3);
+    const lower = skill.toLowerCase();
+    for (const word of ["orient", "audit", "decompose", "close", "guardian"]) {
+      expect(lower).toMatch(new RegExp(word));
+    }
+  });
+
+  it("SPEC-wf-038: Phase 0 runs the spec-index script and sends a first-report handshake", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/spec-index\.js/);
+    expect(skill.toLowerCase()).toMatch(/first-report handshake/);
+  });
+
+  it("SPEC-wf-038: the skill states inner Next: footers are advisory", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/footers? (are )?advisory/);
+  });
+
+  it("SPEC-wf-038: stop conditions are exactly nothing-to-do, complete-and-clean, escalation", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/nothing to do/);
+    expect(skill).toMatch(/complete and clean/);
+    expect(skill).toMatch(/escalation/);
+  });
+});
+
+describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () => {
+  const rel = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-041: records the run's git start point at Phase 0 and diffs changed files at Phase 4", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/git rev-parse HEAD/);
+    expect(skill).toMatch(/git diff --name-only/);
+  });
+
+  it("SPEC-wf-041: maps changed files to spec items across all domains", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/across all domains/);
+  });
+
+  it("SPEC-wf-041: own-run violations are fixed inline with no gap artifacts", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/fix inline/);
+    expect(skill).toMatch(/do \*\*not\*\* write gap artifacts|not write gap artifacts/);
+  });
+
+  it("SPEC-wf-041: escalation triggers are stated (tension, out-of-scope, or 2 non-converging cycles)", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/in tension/);
+    expect(skill).toMatch(/outside this run's scope|out of scope/);
+    expect(skill).toMatch(/without\s+convergence/);
+  });
+
+  it("SPEC-wf-041: pre-existing violations are reported as candidate gaps, not fixed, not blocking", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/pre-existing violations/);
+    expect(skill).toMatch(/candidate gaps/);
+  });
+
+  it("SPEC-wf-041: complete is reported only on a clean guardian audit", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/report complete only on a clean guardian audit/);
+  });
+});
+
+describe("SPEC-wf-008: close-domain footer + advisory-footer rule", () => {
+  const rel = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-008: close-domain ends with a '---' divider and a 'Next:' footer line", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/\n---\n/);
+    expect(skill).toMatch(/\nNext: /);
+  });
+
+  it("SPEC-wf-008: close-domain completion footer routes to session-start; escalation footer is the blocker", () => {
+    const skill = read(rel);
+    expect(skill).toMatch(/\/sdd:session-start/);
+    expect(skill.toLowerCase()).toMatch(/on escalation[^]*blocker description/);
+  });
+
+  it("SPEC-wf-008: close-domain states inner-skill footers are advisory", () => {
+    const skill = read(rel).toLowerCase();
+    expect(skill).toMatch(/footers? (are )?advisory/);
+  });
+});
+
+describe("SPEC-wf-031/033: close-domain is documented (docs-sync drift-free)", () => {
+  it("does not drift: check-skills-drift.js exits 0 with close-domain present", () => {
+    // Throws on non-zero exit; a clean run proves README + sdd-help list close-domain.
+    const out = execFileSync("node", [path.join(REPO_ROOT, "plugin", "scripts", "check-skills-drift.js")], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    });
+    expect(out).toMatch(/close-domain/);
+  });
+});

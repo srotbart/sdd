@@ -39,6 +39,7 @@ via frontmatter references back to the spec.
 
 | Skill | Invoke | Purpose |
 |---|---|---|
+| Close Domain | `/sdd:close-domain` | Use when the user invokes `/sdd:close-domain`, says "close the domain", "run the full execution loop for X", "drive the pipeline for authentication", or wants a single skill to drive the entire execution phase (audit, decompose, close, guardian audit) for one domain |
 | Explain | `/sdd:explain` | Use when the user invokes `/sdd:explain <subject>`, asks to "explain how X works", "document X", "write an explanation of X", or wants a deep-dive document on a component, concept, or subsystem in the current project |
 | Gap To Work Items | `/sdd:gap-to-work-items` | says "decompose gaps into work items", "create work items for GAP-auth", "generate work items from gap report", "break down gaps for authentication", or wants to turn open gap files into actionable work items |
 | Install Statusline | `/sdd:install-statusline` | invokes `/sdd:install-statusline` or asks to "install the SDD statusline", "set up the statusline", or "add SDD statusline to Claude Code" |
