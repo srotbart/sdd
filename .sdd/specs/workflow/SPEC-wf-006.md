@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "d263cdd8"
+version: "59c508f5"
 ---
 
 # SPEC-wf-006 — sdd-worker prompt defines role, responsibilities, and gap reporting
@@ -27,4 +27,6 @@ The prompt passed to the sdd-worker by `sdd:spawn-sdd-worker` must open with an 
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt opens with an explicit execution-agent role declaration` — the prompt declares the pure-execution role up front
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt prohibits the intent-phase skills session-start and target-engage` — the prompt forbids intent-phase skills
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt instructs a 'nothing to do' message when no gaps are found` — the worker reports and stops when there is no work
-- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt instructs sending the gap report to the team lead after the audit` — the worker reports found gaps to the lead after auditing
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt's only imperative is invoking sdd:close-domain (no embedded procedure)` — the prompt's sole procedural instruction is invoking close-domain
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt restricts lead reports to completion, 'nothing to do', or blocker` — the worker reports to the lead only at completion, nothing-to-do, or a blocker
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap reporting > SPEC-wf-006: prompt instructs surfacing lead-instruction-vs-spec conflicts instead of complying` — the worker surfaces a lead-vs-spec conflict by quoting the item instead of complying

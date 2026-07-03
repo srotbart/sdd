@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "e3143815"
+version: "6e5ccb23"
 ---
 
 # SPEC-wf-025 — Issues are a reviewer-team-produced artifact type
@@ -27,4 +27,4 @@ SDD includes an **issues** artifact type produced by a dedicated reviewer team. 
 - `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: review-issues does not spawn via the removed TeamCreate tool` — "no TeamCreate invocation"
 - `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: findings are ISS-{domain}-{seq} under .sdd/issues/ recording location, problem, rationale, severity` — "issue artifact shape"
 - `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: reviewers never auto-fix findings` — "reviewers never auto-fix"
-- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: issues storage and archive directories are scaffolded` — "issues storage + archive scaffolded"
+- `hub/server/spec-wf-plugin.test.ts::SPEC-wf-025: Issues are a reviewer-team-produced artifact type > SPEC-wf-025: issue storage path and archive-subdirectory convention are documented` — "issue storage path and archive-subdirectory convention documented"

@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "c74e5c1a"
+version: "3f81fb88"
 ---
 
 # SPEC-wf-002 — /sdd:spawn-sdd-worker skill creates a persistent sdd-worker agent
@@ -24,5 +24,5 @@ A skill `/sdd:spawn-sdd-worker` exists in the SDD plugin. When invoked with a do
 
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent > SPEC-wf-002: the spawn-sdd-worker SKILL.md exists in the plugin` — the spawn-sdd-worker skill is a committed plugin artifact
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent > SPEC-wf-002: spawns an agent named sdd-worker` — the skill spawns a named sdd-worker agent
-- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent > SPEC-wf-002: the worker prompt sequences spec-audit then gap-to-work-items then work-item-close` — the prompt orders the execution pipeline correctly
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent > SPEC-wf-002: the worker prompt's first action is to invoke sdd:close-domain, with no embedded pipeline` — the prompt's first action is invoking close-domain, with no embedded pipeline
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent > SPEC-wf-002: documents reuse via SendMessage for additional domains without re-spawning` — the worker is reusable for further domains via SendMessage

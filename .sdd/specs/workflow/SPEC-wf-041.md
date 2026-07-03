@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "41851f48"
+version: "5a15136a"
 ---
 
 # SPEC-wf-041 — Guardian cross-domain audit gates worker completion
@@ -21,3 +21,11 @@ After all work items are closed and tests pass, `sdd:close-domain` runs a guardi
 - Escalation triggers are stated: spec tension, out-of-scope fixes, or 2 fix-cycles without convergence
 - Pre-existing violations are reported as candidate gaps, not fixed, and do not block completion
 - "Complete" is reported to the lead only after a clean guardian audit
+
+**Tests:**
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-041: guardian cross-domain audit gates worker completion > SPEC-wf-041: records the run's git start point at Phase 0 and diffs changed files at Phase 4` — the run's start point is recorded and diffed at the guardian audit
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-041: guardian cross-domain audit gates worker completion > SPEC-wf-041: maps changed files to spec items across all domains` — changed files are mapped to governing items across all domains
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-041: guardian cross-domain audit gates worker completion > SPEC-wf-041: own-run violations are fixed inline with no gap artifacts` — this run's own violations are fixed inline without creating gaps
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-041: guardian cross-domain audit gates worker completion > SPEC-wf-041: escalation triggers are stated (tension, out-of-scope, or 2 non-converging cycles)` — the escalation conditions are enumerated
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-041: guardian cross-domain audit gates worker completion > SPEC-wf-041: pre-existing violations are reported as candidate gaps, not fixed, not blocking` — pre-existing violations are reported rather than fixed
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-041: guardian cross-domain audit gates worker completion > SPEC-wf-041: complete is reported only on a clean guardian audit` — completion is gated on a clean guardian audit

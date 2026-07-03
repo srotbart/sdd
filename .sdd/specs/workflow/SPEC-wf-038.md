@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "1be1ee27"
+version: "d3b9947e"
 ---
 
 # SPEC-wf-038 — close-domain skill drives the full execution loop for a domain
@@ -20,3 +20,10 @@ A skill `/sdd:close-domain {domain}` exists in the SDD plugin and internally dri
 - Phase 0 runs the spec-index script and sends a first-report handshake to the team lead
 - The skill states that inner skills' `Next:` footers are advisory and never stop points
 - The skill's stop conditions are exactly: nothing to do, complete-and-clean, or escalation
+
+**Tests:**
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-038: close-domain skill drives the full execution loop for a domain > SPEC-wf-038: close-domain/SKILL.md exists in the plugin` — the close-domain skill is a committed plugin artifact
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-038: close-domain skill drives the full execution loop for a domain > SPEC-wf-038: the skill contains all five phases in order (orient, audit, decompose, close, guardian)` — the skill encodes the five phases in sequence
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-038: close-domain skill drives the full execution loop for a domain > SPEC-wf-038: Phase 0 runs the spec-index script and sends a first-report handshake` — Phase 0 builds the index and sends the startup handshake
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-038: close-domain skill drives the full execution loop for a domain > SPEC-wf-038: the skill states inner Next: footers are advisory` — inner pipeline-skill footers do not stop the loop
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-038: close-domain skill drives the full execution loop for a domain > SPEC-wf-038: stop conditions are exactly nothing-to-do, complete-and-clean, escalation` — the loop stops only on the three defined conditions

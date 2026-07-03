@@ -4,7 +4,7 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "7e6e1ea9"
+version: "15613e94"
 ---
 
 # SPEC-wf-008 — Every pipeline skill output ends with a concrete next-step footer
@@ -33,3 +33,6 @@ Each SDD skill that represents a pipeline stage must end its output with a `---`
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spec-test contains a '---' divider and a 'Next:' footer line` — spec-test ends with a next-step footer
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spec-audit footer routes to gap-to-work-items when gaps are found` — the audit footer routes to gap decomposition on the gaps-found outcome
 - `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: every pipeline skill output ends with a concrete next-step footer > SPEC-wf-008: spawn-sdd-worker footer reads 'Worker running. You will be notified on completion.'` — the worker-spawn footer uses the fixed completion-notice phrasing
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: close-domain footer + advisory-footer rule > SPEC-wf-008: close-domain ends with a '---' divider and a 'Next:' footer line` — close-domain ends with a next-step footer
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: close-domain footer + advisory-footer rule > SPEC-wf-008: close-domain completion footer routes to session-start; escalation footer is the blocker` — the close-domain footer is conditional on completion versus escalation
+- `hub/server/spec-wf-plugin.test.ts > SPEC-wf-008: close-domain footer + advisory-footer rule > SPEC-wf-008: close-domain states inner-skill footers are advisory` — close-domain treats inner pipeline-skill footers as advisory
