@@ -28,10 +28,12 @@ target (intent) → negotiate → fold into spec → audit codebase → gaps →
                                      └──── review (issues / improvements) ← refactor ─┘
 ```
 
-Concrete skill chain: `target-engage` → `spec-audit` → `gap-to-work-items` →
-`work-item-close`, with `review-issues` / `review-improvements` / `review-engage`
-feeding findings back in. `session-start` snapshots the whole state;
-`spawn-sdd-worker` hands the execution phase to an autonomous agent.
+Concrete skill chain: `target-engage` (intent) → then the execution loop
+`close-domain` drives — `spec-audit` → `gap-to-work-items` → `work-item-close`,
+capped by a cross-domain guardian audit — with `review-issues` /
+`review-improvements` / `review-engage` feeding findings back in. `session-start`
+snapshots the whole state; `spawn-sdd-worker` hands the execution phase to an
+autonomous worker that runs `close-domain` for the domain.
 
 Terminal state: no open gaps, no pending work items.
 
