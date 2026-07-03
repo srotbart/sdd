@@ -20,8 +20,8 @@ All SDD state lives under `.sdd/` at the project root. Specs are durable.
 Targets, gaps, and work-items are scaffolding that archives on terminal-state
 transitions. Each has an `archive/` subdirectory; terminal items move there
 immediately. Ephemeral archives (`targets`, `gaps`, `work-items`, `issues`,
-`improvements`) are **gitignored local-only caches** (SPEC-wf-035): the artifact's
-terminal state is committed *before* the move (SPEC-wf-036), so git history — not
+`improvements`) are **gitignored local-only caches**: the artifact's
+terminal state is committed *before* the move, so git history — not
 the working tree — is the permanent record; recovery is
 `git log --diff-filter=A -- <path>` + `git show <sha>:<path>`. Spec archives
 (`.sdd/specs/**/archive/`) stay tracked — permanent truth needed for alias resolution.
@@ -102,7 +102,7 @@ domain: authentication
 abbrev: auth
 status: active        # active | deprecated | aliased
 aliases: []           # former spec IDs, populated by spec-collapse
-scope: []             # optional (SPEC-wf-042); path globs of the code this item governs
+scope: []             # optional; path globs of the code this item governs
 version: "a3f9c812"  # SHA-256[:8] of this file's content; recompute on every write
 ---
 
@@ -149,7 +149,7 @@ Items without a `**Tests:**` block are considered uncovered and surfaced by
 **Version field:** SHA-256 first 8 hex chars of the item file's own content. Recompute
 and update on every write. Used for per-item stale-audit detection.
 
-**Scope field (optional, SPEC-wf-042):** `scope:` is an optional list of **path glob
+**Scope field (optional):** `scope:` is an optional list of **path glob
 patterns** (minimatch/`.gitignore` syntax, repo-root-relative, e.g.
 `scope: [hub/client/src/**]`) naming the code areas the item governs. Path globs — not
 tags or descriptions — because the guardian audit's core operation is *changed file →
@@ -159,7 +159,7 @@ paths), authored at target-engage time going forward; there is **no backfill** o
 existing items. Globs are **recall-oriented, not precision-oriented**: a cross-cutting
 rule correctly carries a broad glob so it is always a candidate when that area changes —
 precision comes afterward, from the agent pruning candidates by title. Discovery
-(SPEC-wf-040) and the guardian audit (SPEC-wf-041) treat a matching scope glob as
+and the guardian audit treat a matching scope glob as
 **authoritative inclusion** in the candidate set; **absence of `scope:` means relevance
 is decided by reasoning — never that the item is out of play.** The `spec-index` script
 emits scope globs comma-separated (empty field when absent).
@@ -302,7 +302,7 @@ create one file per pair.
 | Issue | `ISS-{domain}-{7hex}` | `ISS-auth-3f9c2a1` |
 | Improvement | `IMP-{domain}-{7hex}` | `IMP-auth-3f9c2a1` |
 
-**Two suffix forms (SPEC-wf-037).** Sequential (`{seq}`) and 7-hex-hash (`{7hex}`)
+**Two suffix forms.** Sequential (`{seq}`) and 7-hex-hash (`{7hex}`)
 suffixes are both valid everywhere; every consumer — skills, hub ID auto-linking,
 spec test-status mapping — accepts both. Ephemeral types (gaps, work-items, issues,
 improvements) **mint** `{7hex}` hash IDs: 7 random lowercase hex chars, no lookup,
