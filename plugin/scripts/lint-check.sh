@@ -96,7 +96,7 @@ if [[ -f "$DRIFT_CHECK" ]] && command -v node &>/dev/null; then
   fi
 fi
 
-# ─── Check: No tracked files under gitignored ephemeral archives (SPEC-wf-035) ─
+# ─── Check: No tracked files under gitignored ephemeral archives ────────────────
 # Ephemeral artifact archives (targets/gaps/work-items/issues/improvements) are
 # gitignored local-only caches. Fail if any file under them is tracked — e.g. a
 # `git add -f` bypass of the ignore rule. Spec archives (.sdd/specs/**/archive/)
@@ -111,10 +111,23 @@ EPHEMERAL_ARCHIVES=(
 if command -v git &>/dev/null && git -C "$REPO_ROOT" rev-parse --git-dir &>/dev/null; then
   TRACKED_ARCHIVES="$(git -C "$REPO_ROOT" ls-files -- "${EPHEMERAL_ARCHIVES[@]}")"
   if [[ -n "$TRACKED_ARCHIVES" ]]; then
-    fail "Tracked files exist under gitignored ephemeral archive paths (SPEC-wf-035); untrack with 'git rm --cached':"$'\n'"$TRACKED_ARCHIVES"
+    fail "Tracked files exist under gitignored ephemeral archive paths (ephemeral archives are gitignored local-only caches — never version-control them); untrack with 'git rm --cached':"$'\n'"$TRACKED_ARCHIVES"
   else
     verbose "OK: no tracked files under ephemeral archive paths"
   fi
+fi
+
+# ─── Check: No SPEC-wf-* ID citations under plugin/ (plugin is shipped; must be self-contained) ─
+# Plugin files (skills, references, scripts) are shipped to consumers who do not
+# have this repo's spec. Any SPEC-wf-NNN citation couples the plugin to this repo
+# and breaks portability — state the rule inline instead.
+# Note: the grep pattern SPEC-wf-[0-9] does not match itself because the literal
+# '[' in the pattern string is not a digit character, so this check is self-safe.
+PLUGIN_WF_LEAK=$(grep -rn "SPEC-wf-[0-9]" "$REPO_ROOT/plugin/" 2>/dev/null || true)
+if [ -n "$PLUGIN_WF_LEAK" ]; then
+  fail "plugin/ files reference SPEC-wf- IDs (the plugin is shipped and must be self-contained; remove or inline each citation):"$'\n'"$PLUGIN_WF_LEAK"
+else
+  verbose "OK: no SPEC-wf- ID citations under plugin/"
 fi
 
 # ─── CUSTOMISE: Add your linters below ───────────────────────────────────────

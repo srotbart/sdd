@@ -4,7 +4,8 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "ef419ccc"
+scope: [plugin/**, hub/server/spec-wf-plugin.test.ts]
+version: "d7ec18d5"
 ---
 
 # SPEC-wf-043 — The shipped plugin never references this repository's own spec

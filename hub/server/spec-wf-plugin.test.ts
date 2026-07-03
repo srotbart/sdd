@@ -701,14 +701,20 @@ describe("SPEC-wf-042: spec items may declare an optional scope of governed code
     const schemas = read("plugin/references/schemas.md");
     expect(schemas).toMatch(/scope:/);
     expect(schemas.toLowerCase()).toMatch(/path glob/);
-    expect(schemas).toMatch(/SPEC-wf-042/);
+    // Behavior phrase: a matching scope glob is authoritative for candidate inclusion
+    // in discovery and guardian audit. Use \s+ because line-wrapping may split the
+    // two words across lines (matches space or newline).
+    expect(schemas.toLowerCase()).toMatch(/authoritative\s+inclusion/);
   });
 
   it("SPEC-wf-042: the spec artifact guide documents the optional scope: field with path-glob semantics", () => {
     const guide = read("plugin/references/artifacts/spec.md");
     expect(guide).toMatch(/scope:/);
     expect(guide.toLowerCase()).toMatch(/path glob/);
-    expect(guide).toMatch(/SPEC-wf-042/);
+    // Behavior phrase: a matching scope glob is authoritative for candidate inclusion
+    // in discovery and guardian audit. Use \s+ because line-wrapping may split the
+    // two words across lines (matches space or newline).
+    expect(guide.toLowerCase()).toMatch(/authoritative\s+inclusion/);
   });
 
   it("SPEC-wf-042: docs state scope is opt-in, recall-oriented, no-backfill, and authoritative inclusion", () => {
@@ -935,5 +941,33 @@ describe("SPEC-wf-031/033: close-domain is documented (docs-sync drift-free)", (
       encoding: "utf8",
     });
     expect(out).toMatch(/close-domain/);
+  });
+});
+
+describe("SPEC-wf-043: the shipped plugin never references this repository's own spec IDs", () => {
+  const LINT_PATH = "plugin/scripts/lint-check.sh";
+  const WF_SELF_CONTAINED = /self-contained/i;
+
+  function runLintForPlugin(): string {
+    try {
+      return execFileSync("bash", [LINT_PATH], { cwd: REPO_ROOT, encoding: "utf8" });
+    } catch (e: any) {
+      return `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+  }
+
+  it("SPEC-wf-043: lint-check.sh fails with a self-containedness message when a plugin SKILL.md contains a SPEC-wf-NNN citation", () => {
+    const probeDir = path.join(REPO_ROOT, "plugin", "skills", "_wf043probe_");
+    const probeSkill = path.join(probeDir, "SKILL.md");
+    try {
+      fs.mkdirSync(probeDir, { recursive: true });
+      // Write a stub skill that cites a SPEC-wf-NNN ID — the sort of coupling
+      // the plugin must never ship. The citation format is SPEC-wf-001.
+      fs.writeFileSync(probeSkill, "# Probe skill\n\nThis rule is defined by SPEC-wf-001.\n");
+      const out = runLintForPlugin();
+      expect(out).toMatch(WF_SELF_CONTAINED);
+    } finally {
+      fs.rmSync(probeDir, { recursive: true, force: true });
+    }
   });
 });
