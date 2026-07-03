@@ -4,14 +4,14 @@ domain: workflow
 abbrev: wf
 status: active
 aliases: []
-version: "a861c81f"
+version: "7e6e1ea9"
 ---
 
 # SPEC-wf-008 — Every pipeline skill output ends with a concrete next-step footer
 
 ## Invariant
 
-Each SDD skill that represents a pipeline stage must end its output with a `---` divider followed by a single next-step sentence in the form: `Next: {sentence}. Run \`/{command} {arg}\` to proceed.` The suggestion must be conditional on the outcome (different when work was found vs. nothing found) and include the exact command with domain or artifact ID substituted. Required footers per skill: `sdd:session-start` — highest-priority action or "All clear"; `sdd:target-engage` — after accepting: "Run `/sdd:spec-audit {domain}`"; `sdd:spec-audit` — gaps found: "Run `/sdd:gap-to-work-items {domain}`", none found: "Run `/sdd:spec-test {domain}`"; `sdd:gap-to-work-items` — "Run `/sdd:work-item-close {first-id}`"; `sdd:work-item-close` — items remain: next WI id, all closed: "Run `/sdd:spec-audit {domain}` to verify"; `sdd:spec-test` — "Run the test suite then `/sdd:session-start`"; `sdd:spawn-sdd-worker` — "Worker running. You will be notified on completion."
+Each SDD skill that represents a pipeline stage must end its output with a `---` divider followed by a single next-step sentence in the form: `Next: {sentence}. Run \`/{command} {arg}\` to proceed.` The suggestion must be conditional on the outcome (different when work was found vs. nothing found) and include the exact command with domain or artifact ID substituted. Required footers per skill: `sdd:session-start` — highest-priority action or "All clear"; `sdd:target-engage` — after accepting: "Run `/sdd:spec-audit {domain}`"; `sdd:spec-audit` — gaps found: "Run `/sdd:gap-to-work-items {domain}`", none found: "Run `/sdd:spec-test {domain}`"; `sdd:gap-to-work-items` — "Run `/sdd:work-item-close {first-id}`"; `sdd:work-item-close` — items remain: next WI id, all closed: "Run `/sdd:spec-audit {domain}` to verify"; `sdd:spec-test` — "Run the test suite then `/sdd:session-start`"; `sdd:spawn-sdd-worker` — "Worker running. You will be notified on completion."; `sdd:close-domain` — on completion: "Run `/sdd:session-start` to review state", on escalation: the blocker description. Footers are interactive guidance for a human driver: when a pipeline skill is invoked from within `sdd:close-domain` (SPEC-wf-038), its footer is advisory — close-domain proceeds by its own phase plan and never treats a footer as a stop point.
 
 ## Acceptance criteria
 
@@ -21,6 +21,7 @@ Each SDD skill that represents a pipeline stage must end its output with a `---`
 - `sdd:spec-audit` footer uses `gap-to-work-items` when gaps found, `spec-test` when none found
 - `sdd:work-item-close` footer uses next WI ID when items remain, `spec-audit` to verify when all closed
 - `sdd:spawn-sdd-worker` footer reads: "Worker running. You will be notified on completion."
+- Footers of skills invoked from within `sdd:close-domain` are advisory; close-domain proceeds by its own phase plan
 
 **Tests:**
 
