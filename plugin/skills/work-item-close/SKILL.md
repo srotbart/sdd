@@ -85,8 +85,8 @@ Do not block archiving on missing spec tests; only block on failing ones.
   against the code** — not merely that the test suite is green. A criterion that no
   test happens to exercise must still be confirmed by reading the implementation.
   If any criterion is not actually satisfied, keep working — do not flip to done.
-- **Cross-domain self-check.** When this skill is invoked from `sdd:close-domain`
-  (SPEC-wf-040), self-check the diff against **every cross-domain spec item provided
+- **Cross-domain self-check.** When this skill is invoked from `sdd:close-domain`,
+  self-check the diff against **every cross-domain spec item provided
   in context**, not only the gap's own spec item. The code a work item touches is
   often governed by spec items from other domains; a change that closes its own gap
   while violating another domain's invariant is not done. If the diff conflicts with
@@ -100,7 +100,7 @@ against the code and the diff is clean against all provided cross-domain items.
 
 After the implementation diff is final, back-fill or refine the governing spec
 item's `scope:` field from the actual diff. This is a mechanical write — not
-subject to the escalation rule for spec item edits (SPEC-wf-038):
+subject to the escalation rule for spec item edits:
 
 1. Derive globs from the files changed by this work item.
 2. If the spec item has no `scope:` field, add one with the derived globs;
@@ -120,7 +120,7 @@ multiple gaps (many-to-one), close all of them.
 
 ### 8. Commit the terminal state, then archive
 
-Ephemeral archives are gitignored local-only caches (SPEC-wf-035), so a `mv` into
+Ephemeral archives are gitignored local-only caches, so a `mv` into
 `archive/` reads to git as a plain deletion. Order matters — **write terminal state
 → commit → `mv`**:
 
