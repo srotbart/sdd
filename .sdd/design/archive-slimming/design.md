@@ -18,7 +18,8 @@ The end-state we want: a repo that is properly spec'ed, where the only SDD
 artifacts under version control are the **permanent truth** (specs, standards)
 and the **in-flight temporaries** for upcoming changes (open targets, gaps,
 work-items, issues, improvements). Terminal artifacts are scaffolding whose
-value is consumed at merge; they do not need to be shared or preserved in git.
+value is consumed at merge; they do not need to remain in the working tree —
+but they must stay *recoverable* (git history serves as the permanent archive).
 
 ## Decision summary
 
@@ -30,6 +31,7 @@ value is consumed at merge; they do not need to be shared or preserved in git.
 | IDs — targets (TGT) | Stay sequential; max-seq = active files + `git log --diff-filter=A -- .sdd/targets/` history scan |
 | IDs — specs (SPEC) | Unchanged, sequential; spec archive (deprecated/aliased items) **stays tracked** — it is permanent truth needed for alias resolution |
 | Ledger / index of archived artifacts | **None.** Commit messages and PR descriptions are the provenance record |
+| Long-term retention ("what if?") | Terminal state committed **before** archiving → git history holds full content of every artifact forever; `sdd:archive-recover <ID>` restores on demand. Requires merge-commit strategy (no squash) |
 | Existing artifact IDs | Never renamed; both ID forms are valid everywhere |
 
 ## Detailed design
@@ -39,8 +41,20 @@ value is consumed at merge; they do not need to be shared or preserved in git.
 - `.gitignore` gains: `.sdd/targets/archive/`, `.sdd/gaps/archive/`,
   `.sdd/work-items/archive/`, `.sdd/issues/archive/`, `.sdd/improvements/archive/`.
   (Deliberately **not** `.sdd/specs/**/archive/` — spec archives stay tracked.)
-- Archiving skills keep the current behavior: flip terminal state, `mv` the file
-  into the type's `archive/` dir. The file simply becomes untracked.
+- Archiving skills keep the current behavior — flip terminal state, `mv` the
+  file into the type's `archive/` dir — with one new **hard invariant**: the
+  artifact's terminal state MUST be committed before the `mv`. Every artifact
+  is therefore committed at least twice (creation, terminal state), making
+  **git history the permanent, complete archive**: full content of every
+  artifact that ever existed, recoverable in any clone, forever. Deleting a
+  tracked file never deletes its history.
+- Recovery is wrapped in a helper (`sdd:archive-recover <ID>`):
+  `git log --all --diff-filter=A -- ".sdd/{type}/{ID}.md"` to locate, then
+  `git show <sha>:<path>` to read or restore into the local archive dir.
+- **Merge-strategy constraint**: history completeness depends on PR branch
+  commits reaching main — i.e. merge commits (current practice). Squash
+  merging would erase artifacts created and closed within a single PR; if the
+  merge strategy ever changes, this design must be revisited.
 - Because Grep/Glob respect gitignore, archived content stops polluting agent
   searches; deliberate access (Read with explicit path, Bash, hub filesystem
   reads) still works.
@@ -77,17 +91,19 @@ target minting must run in a full clone (always true for dev sessions).
 
 - Commit messages and PR descriptions continue to name the artifact IDs they
   close (existing convention, e.g. `fix(sdd): … (ISS-wf-004, ISS-wf-002)`).
-- Orphan/reference checks (session-start, work-item-close) are scoped to
-  **active files plus the local archive cache when present**; a missing
-  reference with an empty cache is reported as "unverifiable (archive is
-  local-only)", not as an error.
+- Orphan/reference checks (session-start, work-item-close) resolve against
+  **active files, then the local archive cache, then git history**
+  (`git log --diff-filter=A -- <path>` — cheap, and complete thanks to the
+  commit-before-archive invariant). Only a reference found in none of the
+  three is a true orphan error.
 - Spec alias resolution keeps working — spec archives remain tracked.
 
 ### 4. Skill and tooling changes
 
 | Surface | Change |
 |---|---|
-| `work-item-close`, `target-engage`, `review-engage` (archiving flows) | No mv-flow change; drop any instruction implying archives are committed; stop staging archive paths |
+| `work-item-close`, `target-engage`, `review-engage` (archiving flows) | Enforce commit-terminal-state-before-`mv` invariant; stop staging archive paths |
+| New: `sdd:archive-recover` helper (skill or script) | Locate an archived artifact in history and restore it into the local archive dir |
 | `session-start` | Replace archive globbing with: local-cache read when present, else omit archived counts; ID-numbering guidance updated (hash for ephemeral, history-scan for TGT); new warning when two active artifacts share an ID |
 | `spec-audit`, `gap-to-work-items`, `review-issues`, `review-improvements` (minting flows) | Mint hash IDs for ephemeral types |
 | `plugin/scripts/lint-check.sh` | New check: fail if any **tracked** file exists under a gitignored archive path (backstop against `git add -f`) |
@@ -111,6 +127,8 @@ target minting must run in a full clone (always true for dev sessions).
 - **Lint backstop**: force-add a file under an ignored archive dir → lint fails.
 - **Orphan checks**: work-item referencing a gap present only in the local
   cache → "unverifiable", not error; empty cache → same.
+- **Recovery**: archive an artifact (with the terminal-state commit), delete
+  the local archive copy, run `archive-recover` → full content restored.
 - **Migration proof**: post-merge main contains zero files under ephemeral
   archive paths; spec archive intact.
 
@@ -123,6 +141,13 @@ target minting must run in a full clone (always true for dev sessions).
   second to merge could theoretically duplicate a TGT seq if minted in the
   same window — acceptable residual risk (targets are user-initiated and rare);
   detected by session-start duplicate-ID warning.
+- **Durability is conditional on merge**: history-as-archive is permanent only
+  for commits that reach main. Artifacts on abandoned/unpushed branches die
+  with the branch — acceptable: they describe work that never landed, and they
+  are exactly as safe as the code changes on the same branch. Local history
+  rewriting (rebase/squash dropping artifact commits before push) would erase
+  them — same constraint as the merge-strategy rule: don't rewrite artifact
+  commits away.
 - **Shallow clones**: TGT minting requires full history; document as constraint.
 - **Old references in specs/commits** to archived artifacts (e.g. a spec
   mentioning `GAP-arch-001`): remain as inert historical text; hub renders them
@@ -132,5 +157,6 @@ target minting must run in a full clone (always true for dev sessions).
 
 - Renaming existing artifacts to hash IDs.
 - Any archive branch, ledger, or merge-time sweep (considered and rejected in
-  brainstorming: user requires no post-merge retention).
+  brainstorming: git history + the commit-before-archive invariant already
+  provide durable retention without extra machinery).
 - Changes to spec/standards storage.
