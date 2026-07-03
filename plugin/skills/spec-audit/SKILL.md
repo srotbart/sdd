@@ -93,10 +93,12 @@ referencing the same spec item.
 
 ### 5. Write new gap files
 
-For each new gap found, create `.sdd/gaps/GAP-{abbrev}-{seq}.md` using the next
-available sequence number for the domain. Compute `{seq}` from the max across **both**
-`.sdd/gaps/GAP-{abbrev}-*.md` **and** `.sdd/gaps/archive/GAP-{abbrev}-*.md` — IDs are globally
-stable and never recycled, so an ID already present in `archive/` is taken.
+For each new gap found, create `.sdd/gaps/GAP-{abbrev}-{7hex}.md`, minting the ID as
+`GAP-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
+`openssl rand -hex 4 | cut -c1-7`). Minting requires no sequence scan and no archive
+lookup — hash IDs are collision-free by construction and safe to mint in parallel
+worktrees (SPEC-wf-037). Existing sequential `GAP-{abbrev}-{seq}` IDs remain valid
+and are never renamed.
 
 Use the schema in `references/schemas.md` (Gaps section). Set:
 - `spec-item` — the spec item ID

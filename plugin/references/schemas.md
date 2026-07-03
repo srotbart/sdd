@@ -19,7 +19,12 @@
 All SDD state lives under `.sdd/` at the project root. Specs are durable.
 Targets, gaps, and work-items are scaffolding that archives on terminal-state
 transitions. Each has an `archive/` subdirectory; terminal items move there
-immediately, preserving provenance via frontmatter references in the spec.
+immediately. Ephemeral archives (`targets`, `gaps`, `work-items`, `issues`,
+`improvements`) are **gitignored local-only caches** (SPEC-wf-035): the artifact's
+terminal state is committed *before* the move (SPEC-wf-036), so git history — not
+the working tree — is the permanent record; recovery is
+`git log --diff-filter=A -- <path>` + `git show <sha>:<path>`. Spec archives
+(`.sdd/specs/**/archive/`) stay tracked — permanent truth needed for alias resolution.
 
 ---
 
@@ -276,8 +281,17 @@ create one file per pair.
 | Target | `TGT-{seq}` | `TGT-007` |
 | Spec domain dir | `specs/{domain}/` | `specs/authentication/` |
 | Spec item | `SPEC-{abbrev}-{seq}` | `SPEC-auth-001` |
-| Gap | `GAP-{abbrev}-{seq}` | `GAP-auth-001` |
-| Work item | `WI-{abbrev}-{seq}` | `WI-auth-001` |
+| Gap | `GAP-{abbrev}-{7hex}` | `GAP-auth-3f9c2a1` |
+| Work item | `WI-{abbrev}-{7hex}` | `WI-auth-3f9c2a1` |
+| Issue | `ISS-{domain}-{7hex}` | `ISS-auth-3f9c2a1` |
+| Improvement | `IMP-{domain}-{7hex}` | `IMP-auth-3f9c2a1` |
 
-Sequences are globally stable within their type+domain. IDs are never recycled.
-Retired IDs become aliases in the spec; gaps and work-items are never re-IDed.
+**Two suffix forms (SPEC-wf-037).** Sequential (`{seq}`) and 7-hex-hash (`{7hex}`)
+suffixes are both valid everywhere; every consumer — skills, hub ID auto-linking,
+spec test-status mapping — accepts both. Ephemeral types (gaps, work-items, issues,
+improvements) **mint** `{7hex}` hash IDs: 7 random lowercase hex chars, no lookup,
+collision-free by construction, safe to mint in parallel worktrees with zero
+coordination. Targets and specs keep sequential IDs; the next `TGT-{seq}` derives
+from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history
+scan (full clone required, since target archives are local-only). Existing IDs are
+never renamed or recycled; retired spec IDs become aliases.

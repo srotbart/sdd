@@ -8,7 +8,7 @@ version: 0.1.0
 
 Spawn 3 agents via the Agent tool to sweep the codebase and specs for
 improvement opportunities — enhancements, refactors, simplifications, performance,
-ergonomics, and better patterns. Each proposal is written as an `IMP-{domain}-{seq}`
+ergonomics, and better patterns. Each proposal is written as an `IMP-{domain}-{7hex}`
 artifact under `.sdd/improvements/`. This is the enhancement-focused sibling of
 `/sdd:review-issues`. **The team never auto-applies improvements.**
 
@@ -53,8 +53,11 @@ de-duplicate across agents:
 
 ### 3. Write improvement files
 
-For each distinct proposal, create `.sdd/improvements/IMP-{domain}-{seq}.md`
-using the next available sequence number for the domain.
+For each distinct proposal, create `.sdd/improvements/IMP-{domain}-{7hex}.md`,
+minting the ID as `IMP-{domain}-{7hex}` where `{7hex}` is 7 random lowercase hex
+characters (e.g. `openssl rand -hex 4 | cut -c1-7`) — no sequence scan, collision-free
+by construction (SPEC-wf-037). Existing sequential `IMP-{domain}-{seq}` IDs remain
+valid and are never renamed.
 
 **Required frontmatter:**
 
@@ -132,11 +135,13 @@ Next: Engage proposals with the user. Run `/sdd:review-engage IMP-auth-001` to p
 
 ## Artifact Storage
 
-Improvements live at `.sdd/improvements/IMP-{domain}-{seq}.md`.
-Archived improvements (accepted/dismissed) move to `.sdd/improvements/archive/`.
+Improvements live at `.sdd/improvements/IMP-{domain}-{7hex}.md`.
+Archived improvements (accepted/dismissed) move to `.sdd/improvements/archive/` — a
+gitignored local-only cache (SPEC-wf-035).
 
-**ID convention:** `IMP-{domain-abbrev}-{seq}` — sequential within domain, globally
-stable. IDs are never recycled.
+**ID convention:** `IMP-{domain}-{7hex}` — a 7-char lowercase hex hash minted at
+creation, no lookup required (SPEC-wf-037). Legacy sequential `IMP-{domain}-{seq}`
+IDs remain valid and are never renamed or recycled.
 
 **Terminal states → archive:** `accepted`, `dismissed`
 **Active states:** `open`

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // These tests assert that committed plugin artifacts (SKILL.md files and the
@@ -362,8 +363,10 @@ describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () =>
     expect(skill).not.toMatch(/TeamCreate\s*\(/);
   });
 
-  it("SPEC-wf-025: findings are ISS-{domain}-{seq} under .sdd/issues/ recording location, problem, rationale, severity", () => {
-    expect(skill).toMatch(/ISS-\{domain\}-\{seq\}/);
+  it("SPEC-wf-025: findings are ISS-{domain}-{seq|7hex} under .sdd/issues/ recording location, problem, rationale, severity", () => {
+    // Per SPEC-wf-037 the suffix may be sequential ({seq}) or a 7-hex hash ({7hex});
+    // consumers accept both forms.
+    expect(skill).toMatch(/ISS-\{domain\}-\{(?:seq|7hex)\}/);
     expect(skill).toMatch(/\.sdd\/issues\//);
     expect(skill.toLowerCase()).toMatch(/location/);
     expect(skill.toLowerCase()).toMatch(/rationale/);
@@ -392,8 +395,9 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
     expect(skill).not.toMatch(/TeamCreate\s*\(/);
   });
 
-  it("SPEC-wf-026: proposals are IMP-{domain}-{seq} under .sdd/improvements/ recording effort and impact", () => {
-    expect(skill).toMatch(/IMP-\{domain\}-\{seq\}/);
+  it("SPEC-wf-026: proposals are IMP-{domain}-{seq|7hex} under .sdd/improvements/ recording effort and impact", () => {
+    // Per SPEC-wf-037 the suffix may be sequential ({seq}) or a 7-hex hash ({7hex}).
+    expect(skill).toMatch(/IMP-\{domain\}-\{(?:seq|7hex)\}/);
     expect(skill).toMatch(/\.sdd\/improvements\//);
     expect(skill.toLowerCase()).toMatch(/effort/);
     expect(skill.toLowerCase()).toMatch(/impact/);
@@ -407,4 +411,164 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
     expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements"))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, ".sdd", "improvements", "archive"))).toBe(true);
   });
+});
+
+describe("SPEC-wf-035: Ephemeral artifact archives are local-only, never version-controlled", () => {
+  const gitignore = read(".gitignore");
+  const EPHEMERAL_ARCHIVES = [
+    ".sdd/targets/archive/",
+    ".sdd/gaps/archive/",
+    ".sdd/work-items/archive/",
+    ".sdd/issues/archive/",
+    ".sdd/improvements/archive/",
+  ];
+
+  it("SPEC-wf-035: .gitignore covers all five ephemeral archive paths", () => {
+    for (const p of EPHEMERAL_ARCHIVES) {
+      expect(gitignore).toMatch(new RegExp("^" + p.replace(/[.]/g, "\\$&"), "m"));
+    }
+  });
+
+  it("SPEC-wf-035: .gitignore does NOT ignore the spec archive (permanent truth)", () => {
+    expect(gitignore).not.toMatch(/^\.sdd\/specs\/.*archive/m);
+  });
+
+  it("SPEC-wf-035: no tracked files exist under any ephemeral archive path", () => {
+    const tracked = execFileSync(
+      "git",
+      ["ls-files", "--", ...EPHEMERAL_ARCHIVES],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    ).trim();
+    expect(tracked).toBe("");
+  });
+
+  it("SPEC-wf-035: the spec archive remains tracked", () => {
+    const tracked = execFileSync(
+      "git",
+      ["ls-files", "--", ".sdd/specs/"],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    );
+    expect(tracked).toMatch(/\/archive\//);
+  });
+
+  // Behavioral backstop: lint-check.sh must fail when the archive boundary is
+  // bypassed via `git add -f`, and pass otherwise.
+  const LINT = "plugin/scripts/lint-check.sh";
+  const PROBE = ".sdd/gaps/archive/_lint_probe_test.md";
+  const ARCHIVE_FAIL = /ephemeral archive path/i;
+
+  function runLint(): string {
+    try {
+      return execFileSync("bash", [LINT], { cwd: REPO_ROOT, encoding: "utf8" });
+    } catch (e: any) {
+      // A non-zero exit still carries the script's output on the error object.
+      return `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+  }
+
+  it("SPEC-wf-035: lint-check.sh emits no archive violation on a clean tree", () => {
+    expect(runLint()).not.toMatch(ARCHIVE_FAIL);
+  });
+
+  it("SPEC-wf-035: lint-check.sh fails when a file under an ignored archive path is force-added", () => {
+    const abs = path.join(REPO_ROOT, PROBE);
+    try {
+      fs.writeFileSync(abs, "probe\n");
+      execFileSync("git", ["add", "-f", "--", PROBE], { cwd: REPO_ROOT });
+      expect(runLint()).toMatch(ARCHIVE_FAIL);
+    } finally {
+      try {
+        execFileSync("git", ["rm", "-f", "--cached", "--quiet", "--", PROBE], { cwd: REPO_ROOT });
+      } catch { /* index already clean */ }
+      fs.rmSync(abs, { force: true });
+    }
+  });
+
+  it("SPEC-wf-035: session-start degrades orphan checks to 'unverifiable' for local-only archives", () => {
+    const skill = read("plugin/skills/session-start/SKILL.md");
+    // A missing reference with an empty/absent archive cache is reported as
+    // unverifiable, not a hard error.
+    expect(skill).toMatch(/unverifiable \(archive is local-only\)/);
+    // Resolution is scoped to active files plus the local cache *when present*.
+    expect(skill.toLowerCase()).toMatch(/cache[^.]*when it is present/);
+  });
+});
+
+describe("SPEC-wf-036: Terminal artifact state is committed before archiving", () => {
+  const ARCHIVING_SKILLS = [
+    "plugin/skills/work-item-close/SKILL.md",
+    "plugin/skills/target-engage/SKILL.md",
+    "plugin/skills/review-engage/SKILL.md",
+  ];
+
+  for (const rel of ARCHIVING_SKILLS) {
+    const name = rel.split("/")[2];
+
+    it(`SPEC-wf-036: ${name} states the commit-before-mv ordering (terminal state → commit → mv)`, () => {
+      const skill = read(rel);
+      expect(skill).toMatch(/→\s*commit\s*→\s*`mv`/);
+    });
+
+    it(`SPEC-wf-036: ${name} forbids staging files under an archive path`, () => {
+      const skill = read(rel).toLowerCase();
+      expect(skill).toMatch(/never stage[^\n]*archive/);
+    });
+  }
+
+  it("SPEC-wf-036: the merge-strategy caveat is documented in the artifact operating guides", () => {
+    const wi = read("plugin/references/artifacts/work-item.md").toLowerCase();
+    const tgt = read("plugin/references/artifacts/target.md").toLowerCase();
+    for (const guide of [wi, tgt]) {
+      expect(guide).toMatch(/squash/);
+      expect(guide).toMatch(/merge-commit/);
+    }
+  });
+});
+
+describe("SPEC-wf-037: consumers and docs accept both {seq} and {7hex} ID suffix forms", () => {
+  it("SPEC-wf-037: session-start documents the {7hex} form, TGT history-scan, and duplicate-ID warning", () => {
+    const skill = read("plugin/skills/session-start/SKILL.md");
+    expect(skill).toMatch(/\{7hex\}/);
+    expect(skill).toMatch(/git log --diff-filter=A -- \.sdd\/targets\//);
+    expect(skill.toLowerCase()).toMatch(/duplicate active id/);
+  });
+
+  it("SPEC-wf-037: schemas.md documents both suffix forms and local-only archive semantics", () => {
+    const schemas = read("plugin/references/schemas.md");
+    expect(schemas).toMatch(/\{7hex\}/);
+    expect(schemas).toMatch(/\{seq\}/);
+    expect(schemas.toLowerCase()).toMatch(/local-only cache/);
+  });
+
+  it("SPEC-wf-037: hub ARTIFACT_ID_RE matches both sequential and 7-hex suffix forms", () => {
+    const src = read("hub/client/src/components/Markdown.tsx");
+    const m = src.match(/ARTIFACT_ID_RE\s*=\s*\/(.+?)\/[a-z]*;/);
+    expect(m).not.toBeNull();
+    const re = new RegExp(m![1]);
+    // Legacy sequential and new hash forms both linkify.
+    expect(re.test("ISS-auth-001")).toBe(true);
+    expect(re.test("GAP-wf-3f9c2a1")).toBe(true);
+    expect(re.test("WI-auth-9cfd75f")).toBe(true);
+  });
+});
+
+describe("SPEC-wf-037: ephemeral minting skills mint {7hex} hash IDs, not archive-scanned {seq}", () => {
+  const CASES = [
+    { skill: "plugin/skills/spec-audit/SKILL.md", mint: /GAP-\{abbrev\}-\{7hex\}/, oldScan: /gaps\/archive\/GAP-\{abbrev\}-\*\.md/ },
+    { skill: "plugin/skills/gap-to-work-items/SKILL.md", mint: /WI-\{abbrev\}-\{7hex\}/, oldScan: /work-items\/archive\/WI-\{abbrev\}-\*\.md/ },
+    { skill: "plugin/skills/review-issues/SKILL.md", mint: /ISS-\{domain\}-\{7hex\}/, oldScan: /next available sequence number/i },
+    { skill: "plugin/skills/review-improvements/SKILL.md", mint: /IMP-\{domain\}-\{7hex\}/, oldScan: /next available sequence number/i },
+  ];
+
+  for (const { skill, mint, oldScan } of CASES) {
+    const name = skill.split("/")[2];
+
+    it(`SPEC-wf-037: ${name} mints the {7hex} hash form`, () => {
+      expect(read(skill)).toMatch(mint);
+    });
+
+    it(`SPEC-wf-037: ${name} no longer instructs an archive/sequence scan for minting`, () => {
+      expect(read(skill)).not.toMatch(oldScan);
+    });
+  }
 });

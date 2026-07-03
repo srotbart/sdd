@@ -97,7 +97,7 @@ the SPEC-wf-023 artifact guides (it references them; it is not a divergent copy)
    Concrete skills: target-engage → spec-audit → gap-to-work-items → work-item-close
 
 3. **Project-specific context** — essential orientation for this repo's `.sdd/`:
-   - ID conventions: `TGT-{seq}`, `SPEC-{abbrev}-{seq}`, `GAP-{abbrev}-{seq}`, `WI-{abbrev}-{seq}`
+   - ID conventions: `TGT-{seq}` and `SPEC-{abbrev}-{seq}` are sequential; ephemeral `GAP`/`WI`/`ISS`/`IMP` mint hash IDs `{prefix}-{abbrev}-{7hex}` (legacy `{seq}` forms remain valid). The next `TGT-{seq}` derives from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history scan (needs a full, non-shallow clone).
    - Artifact locations: derive from the active artifacts found in steps 2–3
    - Active domains: list the domain subdirectories found under `.sdd/specs/`
 
@@ -246,9 +246,13 @@ Next: Engage the highest-priority target. Run `/sdd:target-engage TGT-007` to pr
 
 **Orphaned gap** — gap references a `spec-item` ID not found in any spec file (including aliases). Flag with: `⚠ GAP-auth-005 references SPEC-auth-009 which no longer exists — verify spec-collapse ran alias correctly.`
 
-**Orphaned work item** — work item references a `gap-id` not found in the active or archive gaps directory. Flag with: `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
+**Orphaned work item** — work item references a `gap-id` not found among the active gap files. Because ephemeral archives are local-only (SPEC-wf-035), resolution scans the active gaps directory plus the local `gaps/archive/` cache *when it is present*. Two outcomes:
+- Reference absent **and** the local archive cache is present (and does not contain it): a genuine orphan — flag with `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
+- Reference absent **and** the archive cache is empty or absent (e.g. a fresh clone or worktree): report as unverifiable, not an error — `WI-auth-007 references GAP-auth-004 — unverifiable (archive is local-only).`
 
 **Multiple domain directories** — each domain should have exactly one subdirectory under `.sdd/specs/`. Multiple directories for the same domain cannot occur under the naming scheme.
+
+**Duplicate active ID** — two active artifacts of the same type share an ID. Hash-minted ephemeral IDs make this astronomically unlikely, but two `TGT-{seq}` targets minted in parallel branches could collide. Flag with: `⚠ TGT-042 is used by two active targets — rename one.`
 
 **Empty archive dirs are fine** — `archive/` subdirectories may not exist yet; skip gracefully without error.
 

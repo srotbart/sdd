@@ -7,7 +7,7 @@ version: 0.1.0
 # SDD Review Issues
 
 Spawn 3 agents via the Agent tool to sweep the codebase and specs for
-problems. Each reviewer flags distinct findings as `ISS-{domain}-{seq}` artifacts
+problems. Each reviewer flags distinct findings as `ISS-{domain}-{7hex}` artifacts
 under `.sdd/issues/`. Findings are de-duplicated before archival. **Reviewers
 never auto-fix issues.**
 
@@ -52,8 +52,11 @@ de-duplicate across reviewers:
 
 ### 3. Write issue files
 
-For each distinct finding, create `.sdd/issues/ISS-{domain}-{seq}.md` using the
-next available sequence number for the domain.
+For each distinct finding, create `.sdd/issues/ISS-{domain}-{7hex}.md`, minting the
+ID as `ISS-{domain}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
+`openssl rand -hex 4 | cut -c1-7`) — no sequence scan, collision-free by construction
+(SPEC-wf-037). Existing sequential `ISS-{domain}-{seq}` IDs remain valid and are never
+renamed.
 
 **Required frontmatter:**
 
@@ -126,11 +129,13 @@ Next: Engage findings with the user. Run `/sdd:review-engage ISS-auth-001` to pr
 
 ## Artifact Storage
 
-Issues live at `.sdd/issues/ISS-{domain}-{seq}.md`.
-Archived issues (accepted/dismissed) move to `.sdd/issues/archive/`.
+Issues live at `.sdd/issues/ISS-{domain}-{7hex}.md`.
+Archived issues (accepted/dismissed) move to `.sdd/issues/archive/` — a gitignored
+local-only cache (SPEC-wf-035).
 
-**ID convention:** `ISS-{domain-abbrev}-{seq}` — sequential within domain, globally
-stable. IDs are never recycled.
+**ID convention:** `ISS-{domain}-{7hex}` — a 7-char lowercase hex hash minted at
+creation, no lookup required (SPEC-wf-037). Legacy sequential `ISS-{domain}-{seq}`
+IDs remain valid and are never renamed or recycled.
 
 **Terminal states → archive:** `accepted`, `dismissed`
 **Active states:** `open`

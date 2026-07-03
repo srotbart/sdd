@@ -77,22 +77,29 @@ If the spec item has no `**Tests:**` block, note it in the report: "SPEC-auth-00
 has no spec-level tests — consider running /sdd:spec-test after this work item closes."
 Do not block archiving on missing spec tests; only block on failing ones.
 
-### 7. Mark work item done and archive
+### 7. Mark work item done and close the linked gap(s)
 
-In one edit to the work item file:
-- Set `status: done`
+In one edit to the work item file, set `status: done`. For each linked gap, set
+`status: closed` and `closed-by: {work-item-id}`. If the work item referenced
+multiple gaps (many-to-one), close all of them.
 
-Move the work item file to `.sdd/work-items/archive/`.
+### 8. Commit the terminal state, then archive
 
-### 8. Close the linked gap(s)
+Ephemeral archives are gitignored local-only caches (SPEC-wf-035), so a `mv` into
+`archive/` reads to git as a plain deletion. Order matters — **write terminal state
+→ commit → `mv`**:
 
-For each linked gap:
-- Set `status: closed`
-- Set `closed-by: {work-item-id}`
+1. Commit the implementation, the tests, and the terminal work-item and gap files
+   at their active paths, with a message naming the WI and closed gap IDs.
+2. Move the work item file to `.sdd/work-items/archive/` and each gap file to
+   `.sdd/gaps/archive/`.
 
-Move the gap file to `.sdd/gaps/archive/`.
-
-If the work item referenced multiple gaps (many-to-one), close and archive all of them.
+Never stage or commit files under an ephemeral `archive/` path. Committing the
+terminal state before the move keeps git history a complete record; recover an
+archived artifact with `git log --diff-filter=A -- <path>` +
+`git show <sha>:<path>`. The guarantee holds under a merge-commit strategy —
+squash-merging or rebasing the artifact commit away would erase artifacts created
+and closed within a single branch.
 
 ### 9. Report
 

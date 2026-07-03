@@ -71,6 +71,14 @@ continuing to ask.
 
 ### 4. Terminal decisions
 
+**Archiving convention (SPEC-wf-035/036):** each terminal decision below moves the
+artifact into `.sdd/issues/archive/` or `.sdd/improvements/archive/` — gitignored
+local-only caches. **Write terminal state → commit → `mv`**: first commit the
+artifact's terminal state (status flip, final dialog, `engaged-by`/`dismissed-reason`,
+and any spec item or gap written) at its active path, then move the file. The move
+is a plain deletion to git; the prior commit is what preserves the artifact's final
+content in history. Never stage files under an `archive/` path.
+
 #### Accepted as spec change
 
 When the user accepts an artifact as requiring a spec item change:
