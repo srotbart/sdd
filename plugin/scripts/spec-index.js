@@ -2,7 +2,7 @@
 /**
  * spec-index.js
  *
- * Builds the SDD spec index mechanically (SPEC-wf-039): globs the active spec
+ * Builds the SDD spec index mechanically: globs the active spec
  * corpus and prints one tab-separated line per active item to stdout:
  *
  *   {id}\t{domain}\t{title}\t{scope globs, comma-separated or empty}
@@ -12,13 +12,13 @@
  * this at Phase 0 (orient) and re-runs it at Phase 4 (guardian audit) so mid-run
  * spec changes are covered by regeneration rather than cache invalidation.
  *
- * Rules (SPEC-wf-039):
+ * Rules:
  *   - Globs SPEC-*.md one and two levels under `.sdd/specs/{domain}/`.
  *   - Skips `archive/` at either level.
  *   - Excludes items whose `status:` is not `active`.
  *   - The item's title (first heading, minus the `SPEC-... —` prefix) is its
  *     one-line description; there is no separate summary field.
- *   - Scope globs (optional `scope:` frontmatter, SPEC-wf-042) are emitted in the
+ *   - Scope globs (optional `scope:` frontmatter) are emitted in the
  *     4th column, comma-separated, or an empty field when absent.
  *
  * Usage: node plugin/scripts/spec-index.js
