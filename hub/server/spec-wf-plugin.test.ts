@@ -806,6 +806,32 @@ describe("SPEC-wf-008: close-domain footer + advisory-footer rule", () => {
   });
 });
 
+describe("SPEC-wf-040: work items are closed with cross-domain spec context and self-check", () => {
+  const wic = "plugin/skills/work-item-close/SKILL.md";
+  const cd = "plugin/skills/close-domain/SKILL.md";
+
+  it("SPEC-wf-040: work-item-close verifies each acceptance criterion against the code before done", () => {
+    const skill = read(wic).toLowerCase();
+    expect(skill).toMatch(/re-read the gap's spec item[^]*acceptance criteria[^]*against the code/);
+    expect(skill).toMatch(/"tests pass" alone is not completion/);
+  });
+
+  it("SPEC-wf-040: work-item-close instructs a cross-domain diff self-check from close-domain", () => {
+    const skill = read(wic).toLowerCase();
+    expect(skill).toMatch(/cross-domain self-check/);
+    expect(skill).toMatch(/every cross-domain spec item provided/);
+  });
+
+  it("SPEC-wf-040: close-domain selects relevant spec items across all domains before implementing", () => {
+    const skill = read(cd).toLowerCase();
+    expect(skill).toMatch(/select the governing spec items/);
+    expect(skill).toMatch(/across all domains/);
+    // Discovery: index/scope first, read-only subagent only when inconclusive, fallback reported.
+    expect(skill).toMatch(/spec-discovery subagent/);
+    expect(skill).toMatch(/never silently skipped/);
+  });
+});
+
 describe("SPEC-wf-031/033: close-domain is documented (docs-sync drift-free)", () => {
   it("does not drift: check-skills-drift.js exits 0 with close-domain present", () => {
     // Throws on non-zero exit; a clean run proves README + sdd-help list close-domain.

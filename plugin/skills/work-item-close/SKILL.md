@@ -77,6 +77,25 @@ If the spec item has no `**Tests:**` block, note it in the report: "SPEC-auth-00
 has no spec-level tests — consider running /sdd:spec-test after this work item closes."
 Do not block archiving on missing spec tests; only block on failing ones.
 
+### 6b. Verify acceptance criteria and cross-domain compliance
+
+**"Tests pass" alone is not completion.** Before marking the work item done:
+
+- **Re-read the gap's spec item `## Acceptance criteria` and verify each bullet
+  against the code** — not merely that the test suite is green. A criterion that no
+  test happens to exercise must still be confirmed by reading the implementation.
+  If any criterion is not actually satisfied, keep working — do not flip to done.
+- **Cross-domain self-check.** When this skill is invoked from `sdd:close-domain`
+  (SPEC-wf-040), self-check the diff against **every cross-domain spec item provided
+  in context**, not only the gap's own spec item. The code a work item touches is
+  often governed by spec items from other domains; a change that closes its own gap
+  while violating another domain's invariant is not done. If the diff conflicts with
+  a provided cross-domain item, resolve it before proceeding (or surface it, per the
+  close-domain guardian rules).
+
+Proceed to mark the work item done only once every acceptance criterion is verified
+against the code and the diff is clean against all provided cross-domain items.
+
 ### 7. Mark work item done and close the linked gap(s)
 
 In one edit to the work item file, set `status: done`. For each linked gap, set
