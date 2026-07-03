@@ -572,3 +572,85 @@ describe("SPEC-wf-037: ephemeral minting skills mint {7hex} hash IDs, not archiv
     });
   }
 });
+
+describe("SPEC-wf-039: spec-index.js builds a deterministic, ephemeral full-corpus index", () => {
+  const SCRIPT = path.join(REPO_ROOT, "plugin", "scripts", "spec-index.js");
+
+  function runIndex(): string {
+    return execFileSync("node", [SCRIPT], { cwd: REPO_ROOT, encoding: "utf8" });
+  }
+
+  it("SPEC-wf-039: the spec-index.js script exists", () => {
+    expect(fs.existsSync(SCRIPT)).toBe(true);
+  });
+
+  it("SPEC-wf-039: prints one tab-separated line per active item with id, domain, title, scope", () => {
+    const lines = runIndex().split("\n").filter(Boolean);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      const cols = line.split("\t");
+      expect(cols.length).toBe(4); // id, domain, title, scope (4th may be empty)
+      expect(cols[0]).toMatch(/^SPEC-/);
+      expect(cols[1].length).toBeGreaterThan(0);
+      expect(cols[2].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("SPEC-wf-039: includes an active item and excludes archived items", () => {
+    const out = runIndex();
+    expect(out).toMatch(/^SPEC-wf-038\t/m); // active
+    expect(out).not.toMatch(/^SPEC-wf-007\t/m); // archived at .sdd/specs/workflow/archive/
+  });
+
+  it("SPEC-wf-039: emits scope globs comma-separated when present, empty when absent (SPEC-wf-042)", () => {
+    const fixtureDir = path.join(REPO_ROOT, ".sdd", "specs", "__indextest__");
+    const withScope = path.join(fixtureDir, "SPEC-idx-001.md");
+    const noScope = path.join(fixtureDir, "SPEC-idx-002.md");
+    try {
+      fs.mkdirSync(fixtureDir, { recursive: true });
+      fs.writeFileSync(
+        withScope,
+        '---\nid: SPEC-idx-001\ndomain: indextest\nabbrev: idx\nstatus: active\naliases: []\nscope: [hub/client/src/**, plugin/**]\nversion: "00000000"\n---\n\n# SPEC-idx-001 — fixture item with scope\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n',
+      );
+      fs.writeFileSync(
+        noScope,
+        '---\nid: SPEC-idx-002\ndomain: indextest\nabbrev: idx\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-idx-002 — fixture item without scope\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n',
+      );
+      const out = runIndex();
+      const withLine = out.split("\n").find((l) => l.startsWith("SPEC-idx-001\t"));
+      const noLine = out.split("\n").find((l) => l.startsWith("SPEC-idx-002\t"));
+      expect(withLine).toBeDefined();
+      expect(noLine).toBeDefined();
+      expect(withLine!.split("\t")[3]).toBe("hub/client/src/**,plugin/**");
+      expect(noLine!.split("\t")[3]).toBe("");
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  it("SPEC-wf-039: excludes non-active items", () => {
+    const fixtureDir = path.join(REPO_ROOT, ".sdd", "specs", "__indextest__");
+    const deprecated = path.join(fixtureDir, "SPEC-idx-003.md");
+    try {
+      fs.mkdirSync(fixtureDir, { recursive: true });
+      fs.writeFileSync(
+        deprecated,
+        '---\nid: SPEC-idx-003\ndomain: indextest\nabbrev: idx\nstatus: deprecated\naliases: []\nversion: "00000000"\n---\n\n# SPEC-idx-003 — deprecated fixture\n\n## Invariant\nx\n',
+      );
+      const out = runIndex();
+      expect(out).not.toMatch(/^SPEC-idx-003\t/m);
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  it("SPEC-wf-039: writes only to stdout — no index file is committed to the repo", () => {
+    runIndex();
+    const tracked = execFileSync(
+      "git",
+      ["ls-files", "--", ".sdd/spec-index*", "plugin/scripts/spec-index.txt", "spec-index.*"],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    ).trim();
+    expect(tracked).toBe("");
+  });
+});
