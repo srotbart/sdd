@@ -9,10 +9,10 @@ before the item is considered done. Work items are produced exclusively by
 
 ## 1. Schema / ID Convention
 
-**File path:** `.sdd/work-items/WI-{abbrev}-{seq}.md`
-**ID pattern:** `WI-{abbrev}-{seq}` — abbreviation matches the spec domain
-(e.g., `auth`, `wf`); sequence is globally stable within the domain and never recycled —
-number from the max across **both** `.sdd/work-items/` and `.sdd/work-items/archive/`.
+**File path:** `.sdd/work-items/WI-{abbrev}-{7hex}.md`
+**ID pattern:** `WI-{abbrev}-{7hex}` — abbreviation matches the spec domain
+(e.g., `auth`, `wf`); the 7-hex suffix is generated at mint time (`openssl rand -hex 4 | cut -c1-7`);
+no sequence scan and no archive lookup — collision-free by construction.
 
 **Required frontmatter:**
 
