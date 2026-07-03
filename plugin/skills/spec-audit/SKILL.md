@@ -29,7 +29,7 @@ parse frontmatter `id`, `status`, `version`, and the body. If auditing a single 
 filter to that item only.
 
 Each active spec item body must contain `## Invariant` and `## Acceptance criteria`
-sections (per SPEC-wf-017). The audit reasons against the `## Invariant` section. If
+sections. The audit reasons against the `## Invariant` section. If
 creating or updating a spec item file during audit, include both sections in order:
 `## Invariant` (concise rule statement), then `## Acceptance criteria` (bullet list
 of verifiable conditions).
@@ -97,7 +97,7 @@ For each new gap found, create `.sdd/gaps/GAP-{abbrev}-{7hex}.md`, minting the I
 `GAP-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
 `openssl rand -hex 4 | cut -c1-7`). Minting requires no sequence scan and no archive
 lookup — hash IDs are collision-free by construction and safe to mint in parallel
-worktrees (SPEC-wf-037). Existing sequential `GAP-{abbrev}-{seq}` IDs remain valid
+worktrees. Existing sequential `GAP-{abbrev}-{seq}` IDs remain valid
 and are never renamed.
 
 Use the schema in `references/schemas.md` (Gaps section). Set:
