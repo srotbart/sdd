@@ -1,0 +1,5 @@
+# Files whose content is executed or byte-parsed by tests must stay LF on
+# every platform — Windows autocrlf smudging breaks bash and the SPEC-wf-008
+# `\n---\n` frontmatter test (see hub CRLF gotcha).
+*.sh text eol=lf
+SKILL.md text eol=lf
