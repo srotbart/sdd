@@ -33,8 +33,10 @@ Everything lives under `.sdd/` at the project root.
 | `gaps/` | Where the codebase diverges from the spec | Agent (from audit) |
 | `work-items/` | Scoped tasks to close specific gaps | Agent (from gaps) |
 
-Specs are **durable** — they never archive. Everything else archives when done,
-preserving provenance via frontmatter references.
+Active spec items are **durable** — never deleted, and never archived while active; a
+deprecated or aliased spec moves to the *tracked* spec archive
+(`.sdd/specs/**/archive/`). Everything else (targets, gaps, work-items, issues,
+improvements) archives locally when done, preserving provenance via frontmatter references.
 
 ## The Pipeline
 
@@ -44,9 +46,14 @@ preserving provenance via frontmatter references.
 3. Fold into spec       →  /sdd:target-engage TGT-001  (when status: ready)
 4. Audit the codebase   →  /sdd:spec-audit authentication
 5. Decompose gaps       →  /sdd:gap-to-work-items authentication
-6. Close work items     →  /sdd:work-item-close WI-auth-001
+6. Close work items     →  /sdd:work-item-close WI-auth-3f9c2a1
 7. Check state          →  /sdd:session-start
 ```
+
+Steps 4–6 are the execution loop. Run them by hand, or drive all three in one loop
+with `/sdd:close-domain authentication` (orient → audit → decompose → close →
+guardian audit) — the same loop the autonomous `/sdd:spawn-sdd-worker authentication`
+runs for you.
 
 Terminal state: no open gaps, no pending work items.
 
@@ -127,9 +134,12 @@ draft → awaiting-agent → awaiting-user → ready → accepted → [archive]
 /sdd:target-engage TGT-001       # agent folds into spec, archives target
 /sdd:spec-audit authentication   # finds gaps in codebase
 /sdd:gap-to-work-items authentication
-/sdd:work-item-close WI-auth-001
+/sdd:work-item-close WI-auth-3f9c2a1
 /sdd:session-start               # check remaining state
 ```
+
+The last three steps are the execution loop; `/sdd:close-domain authentication`
+runs them (audit → decompose → close, then a guardian audit) in one invocation.
 
 ## All Skills
 

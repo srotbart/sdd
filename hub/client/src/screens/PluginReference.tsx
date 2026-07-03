@@ -27,9 +27,11 @@ const PIPELINE_ASCII = `
 
 const ARTIFACTS = [
   { id: 'TGT', name: 'Target', path: '.sdd/targets/', desc: 'Declared user intent, negotiated through dialog to a settled statement.' },
-  { id: 'SPEC', name: 'Spec item', path: '.sdd/specs/', desc: 'Durable invariant derived from one or more accepted targets. Never archived.' },
+  { id: 'SPEC', name: 'Spec item', path: '.sdd/specs/', desc: 'Durable invariant derived from one or more accepted targets. Active items are never archived; deprecated or aliased ones move to the tracked spec archive.' },
   { id: 'GAP', name: 'Gap', path: '.sdd/gaps/', desc: 'Divergence between spec and codebase, discovered by spec-audit.' },
   { id: 'WI', name: 'Work item', path: '.sdd/work-items/', desc: 'Scoped implementation task that closes one or more gaps.' },
+  { id: 'ISS', name: 'Issue', path: '.sdd/issues/', desc: 'Reviewer-flagged problem — bug, anti-pattern, or spec concern — engaged via review-engage.' },
+  { id: 'IMP', name: 'Improvement', path: '.sdd/improvements/', desc: 'Reviewer-proposed enhancement — refactor, simplification, or better pattern — engaged via review-engage.' },
 ];
 
 
@@ -46,19 +48,19 @@ created: "2026-05-17T00:00:00Z"
 <turn>`;
 
 const GAP_SCHEMA = `---
-id: GAP-scr-001
+id: GAP-scr-3f9c2a1        # {7hex} minted hash; legacy GAP-scr-001 {seq} also valid
 spec-item: SPEC-scr-009
 status: open | closed | deferred
 discovered: "2026-05-17T00:00:00Z"
 audit-spec-version: <hash>
-closed-by: null | WI-scr-001
+closed-by: null | WI-scr-8a1b2c4
 ---
 **Location:** path/to/file.ts:42
 **Reasoning:** one-line justification`;
 
 const WI_SCHEMA = `---
-id: WI-scr-001
-gap-id: GAP-scr-001
+id: WI-scr-8a1b2c4         # {7hex} minted hash; legacy WI-scr-001 {seq} also valid
+gap-id: GAP-scr-3f9c2a1
 status: pending | in-progress | done | abandoned
 created: "2026-05-17T00:00:00Z"
 ---
@@ -71,10 +73,12 @@ const LIFECYCLE_ROWS = [
   { artifact: 'Target', states: 'draft → awaiting-agent → awaiting-user → ready → accepted', terminal: 'accepted' },
   { artifact: 'Gap', states: 'open → closed | deferred', terminal: 'closed / deferred' },
   { artifact: 'Work item', states: 'pending → in-progress → done | abandoned', terminal: 'done / abandoned' },
+  { artifact: 'Issue', states: 'open → accepted | dismissed', terminal: 'accepted / dismissed' },
+  { artifact: 'Improvement', states: 'open → accepted | dismissed', terminal: 'accepted / dismissed' },
 ];
 
 const DESIGN_DECISIONS = [
-  'Specs are never archived — they are the durable source of truth.',
+  'Active spec items are the durable source of truth and are never archived; deprecated or aliased ones move to the tracked spec archive.',
   'Gaps are written by audit, never by hand — verifiability over vibes.',
   'Work items require at least one test criterion — no implementation without verification.',
   'Many-gaps-to-one work item is allowed when the root cause is shared.',
@@ -140,7 +144,7 @@ export function PluginReference() {
         <span className="pr-toolbar__sub">— SDD workflow, artifacts, and skills</span>
         <a
           className="pr-toolbar__github"
-          href="https://github.com/anthropics/claude-code"
+          href="https://github.com/srotbart/sdd"
           target="_blank"
           rel="noopener noreferrer"
         >

@@ -94,7 +94,9 @@ the SPEC-wf-023 artifact guides (it references them; it is not a divergent copy)
    ```
    spec (red) → code (green) → review (issues/improvements) → gaps → refactor
    ```
-   Concrete skills: target-engage → spec-audit → gap-to-work-items → work-item-close
+   Concrete skills: target-engage (intent) → then the execution loop `close-domain`
+   drives: spec-audit → gap-to-work-items → work-item-close → guardian audit
+   (spawn-sdd-worker runs that loop autonomously)
 
 3. **Project-specific context** — essential orientation for this repo's `.sdd/`:
    - ID conventions: `TGT-{seq}` and `SPEC-{abbrev}-{seq}` are sequential; ephemeral `GAP`/`WI`/`ISS`/`IMP` mint hash IDs `{prefix}-{abbrev}-{7hex}` (legacy `{seq}` forms remain valid). The next `TGT-{seq}` derives from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history scan (needs a full, non-shallow clone).

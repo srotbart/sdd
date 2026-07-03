@@ -46,6 +46,7 @@ describe('PluginReference screen (WI-scr-008)', () => {
     const link = document.querySelector('.pr-toolbar__github');
     expect(link).not.toBeNull();
     expect(link!.textContent).toContain('view source on github');
+    expect(link!.getAttribute('href')).toBe('https://github.com/srotbart/sdd');
   });
 
   it('toolbar contains the ❡ glyph and "plugin reference" title', () => {
@@ -105,5 +106,43 @@ describe('PluginReference skill list (SPEC-scr-044)', () => {
     await waitFor(() => {
       expect(screen.getByText(/No skills found/)).toBeInTheDocument();
     });
+  });
+});
+
+describe('PluginReference artifact model (WI-wf-f7bf4e6)', () => {
+  it('lists the Issue and Improvement artifact types in the ARTIFACTS cards', () => {
+    render(<PluginReference />);
+    const ids = Array.from(document.querySelectorAll('.pr-artifact-card__id'))
+      .map((el) => el.textContent?.trim());
+    expect(ids).toContain('ISS');
+    expect(ids).toContain('IMP');
+    const body = document.body.textContent || '';
+    expect(body).toContain('.sdd/issues/');
+    expect(body).toContain('.sdd/improvements/');
+  });
+
+  it('includes Issue and Improvement rows in the status-lifecycle table', () => {
+    render(<PluginReference />);
+    const artifacts = Array.from(document.querySelectorAll('.pr-lifecycle-table tbody tr td:first-child'))
+      .map((el) => el.textContent?.trim());
+    expect(artifacts).toContain('Issue');
+    expect(artifacts).toContain('Improvement');
+  });
+
+  it('reflects the tracked spec archive instead of claiming specs are flatly never archived', () => {
+    render(<PluginReference />);
+    const body = document.body.textContent || '';
+    // The nuance is present…
+    expect(body).toContain('tracked spec archive');
+    // …and the old flat claims are gone.
+    expect(body).not.toContain('Never archived.');
+    expect(body).not.toContain('Specs are never archived');
+  });
+
+  it('shows {7hex} hash IDs in the gap and work-item schema examples', () => {
+    render(<PluginReference />);
+    const body = document.body.textContent || '';
+    expect(body).toMatch(/GAP-scr-[0-9a-f]{7}/);
+    expect(body).toMatch(/WI-scr-[0-9a-f]{7}/);
   });
 });
