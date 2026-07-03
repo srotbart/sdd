@@ -96,6 +96,27 @@ if [[ -f "$DRIFT_CHECK" ]] && command -v node &>/dev/null; then
   fi
 fi
 
+# ─── Check: No tracked files under gitignored ephemeral archives (SPEC-wf-035) ─
+# Ephemeral artifact archives (targets/gaps/work-items/issues/improvements) are
+# gitignored local-only caches. Fail if any file under them is tracked — e.g. a
+# `git add -f` bypass of the ignore rule. Spec archives (.sdd/specs/**/archive/)
+# are exempt: they are permanent truth needed for alias resolution.
+EPHEMERAL_ARCHIVES=(
+  ".sdd/targets/archive"
+  ".sdd/gaps/archive"
+  ".sdd/work-items/archive"
+  ".sdd/issues/archive"
+  ".sdd/improvements/archive"
+)
+if command -v git &>/dev/null && git -C "$REPO_ROOT" rev-parse --git-dir &>/dev/null; then
+  TRACKED_ARCHIVES="$(git -C "$REPO_ROOT" ls-files -- "${EPHEMERAL_ARCHIVES[@]}")"
+  if [[ -n "$TRACKED_ARCHIVES" ]]; then
+    fail "Tracked files exist under gitignored ephemeral archive paths (SPEC-wf-035); untrack with 'git rm --cached':"$'\n'"$TRACKED_ARCHIVES"
+  else
+    verbose "OK: no tracked files under ephemeral archive paths"
+  fi
+fi
+
 # ─── CUSTOMISE: Add your linters below ───────────────────────────────────────
 #
 # Examples (uncomment and adapt):

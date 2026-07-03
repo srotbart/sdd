@@ -447,4 +447,37 @@ describe("SPEC-wf-035: Ephemeral artifact archives are local-only, never version
     );
     expect(tracked).toMatch(/\/archive\//);
   });
+
+  // Behavioral backstop: lint-check.sh must fail when the archive boundary is
+  // bypassed via `git add -f`, and pass otherwise.
+  const LINT = "plugin/scripts/lint-check.sh";
+  const PROBE = ".sdd/gaps/archive/_lint_probe_test.md";
+  const ARCHIVE_FAIL = /ephemeral archive path/i;
+
+  function runLint(): string {
+    try {
+      return execFileSync("bash", [LINT], { cwd: REPO_ROOT, encoding: "utf8" });
+    } catch (e: any) {
+      // A non-zero exit still carries the script's output on the error object.
+      return `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+  }
+
+  it("SPEC-wf-035: lint-check.sh emits no archive violation on a clean tree", () => {
+    expect(runLint()).not.toMatch(ARCHIVE_FAIL);
+  });
+
+  it("SPEC-wf-035: lint-check.sh fails when a file under an ignored archive path is force-added", () => {
+    const abs = path.join(REPO_ROOT, PROBE);
+    try {
+      fs.writeFileSync(abs, "probe\n");
+      execFileSync("git", ["add", "-f", "--", PROBE], { cwd: REPO_ROOT });
+      expect(runLint()).toMatch(ARCHIVE_FAIL);
+    } finally {
+      try {
+        execFileSync("git", ["rm", "-f", "--cached", "--quiet", "--", PROBE], { cwd: REPO_ROOT });
+      } catch { /* index already clean */ }
+      fs.rmSync(abs, { force: true });
+    }
+  });
 });
