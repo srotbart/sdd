@@ -654,3 +654,50 @@ describe("SPEC-wf-039: spec-index.js builds a deterministic, ephemeral full-corp
     expect(tracked).toBe("");
   });
 });
+
+describe("SPEC-wf-042: spec items may declare an optional scope of governed code paths", () => {
+  it("SPEC-wf-042: schemas.md documents the optional scope: field with path-glob semantics", () => {
+    const schemas = read("plugin/references/schemas.md");
+    expect(schemas).toMatch(/scope:/);
+    expect(schemas.toLowerCase()).toMatch(/path glob/);
+    expect(schemas).toMatch(/SPEC-wf-042/);
+  });
+
+  it("SPEC-wf-042: the spec artifact guide documents the optional scope: field with path-glob semantics", () => {
+    const guide = read("plugin/references/artifacts/spec.md");
+    expect(guide).toMatch(/scope:/);
+    expect(guide.toLowerCase()).toMatch(/path glob/);
+    expect(guide).toMatch(/SPEC-wf-042/);
+  });
+
+  it("SPEC-wf-042: docs state scope is opt-in, recall-oriented, no-backfill, and authoritative inclusion", () => {
+    for (const rel of ["plugin/references/schemas.md", "plugin/references/artifacts/spec.md"]) {
+      const doc = read(rel).toLowerCase();
+      expect(doc).toMatch(/opt-in/);
+      expect(doc).toMatch(/recall-oriented/);
+      expect(doc).toMatch(/no backfill/);
+      expect(doc).toMatch(/authoritative/);
+      // Absence of scope never means the item is out of play.
+      expect(doc).toMatch(/absence of `scope:`/);
+    }
+  });
+
+  it("SPEC-wf-042: spec-index emits scope globs for an item carrying scope:", () => {
+    const SCRIPT = path.join(REPO_ROOT, "plugin", "scripts", "spec-index.js");
+    const fixtureDir = path.join(REPO_ROOT, ".sdd", "specs", "__scopetest__");
+    const scoped = path.join(fixtureDir, "SPEC-scp-001.md");
+    try {
+      fs.mkdirSync(fixtureDir, { recursive: true });
+      fs.writeFileSync(
+        scoped,
+        '---\nid: SPEC-scp-001\ndomain: scopetest\nabbrev: scp\nstatus: active\naliases: []\nscope: [hub/**, plugin/scripts/**]\nversion: "00000000"\n---\n\n# SPEC-scp-001 — scoped fixture\n\n## Invariant\nx\n',
+      );
+      const out = execFileSync("node", [SCRIPT], { cwd: REPO_ROOT, encoding: "utf8" });
+      const line = out.split("\n").find((l) => l.startsWith("SPEC-scp-001\t"));
+      expect(line).toBeDefined();
+      expect(line!.split("\t")[3]).toBe("hub/**,plugin/scripts/**");
+    } finally {
+      fs.rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+});
