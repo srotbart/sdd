@@ -22,12 +22,12 @@ domain: authentication
 abbrev: auth
 status: active        # active | deprecated | aliased
 aliases: []           # former IDs, populated by spec-collapse
-scope: []             # optional (SPEC-wf-042); path globs of the code this item governs
+scope: []             # optional; path globs of the code this item governs
 version: "a3f9c812"  # SHA-256[:8] of the file's own content; recompute on every write
 ---
 ```
 
-**Optional `scope:` field (SPEC-wf-042):** a list of **path glob patterns**
+**Optional `scope:` field:** a list of **path glob patterns**
 (minimatch/`.gitignore` syntax, repo-root-relative, e.g. `scope: [hub/client/src/**]`)
 naming the code areas the item governs. Path globs make the guardian audit's *changed
 file → candidate spec items* mapping deterministic. It is **opt-in for genuinely

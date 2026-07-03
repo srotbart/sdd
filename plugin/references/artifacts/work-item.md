@@ -92,11 +92,11 @@ pending → in-progress → done      → [archive]
    path (gap behaviour present and correct).
 7. Run the tests and confirm they pass. Do not proceed with red tests.
 8. Set `status: done`; for each linked gap set `status: closed`, `closed-by: {WI-id}`.
-9. **Commit the terminal state before archiving** (SPEC-wf-036): commit the
+9. **Commit the terminal state before archiving**: commit the
    implementation, tests, and the terminal work-item and gap files at their active
    paths, then move the work item to `.sdd/work-items/archive/` and each gap to
-   `.sdd/gaps/archive/`. Those archive dirs are gitignored local-only caches
-   (SPEC-wf-035), so the move is a plain deletion to git — the prior commit is what
+   `.sdd/gaps/archive/`. Those archive dirs are gitignored local-only caches,
+   so the move is a plain deletion to git — the prior commit is what
    preserves final content in history. Never stage files under an `archive/` path.
 
 ### Handling a blocked work item
@@ -122,7 +122,7 @@ new work item may reference it later if needed.
   before any code change is made, so concurrent readers see the work is claimed.
 - **Verify before archiving.** Do not archive until the test suite passes.
 - **Commit before archiving; merge, don't squash.** The terminal state must be
-  committed before the `mv` into the gitignored `archive/` cache (SPEC-wf-036), so
+  committed before the `mv` into the gitignored `archive/` cache, so
   git history retains the artifact's final content. This durability guarantee holds
   only under a merge-commit strategy — squash-merging or rebasing the artifact
   commit away erases artifacts created and closed within a single branch.
