@@ -71,7 +71,7 @@ continuing to ask.
 
 ### 4. Terminal decisions
 
-**Archiving convention (SPEC-wf-035/036):** each terminal decision below moves the
+**Archiving convention:** each terminal decision below moves the
 artifact into `.sdd/issues/archive/` or `.sdd/improvements/archive/` — gitignored
 local-only caches. **Write terminal state → commit → `mv`**: first commit the
 artifact's terminal state (status flip, final dialog, `engaged-by`/`dismissed-reason`,

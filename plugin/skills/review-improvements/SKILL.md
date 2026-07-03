@@ -56,7 +56,7 @@ de-duplicate across agents:
 For each distinct proposal, create `.sdd/improvements/IMP-{domain}-{7hex}.md`,
 minting the ID as `IMP-{domain}-{7hex}` where `{7hex}` is 7 random lowercase hex
 characters (e.g. `openssl rand -hex 4 | cut -c1-7`) — no sequence scan, collision-free
-by construction (SPEC-wf-037). Existing sequential `IMP-{domain}-{seq}` IDs remain
+by construction. Existing sequential `IMP-{domain}-{seq}` IDs remain
 valid and are never renamed.
 
 **Required frontmatter:**
@@ -137,10 +137,10 @@ Next: Engage proposals with the user. Run `/sdd:review-engage IMP-auth-001` to p
 
 Improvements live at `.sdd/improvements/IMP-{domain}-{7hex}.md`.
 Archived improvements (accepted/dismissed) move to `.sdd/improvements/archive/` — a
-gitignored local-only cache (SPEC-wf-035).
+gitignored local-only cache.
 
 **ID convention:** `IMP-{domain}-{7hex}` — a 7-char lowercase hex hash minted at
-creation, no lookup required (SPEC-wf-037). Legacy sequential `IMP-{domain}-{seq}`
+creation, no lookup required. Legacy sequential `IMP-{domain}-{seq}`
 IDs remain valid and are never renamed or recycled.
 
 **Terminal states → archive:** `accepted`, `dismissed`
@@ -151,8 +151,8 @@ this skill.
 
 ## Shared Mechanics with Issues
 
-The improvements artifact shares the same mechanics as the issues artifact
-(SPEC-wf-025): storage layout with `archive/`, de-duplication across team,
+The improvements artifact shares the same mechanics as the issues artifact:
+storage layout with `archive/`, de-duplication across team,
 in-document engagement via `/sdd:review-engage`, and terminal-state archival.
 The distinction is intent: issues flag defects; improvements propose enhancements.
 
