@@ -17,7 +17,7 @@ target-engage: reconcile ready target with spec
 ── Execution phase (autonomous sdd-worker) ──
 spawn-sdd-worker: spawn the persistent sdd-worker for a domain
        ↓
-close-domain: drive the whole loop — the worker's entire job (SPEC-wf-038)
+close-domain: drive the whole loop — the worker's entire job
   Phase 0  orient     — build the spec index, record the run's git start point
   Phase 1  audit      — spec-audit → gap report (file:line + one-line reasoning)
   Phase 2  decompose  — gap-to-work-items → scoped tasks
@@ -63,9 +63,9 @@ close-domain is invoked by the sdd-worker (and usable manually). Its inner skill
 - **Reasoning is visible.** Every gap includes a one-line justification.
   Verifiability over vibes.
 - **Ephemeral archives are local-only.** The `archive/` subdirectories of targets,
-  gaps, work-items, issues, and improvements are gitignored (SPEC-wf-035); the
+  gaps, work-items, issues, and improvements are gitignored; the
   terminal state is committed *before* the `mv`, so git history — not the working
   tree — is the permanent record. Spec archives (`.sdd/specs/**/archive/`) stay tracked.
 - **Ephemeral IDs are minted, not scanned.** Gaps, work-items, issues, and
-  improvements mint `{prefix}-{abbrev}-{7hex}` hash IDs (SPEC-wf-037); legacy
+  improvements mint `{prefix}-{abbrev}-{7hex}` hash IDs; legacy
   sequential `{seq}` forms remain valid. Targets and specs keep sequential IDs.

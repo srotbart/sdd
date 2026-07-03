@@ -106,10 +106,10 @@ the initial intent in the Dialog section. When ready for agent response, flip
    - **No conflict, extends spec:** Write new or updated spec item(s), archive target (`accepted`).
    - **Conflict with existing spec:** Write a `.conflict.md` file, keep target `ready`, stop.
    - **No-op (already covered):** Archive target (`accepted`), note in dialog.
-3. Archive: **commit the target's terminal state before the move** (SPEC-wf-036) —
+3. Archive: **commit the target's terminal state before the move** —
    commit the status flip, final dialog, and any spec items written, then `mv` the
-   target file to `.sdd/targets/archive/`. That dir is a gitignored local-only cache
-   (SPEC-wf-035), so the move is a plain deletion to git; the prior commit preserves
+   target file to `.sdd/targets/archive/`. That dir is a gitignored local-only cache,
+   so the move is a plain deletion to git; the prior commit preserves
    the target's final content in history. This durability holds only under a
    merge-commit strategy — squash-merging or rebasing the commit away erases targets
    created and folded within one branch. Never stage files under

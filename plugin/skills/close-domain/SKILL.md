@@ -68,7 +68,7 @@ For each open work item in the domain, in sequence:
 
 1. **Select the governing spec items.** From the work item's scope (files/areas),
    pick the relevant spec items across ALL domains using the Phase 0 index plus any
-   `scope:` globs (SPEC-wf-042) that match the touched paths — a matching scope glob
+   `scope:` globs that match the touched paths — a matching scope glob
    is authoritative inclusion. Read the **full text** of the selected items into
    context. If relevance is unclear (unfamiliar area, large blast radius), spawn a
    read-only **spec-discovery subagent** to sweep the corpus and return the
@@ -103,7 +103,7 @@ After all work items are closed and their tests pass, before reporting complete:
    - **Pre-existing violations** (not from this run's diff): **report them to the
      lead as candidate gaps** — do not fix them inline and do not block completion
      on them.
-   - **Scope-drift flagging** (SPEC-wf-042): when a file changed by this run
+   - **Scope-drift flagging**: when a file changed by this run
      is not covered by the governing spec item's `scope:` glob, flag it as
      scope drift for correction — this does not block completion and is not an
      own-run violation requiring an inline fix.
@@ -129,7 +129,7 @@ test counts, tree cleanliness.
 **Execution never modifies spec item files.** A fix requiring a spec item edit is
 an escalation — report it to the lead rather than closing inline. The only permitted
 spec-file writes during execution are the mechanical annotations (`**Tests:**`
-linking and `scope:` backfill per SPEC-wf-042) and their version-hash recomputation;
+linking and `scope:` backfill) and their version-hash recomputation;
 these never touch invariant or acceptance-criteria content and are excepted.
 
 ---

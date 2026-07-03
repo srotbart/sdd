@@ -96,7 +96,7 @@ Compare the Current statement against every active spec item in the domain. Clas
 
 ### 4. Execute the outcome
 
-**Archiving convention (SPEC-wf-035/036):** whenever an outcome below archives the
+**Archiving convention:** whenever an outcome below archives the
 target — flips it to `accepted`/`archived` and moves it into `.sdd/targets/archive/`
 — **write terminal state → commit → `mv`**: first commit the target's terminal
 state (status flip, final dialog, and any spec items written) at its active path,

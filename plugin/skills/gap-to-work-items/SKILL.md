@@ -56,7 +56,7 @@ For each work item, create `.sdd/work-items/WI-{abbrev}-{7hex}.md`, minting the 
 `WI-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
 `openssl rand -hex 4 | cut -c1-7`). Minting requires no sequence scan and no archive
 lookup — hash IDs are collision-free by construction and safe to mint in parallel
-worktrees (SPEC-wf-037). Existing sequential `WI-{abbrev}-{seq}` IDs remain valid and
+worktrees. Existing sequential `WI-{abbrev}-{seq}` IDs remain valid and
 are never renamed.
 
 Use the schema in `references/schemas.md` (Work Items section). Set:

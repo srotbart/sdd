@@ -61,14 +61,14 @@ trap cleanup EXIT
 
 # Create minimal .sdd structure
 mkdir -p "$tmpdir/.sdd/targets"
-mkdir -p "$tmpdir/.sdd/specs/workflow"
+mkdir -p "$tmpdir/.sdd/specs/auth"
 mkdir -p "$tmpdir/.sdd/gaps"
 mkdir -p "$tmpdir/.sdd/work-items"
 
 # One awaiting-user target
 printf -- '---\nid: TGT-001\nstatus: awaiting-user\n---\n' > "$tmpdir/.sdd/targets/TGT-001.md"
-# One spec item
-printf -- '---\nid: SPEC-wf-001\n---\n' > "$tmpdir/.sdd/specs/workflow/SPEC-wf-001.md"
+# One spec item (use a generic example ID, not a repo-specific wf ID)
+printf -- '---\nid: SPEC-auth-001\n---\n' > "$tmpdir/.sdd/specs/auth/SPEC-auth-001.md"
 # One open gap
 printf -- '---\nid: GAP-wf-001\n---\n' > "$tmpdir/.sdd/gaps/GAP-wf-001.md"
 # One open work item
