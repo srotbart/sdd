@@ -38,13 +38,12 @@ describe("SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent", 
     expect(skill).toMatch(/name['"`:\s]+["`']?sdd-worker/);
   });
 
-  it("SPEC-wf-002: the worker prompt sequences spec-audit then gap-to-work-items then work-item-close", () => {
-    const auditAt = skill.indexOf("sdd:spec-audit");
-    const decomposeAt = skill.indexOf("sdd:gap-to-work-items");
-    const closeAt = skill.indexOf("sdd:work-item-close");
-    expect(auditAt).toBeGreaterThanOrEqual(0);
-    expect(decomposeAt).toBeGreaterThan(auditAt);
-    expect(closeAt).toBeGreaterThan(decomposeAt);
+  it("SPEC-wf-002: the worker prompt's first action is to invoke sdd:close-domain, with no embedded pipeline", () => {
+    // The loop lives in close-domain (SPEC-wf-038), not in the prompt.
+    expect(skill).toMatch(/first action[^]*sdd:close-domain \{domain\}/i);
+    // The old three-step audit→decompose→close procedure is gone from the prompt.
+    expect(skill).not.toMatch(/1\.\s*Run \/sdd:spec-audit/);
+    expect(skill).not.toMatch(/Run \/sdd:gap-to-work-items \{domain\}/);
   });
 
   it("SPEC-wf-002: documents reuse via SendMessage for additional domains without re-spawning", () => {
@@ -147,8 +146,22 @@ describe("SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap
     expect(skill.toLowerCase()).toMatch(/nothing to do/);
   });
 
-  it("SPEC-wf-006: prompt instructs sending the gap report to the team lead after the audit", () => {
-    expect(skill.toLowerCase()).toMatch(/listing every gap\s+found/);
+  it("SPEC-wf-006: prompt's only imperative is invoking sdd:close-domain (no embedded procedure)", () => {
+    expect(skill).toMatch(/sdd:close-domain \{domain\}/);
+    expect(skill).not.toMatch(/1\.\s*Run \/sdd:spec-audit/);
+  });
+
+  it("SPEC-wf-006: prompt restricts lead reports to completion, 'nothing to do', or blocker", () => {
+    expect(skill.toLowerCase()).toMatch(
+      /report to your team lead only at genuine completion, "nothing to do", or a real\s+blocker/,
+    );
+  });
+
+  it("SPEC-wf-006: prompt instructs surfacing lead-instruction-vs-spec conflicts instead of complying", () => {
+    const lower = skill.toLowerCase();
+    expect(lower).toMatch(/conflicts with an active spec item/);
+    expect(lower).toMatch(/do not comply/);
+    expect(lower).toMatch(/quote the\s+spec item/);
   });
 });
 
