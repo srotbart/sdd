@@ -741,6 +741,26 @@ describe("SPEC-wf-042: spec items may declare an optional scope of governed code
       fs.rmSync(fixtureDir, { recursive: true, force: true });
     }
   });
+
+  it("SPEC-wf-042: work-item-close documents scope backfill from the closing diff", () => {
+    const skill = read("plugin/skills/work-item-close/SKILL.md");
+    const lower = skill.toLowerCase();
+    // Must instruct scope backfill from the diff
+    expect(lower).toMatch(/scope.*backfill|backfill.*scope/);
+    // Must reference the scope: field
+    expect(lower).toMatch(/`scope:`|scope: field/);
+    // Must distinguish from invariant/AC content (mechanical write only)
+    expect(lower).toMatch(/invariant/);
+    expect(lower).toMatch(/mechanical write/);
+  });
+
+  it("SPEC-wf-042: close-domain Phase 4 documents scope-drift flagging as non-blocking", () => {
+    const skill = read("plugin/skills/close-domain/SKILL.md").toLowerCase();
+    // Must mention scope drift flagging
+    expect(skill).toMatch(/scope.drift|scope-drift/);
+    // Must state it does not block completion
+    expect(skill).toMatch(/does not block completion/);
+  });
 });
 
 describe("SPEC-wf-038: close-domain skill drives the full execution loop for a domain", () => {
@@ -785,6 +805,26 @@ describe("SPEC-wf-038: close-domain skill drives the full execution loop for a d
     expect(skill).toMatch(/complete and clean/);
     expect(skill).toMatch(/escalation/);
   });
+
+  it("SPEC-wf-038: description and preamble identify close-domain as the sdd-worker operating loop and redirect lead/main to spawn-sdd-worker", () => {
+    const skill = read(rel);
+    // description/preamble must name it as the sdd-worker's operating loop
+    expect(skill).toMatch(/sdd-worker's operating loop/i);
+    // must redirect lead/main sessions to spawn-sdd-worker
+    expect(skill).toMatch(/spawn-sdd-worker \{domain\}/);
+    // "equally usable by a human driver" framing must be gone
+    expect(skill).not.toMatch(/equally usable by a human driver/i);
+  });
+
+  it("SPEC-wf-038: skill states spec-item edits are escalations with mechanical Tests/scope writes excepted", () => {
+    const skill = read(rel);
+    const lower = skill.toLowerCase();
+    // Must state that a fix requiring a spec item edit is an escalation
+    expect(lower).toMatch(/fix requiring a spec item edit is\s+an escalation/);
+    // Must name the excepted mechanical annotations
+    expect(skill).toMatch(/\*\*Tests:\*\*/);
+    expect(skill).toMatch(/`scope:`/);
+  });
 });
 
 describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () => {
@@ -823,6 +863,20 @@ describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () 
   it("SPEC-wf-041: complete is reported only on a clean guardian audit", () => {
     const skill = read(rel).toLowerCase();
     expect(skill).toMatch(/report complete only on a clean guardian audit/);
+  });
+
+  it("SPEC-wf-041: report claims are verified against the current tree at reporting time, never from memory", () => {
+    const skill = read(rel);
+    const lower = skill.toLowerCase();
+    // Must require verification at reporting time
+    expect(lower).toMatch(/verified against the current tree at reporting time/);
+    // Must cover all required claim categories
+    expect(lower).toMatch(/file states/);
+    expect(lower).toMatch(/commit hashes/);
+    expect(lower).toMatch(/test counts/);
+    expect(lower).toMatch(/tree cleanliness/);
+    // Must state the prohibition
+    expect(lower).toMatch(/never restat/);
   });
 });
 
