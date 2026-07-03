@@ -33,8 +33,10 @@ Everything lives under `.sdd/` at the project root.
 | `gaps/` | Where the codebase diverges from the spec | Agent (from audit) |
 | `work-items/` | Scoped tasks to close specific gaps | Agent (from gaps) |
 
-Specs are **durable** — they never archive. Everything else archives when done,
-preserving provenance via frontmatter references.
+Active spec items are **durable** — never deleted, and never archived while active; a
+deprecated or aliased spec moves to the *tracked* spec archive
+(`.sdd/specs/**/archive/`). Everything else (targets, gaps, work-items, issues,
+improvements) archives locally when done, preserving provenance via frontmatter references.
 
 ## The Pipeline
 
