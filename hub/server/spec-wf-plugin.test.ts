@@ -480,4 +480,13 @@ describe("SPEC-wf-035: Ephemeral artifact archives are local-only, never version
       fs.rmSync(abs, { force: true });
     }
   });
+
+  it("SPEC-wf-035: session-start degrades orphan checks to 'unverifiable' for local-only archives", () => {
+    const skill = read("plugin/skills/session-start/SKILL.md");
+    // A missing reference with an empty/absent archive cache is reported as
+    // unverifiable, not a hard error.
+    expect(skill).toMatch(/unverifiable \(archive is local-only\)/);
+    // Resolution is scoped to active files plus the local cache *when present*.
+    expect(skill.toLowerCase()).toMatch(/cache[^.]*when it is present/);
+  });
 });

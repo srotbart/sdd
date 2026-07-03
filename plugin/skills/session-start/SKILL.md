@@ -246,7 +246,9 @@ Next: Engage the highest-priority target. Run `/sdd:target-engage TGT-007` to pr
 
 **Orphaned gap** — gap references a `spec-item` ID not found in any spec file (including aliases). Flag with: `⚠ GAP-auth-005 references SPEC-auth-009 which no longer exists — verify spec-collapse ran alias correctly.`
 
-**Orphaned work item** — work item references a `gap-id` not found in the active or archive gaps directory. Flag with: `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
+**Orphaned work item** — work item references a `gap-id` not found among the active gap files. Because ephemeral archives are local-only (SPEC-wf-035), resolution scans the active gaps directory plus the local `gaps/archive/` cache *when it is present*. Two outcomes:
+- Reference absent **and** the local archive cache is present (and does not contain it): a genuine orphan — flag with `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
+- Reference absent **and** the archive cache is empty or absent (e.g. a fresh clone or worktree): report as unverifiable, not an error — `WI-auth-007 references GAP-auth-004 — unverifiable (archive is local-only).`
 
 **Multiple domain directories** — each domain should have exactly one subdirectory under `.sdd/specs/`. Multiple directories for the same domain cannot occur under the naming scheme.
 
