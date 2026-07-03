@@ -2,7 +2,7 @@
 id: WI-wf-41000aa
 gap-id: GAP-wf-1e23a6f
 domain: workflow
-status: pending
+status: done
 created: "2026-07-03T00:00:00Z"
 abandoned-reason: null
 ---

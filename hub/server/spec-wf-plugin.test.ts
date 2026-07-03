@@ -822,6 +822,20 @@ describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () 
     const skill = read(rel).toLowerCase();
     expect(skill).toMatch(/report complete only on a clean guardian audit/);
   });
+
+  it("SPEC-wf-041: report claims are verified against the current tree at reporting time, never from memory", () => {
+    const skill = read(rel);
+    const lower = skill.toLowerCase();
+    // Must require verification at reporting time
+    expect(lower).toMatch(/verified against the current tree at reporting time/);
+    // Must cover all required claim categories
+    expect(lower).toMatch(/file states/);
+    expect(lower).toMatch(/commit hashes/);
+    expect(lower).toMatch(/test counts/);
+    expect(lower).toMatch(/tree cleanliness/);
+    // Must state the prohibition
+    expect(lower).toMatch(/never restat/);
+  });
 });
 
 describe("SPEC-wf-008: close-domain footer + advisory-footer rule", () => {

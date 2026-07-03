@@ -115,6 +115,11 @@ Stop only on one of:
 Report to the team lead at exactly these moments (plus the Phase 0 handshake and
 the Phase 1 gap list). Do not send interactive-style status pings between stages.
 
+**Every factual claim in a completion or guardian report** must be
+verified against the current tree at reporting time — never restated from
+memory or assumed state. Claims covered: file states, commit hashes,
+test counts, tree cleanliness.
+
 ## Constraints
 
 **Execution never modifies spec item files.** A fix requiring a spec item edit is
