@@ -472,6 +472,20 @@ describe("frontmatter inline-comment handling", () => {
   });
 });
 
+describe("gap domain fallback from spec-item id", () => {
+  it("derives the domain from hyphenated abbrevs and hash suffixes", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-ui-screens-9f1c2a3.md"),
+      `---\nid: GAP-ui-screens-9f1c2a3\nspec-item: SPEC-ui-screens-004\nstatus: open\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: null\n---\n\n# Gap: g\n\n**Location:** x:1\n**Reasoning:** r\n`
+    );
+
+    const gaps = parseGaps(root);
+    const gap = gaps.find((g) => g.id === "GAP-ui-screens-9f1c2a3");
+    expect(gap?.domain).toBe("ui-screens");
+  });
+});
+
 describe("component: frontmatter compatibility (review fixes)", () => {
   it("parseGaps reads component: as the domain, falling back to legacy domain:", () => {
     const root = makeGapsSddDir();

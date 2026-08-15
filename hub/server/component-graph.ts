@@ -61,6 +61,8 @@ function parseManifest(filePath: string, dirPath: string): Manifest | null {
   try {
     content = fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
   } catch {
+    // Unreadable manifest is treated as absent: the component still renders
+    // from its items, just without manifest metadata.
     return null;
   }
   const fmMatch = /^---\n([\s\S]*?)\n---/.exec(content);
@@ -109,12 +111,11 @@ function parseManifest(filePath: string, dirPath: string): Manifest | null {
   };
 }
 
-function collectManifests(specsDir: string): Manifest[] {
+function collectManifests(tree: ReturnType<typeof collectSpecsTree>): Manifest[] {
   // collectSpecsTree is the single source for the specs-tree walk; this only
   // parses what it classified as manifests.
-  const { manifestFiles } = collectSpecsTree(specsDir);
   const manifests: Manifest[] = [];
-  for (const { componentPath, filePath } of manifestFiles) {
+  for (const { componentPath, filePath } of tree.manifestFiles) {
     const parsed = parseManifest(filePath, componentPath);
     if (parsed) manifests.push(parsed);
   }
@@ -122,9 +123,12 @@ function collectManifests(specsDir: string): Manifest[] {
 }
 
 export function buildComponentGraph(sddPath: string): ComponentGraph {
-  const specs = parseSpecs(sddPath);
+  // One tree walk serves both the spec parse and the manifest scan — this
+  // endpoint refires on every watcher event, so the directory I/O matters.
+  const tree = collectSpecsTree(path.join(sddPath, "specs"));
+  const specs = parseSpecs(sddPath, tree);
   const gaps = parseGaps(sddPath);
-  const manifests = collectManifests(path.join(sddPath, "specs"));
+  const manifests = collectManifests(tree);
 
   // Node set: every component path an item attaches to, every ancestor of it,
   // and every manifest directory.

@@ -123,15 +123,23 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     ? { status: "skipped", skipReason: skipMatch[1].trim() }
     : { status: "not-run" };
 
-  // Contract binding: `contract-consumer` + inline `contract-synced` list of
-  // `{spec-item-id}@{version-hash}` stamps. Malformed entries are dropped.
+  // Contract binding: `contract-consumer` + `contract-synced` flow list of
+  // `{spec-item-id}@{version-hash}` stamps. The list is matched against the
+  // raw frontmatter block so a wrapped multi-line list is read whole — the
+  // line-oriented meta would silently truncate it to the first line's
+  // entries, and a dropped drifted endpoint would read as in-sync. Malformed
+  // or unterminated lists yield zero entries → binding status "unknown"
+  // (fail-closed), never a false in-sync.
   let contract: SpecItem["contract"];
   if (meta["contract-consumer"]) {
     const synced: Array<{ item: string; stamp: string }> = [];
-    const rawSynced = (meta["contract-synced"] ?? "").replace(/^\[|\]$/g, "");
-    for (const entry of rawSynced.split(",")) {
-      const m = /^([A-Za-z0-9-]+)@([0-9a-fA-F]+)$/.exec(entry.trim());
-      if (m) synced.push({ item: m[1].toUpperCase(), stamp: m[2].toLowerCase() });
+    const fmBlock = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content)?.[1] ?? "";
+    const listMatch = /^contract-synced:[ \t]*\[([^\]]*)\]/m.exec(fmBlock);
+    if (listMatch) {
+      for (const entry of listMatch[1].split(",")) {
+        const m = /^([A-Za-z0-9-]+)@([0-9a-fA-F]+)$/.exec(entry.trim());
+        if (m) synced.push({ item: m[1].toUpperCase(), stamp: m[2].toLowerCase() });
+      }
     }
     contract = { consumer: meta["contract-consumer"], synced };
   }
@@ -303,7 +311,9 @@ const ABBREV_TO_DOMAIN: Record<string, string> = {
 };
 
 function deriveDomainFromSpecItem(specItem: string): string {
-  const match = /^SPEC-([a-z]+)-\d+$/i.exec(specItem);
+  // Abbrevs may contain hyphens and suffixes may be sequential or 7-hex —
+  // same forms parseRefs accepts (SPEC-ui-screens-004, SPEC-auth-3f9c2a1).
+  const match = /^SPEC-([a-z][a-z0-9-]*)-(?:\d+|[0-9a-f]{7})$/i.exec(specItem);
   if (!match) return "";
   const abbrev = match[1].toLowerCase();
   return ABBREV_TO_DOMAIN[abbrev] ?? abbrev;
@@ -616,7 +626,7 @@ export function collectSpecsTree(specsDir: string): {
   return { specFiles, mappingFiles, manifestFiles };
 }
 
-export function parseSpecs(sddPath: string): Spec[] {
+export function parseSpecs(sddPath: string, tree?: ReturnType<typeof collectSpecsTree>): Spec[] {
   const specsDir = path.join(sddPath, "specs");
   const workspaceRoot = path.dirname(sddPath);
   const specsByDomain = new Map<string, Spec>();
@@ -624,8 +634,9 @@ export function parseSpecs(sddPath: string): Spec[] {
   // Components nest to any depth. Legacy flat/subject layouts are shallow
   // trees and parse identically. Several mapping files may share an abbrev (a
   // documented misconfiguration), so all candidates are kept and
-  // disambiguated by directory proximity to the item.
-  const { specFiles: specFilePaths, mappingFiles } = collectSpecsTree(specsDir);
+  // disambiguated by directory proximity to the item. Callers that already
+  // walked the tree (component-graph) pass it in to avoid a second walk.
+  const { specFiles: specFilePaths, mappingFiles } = tree ?? collectSpecsTree(specsDir);
 
   // Per-item metadata needed after grouping: the frontmatter abbrev (the
   // authoritative mapping-file key — item IDs may use a different shorthand,
@@ -668,6 +679,8 @@ export function parseSpecs(sddPath: string): Spec[] {
     try {
       raw = fs.readFileSync(mappingPath, "utf8");
     } catch {
+      // Unreadable mapping file is treated as absent: test status degrades
+      // to not-run rather than failing the whole parse.
       raw = null;
     }
     const mapping = raw === null ? null : validateTestMapping(raw);

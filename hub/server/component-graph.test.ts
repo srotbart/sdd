@@ -201,6 +201,38 @@ describe("buildComponentGraph", () => {
     expect(server?.abbrev).toBe("hsrv");
   });
 
+  it("reads wrapped multi-line contract-synced lists whole (a drifted second entry is not lost)", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    // Second entry on a continuation line carries the drift.
+    fs.writeFileSync(
+      path.join(dir, "SPEC-hsrv-050.md"),
+      `---\nid: SPEC-hsrv-050\ncomponent: hub/server\nabbrev: hsrv\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [SPEC-hsrv-001@00000000,\n  SPEC-hcli-004@deadbeef]\nversion: "aaaaaaaa"\n---\n\n# SPEC-hsrv-050 — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    writeItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001"); // version 00000000 — matches
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-004"); // version 00000000 ≠ deadbeef
+
+    const graph = buildComponentGraph(sddPath);
+    const edge = graph.edges.find((e) => e.contractItem === "SPEC-HSRV-050");
+    expect(edge?.status).toBe("consumer-drifted");
+  });
+
+  it("treats an unterminated contract-synced list as unknown, never in-sync", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "SPEC-hsrv-051.md"),
+      `---\nid: SPEC-hsrv-051\ncomponent: hub/server\nabbrev: hsrv\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [SPEC-hcli-004@00000000\nversion: "aaaaaaaa"\n---\n\n# SPEC-hsrv-051 — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-004");
+
+    const graph = buildComponentGraph(sddPath);
+    const edge = graph.edges.find((e) => e.contractItem === "SPEC-HSRV-051");
+    expect(edge?.status).toBe("unknown");
+  });
+
   it("returns an empty graph for a missing specs directory", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-graph-empty-"));
     const graph = buildComponentGraph(path.join(root, ".sdd"));

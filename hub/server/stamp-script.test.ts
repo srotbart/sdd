@@ -204,6 +204,30 @@ describe("stamp.js", () => {
     expect(all.stdout).toContain("does not support --all");
   });
 
+  it("never touches version/contract lines quoted in the body", () => {
+    const root = makeProject();
+    const file = path.join(root, ".sdd", "specs", "hub", "server", "SPEC-hsrv-050.md");
+    const body =
+      "\n# SPEC-hsrv-050 — item quoting schema examples\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n\n" +
+      "Example schema:\n\n```markdown\nversion: \"a3f9c812\"\ncontract-synced: [SPEC-none-001@deadbeef]\n```\n";
+    fs.writeFileSync(
+      file,
+      `---\nid: SPEC-hsrv-050\ncomponent: hub/server\nabbrev: x\nstatus: active\naliases: []\n---${body}`
+    );
+
+    const result = run(["version", file], root);
+    expect(result.code).toBe(0);
+    const content = fs.readFileSync(file, "utf8");
+    // Quoted example untouched; real version inserted into the frontmatter.
+    expect(content).toContain('version: "a3f9c812"\ncontract-synced: [SPEC-none-001@deadbeef]');
+    const fmMatch = /^---\n([\s\S]*?)\n---/.exec(content)!;
+    expect(fmMatch[1]).toMatch(/version: "[0-9a-f]{8}"/);
+    // check ignores the quoted contract example — clean exit.
+    expect(run(["check", file], root).code).toBe(0);
+    // Idempotent.
+    expect(run(["version", file], root).stdout).toBe("");
+  });
+
   it("check: flags self-stamps as non-convergent", () => {
     const root = makeProject();
     const contract = writeItem(
