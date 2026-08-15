@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseSpecs, parseGaps } from "./sdd-parser.js";
+import { parseSpecs, parseGaps, collectSpecsTree } from "./sdd-parser.js";
 
 // The component graph powering the hub's Map screen: one node per component
 // (derived from item `component:` paths — legacy flat domains are one-level
@@ -110,27 +110,14 @@ function parseManifest(filePath: string, dirPath: string): Manifest | null {
 }
 
 function collectManifests(specsDir: string): Manifest[] {
+  // collectSpecsTree is the single source for the specs-tree walk; this only
+  // parses what it classified as manifests.
+  const { manifestFiles } = collectSpecsTree(specsDir);
   const manifests: Manifest[] = [];
-  const walk = (dir: string, rel: string): void => {
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      if (e.isDirectory()) {
-        if (e.name !== "archive") walk(path.join(dir, e.name), rel ? `${rel}/${e.name}` : e.name);
-        continue;
-      }
-      if (e.name === "component.md" && rel) {
-        const parsed = parseManifest(path.join(dir, e.name), rel);
-        if (parsed) manifests.push(parsed);
-      }
-    }
-  };
-  walk(specsDir, "");
-  manifests.sort((a, b) => a.dirPath.localeCompare(b.dirPath));
+  for (const { componentPath, filePath } of manifestFiles) {
+    const parsed = parseManifest(filePath, componentPath);
+    if (parsed) manifests.push(parsed);
+  }
   return manifests;
 }
 
@@ -187,30 +174,48 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
   // Binding status: compare each synced stamp against the referenced item's
   // current version. Derived here, never stored in the artifact.
   const itemByUpperId = new globalThis.Map<string, ItemInfo>(items.map((i) => [i.id.toUpperCase(), i]));
-  const inSubtreeOf = (root: string, componentPath: string): boolean =>
+  const inSubtree = (root: string, componentPath: string): boolean =>
     componentPath === root || componentPath.startsWith(root + "/");
 
-  const bindingStatus = (producer: string, contract: ItemContract): BindingStatus => {
+  const bindingStatus = (contractId: string, producer: string, contract: ItemContract): BindingStatus => {
+    // Scan every entry and report the most actionable state: a definite
+    // producer/consumer drift beats an unknown — an early return on the first
+    // oddity would let a third-party or missing entry mask a real drift.
+    let producerDrift = false;
+    let consumerDrift = false;
     let sawUnknown = false;
+    let sawEntry = false;
     for (const entry of contract.synced) {
+      // A self-stamp can never converge (writing the stamp changes the hash
+      // the stamp would need to record) — ignored here; sdd-doctor flags it.
+      if (entry.item.toUpperCase() === contractId.toUpperCase()) continue;
+      sawEntry = true;
       const current = itemByUpperId.get(entry.item.toUpperCase());
       if (!current) {
         sawUnknown = true;
         continue;
       }
       if (current.version.toLowerCase() !== entry.stamp.toLowerCase()) {
-        if (inSubtreeOf(producer, current.component)) return "producer-drifted";
-        if (inSubtreeOf(contract.consumer, current.component)) return "consumer-drifted";
-        return "unknown";
+        if (inSubtree(producer, current.component)) producerDrift = true;
+        else if (inSubtree(contract.consumer, current.component)) consumerDrift = true;
+        else sawUnknown = true;
       }
     }
+    // Zero usable entries means the binding was never verified — fail closed.
+    if (!sawEntry) return "unknown";
+    if (producerDrift) return "producer-drifted";
+    if (consumerDrift) return "consumer-drifted";
     return sawUnknown ? "unknown" : "in-sync";
   };
 
-  const manifestByPath = new Map(manifests.map((m) => [m.dirPath, m]));
+  // One derivation per contract item — the node summary and the edge must
+  // never disagree about the same binding.
+  const statusByContractItem = new globalThis.Map<string, BindingStatus>();
+  for (const i of items) {
+    if (i.contract) statusByContractItem.set(i.id, bindingStatus(i.id, i.component, i.contract));
+  }
 
-  const inSubtree = (nodePath: string, componentPath: string): boolean =>
-    componentPath === nodePath || componentPath.startsWith(nodePath + "/");
+  const manifestByPath = new Map(manifests.map((m) => [m.dirPath, m]));
 
   const openGaps = gaps.filter((g) => g.status === "open");
 
@@ -238,7 +243,7 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
           .map((i) => ({
             item: i.id,
             consumer: i.contract!.consumer,
-            status: bindingStatus(p, i.contract!),
+            status: statusByContractItem.get(i.id) ?? "unknown",
           })),
       };
     });
@@ -247,7 +252,9 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
   // stays visible on the node's own dependsOn list but draws nothing.
   const edges: ComponentEdge[] = [];
   for (const m of manifests) {
-    for (const target of m.dependsOn) {
+    // Deduped: a repeated depends-on entry must not produce duplicate edges
+    // (and duplicate React keys downstream).
+    for (const target of new Set(m.dependsOn)) {
       if (nodePaths.has(target)) {
         edges.push({ from: m.dirPath, to: target, kind: "depends-on" });
       }
@@ -264,7 +271,7 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
       to: i.component,
       kind: "contract",
       contractItem: i.id,
-      status: bindingStatus(i.component, i.contract),
+      status: statusByContractItem.get(i.id) ?? "unknown",
     });
   }
 

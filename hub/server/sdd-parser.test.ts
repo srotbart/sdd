@@ -457,6 +457,21 @@ describe("parseTargets", () => {
   });
 });
 
+describe("frontmatter inline-comment handling", () => {
+  it("keeps ' #' in free-text fields while stripping it from structural ones", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-arch-777.md"),
+      `---\nid: GAP-arch-777\nspec-item: SPEC-arch-001\ncomponent: architecture   # structural comment\nstatus: deferred\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: blocked by upstream #123\n---\n\n# Gap: g\n\n**Location:** x:1\n**Reasoning:** r\n`
+    );
+
+    const gaps = parseGaps(root);
+    const gap = gaps.find((g) => g.id === "GAP-arch-777");
+    expect(gap?.domain).toBe("architecture");
+    expect(gap?.deferredReason).toBe("blocked by upstream #123");
+  });
+});
+
 describe("component: frontmatter compatibility (review fixes)", () => {
   it("parseGaps reads component: as the domain, falling back to legacy domain:", () => {
     const root = makeGapsSddDir();

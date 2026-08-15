@@ -113,19 +113,31 @@ id: SPEC-hsrv-012
 component: hub/server              # the producer — the item lives here
 ...
 contract-consumer: hub/client
-contract-synced: [SPEC-hsrv-012@a3f9c812, SPEC-hcli-004@9921bc0d]
+contract-synced: [SPEC-hsrv-020@a3f9c812, SPEC-hcli-004@9921bc0d]
 ---
 ```
 
-Each `contract-synced` entry is `{spec-item-id}@{version-hash}`. **Binding
-status is derived, never stored** — compare each stamp against the referenced
-item's current `version`:
+Each `contract-synced` entry is `{spec-item-id}@{version-hash}` and references
+the **other** spec items forming the contract's endpoints. **Never stamp the
+contract item itself** — a self-stamp is mathematically unable to converge
+(writing the stamp changes the file, which changes the hash the stamp would
+need to record). The contract item's own edits need no stamp: editing the
+promise *is* the re-verification event, and the re-stamp of the other
+endpoints happens in that same write. Readers ignore self-stamps; sdd-doctor
+flags them as malformed.
+
+**Binding status is derived, never stored** — compare each stamp against the
+referenced item's current `version`:
 
 - all match → **in-sync**
 - a producer-side item drifted → **producer-drifted**; a consumer-side item
   drifted → **consumer-drifted** (side = whether the drifted item's component
-  sits under the contract's component or under `contract-consumer`)
+  sits under the contract's component or under `contract-consumer`). A
+  definite drift always outranks an unknown — every entry is checked before
+  the status is decided.
 - a referenced item can't be found → **unknown** (surfaced, never guessed)
+- zero usable entries (empty or all-malformed `contract-synced`) → **unknown**
+  — an unverified binding is never reported in-sync
 
 **Re-syncing:** when an edge drifts, re-verify the contract against both sides
 (does the promise still hold as stated?), update the invariant if needed, then

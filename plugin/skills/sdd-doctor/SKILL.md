@@ -128,8 +128,10 @@ For every contract item (frontmatter `contract-consumer` +
 
 - **Malformed bindings are reported:** a `contract-consumer` naming no known
   component, a `contract-synced` entry that doesn't parse as
-  `{spec-item-id}@{hash}`, or a referenced spec item that can't be found
-  (active, alias, or tracked spec archive).
+  `{spec-item-id}@{hash}`, a **self-stamp** (the contract item referencing
+  itself — can never converge; see the spec guide), an empty
+  `contract-synced`, or a referenced spec item that can't be found (active,
+  alias, or tracked spec archive).
 - **Drift is reported, never fixed:** compare each stamp to the referenced
   item's current `version`. Producer- or consumer-drifted bindings route to
   the worker — re-stamping requires re-verifying the contract against both

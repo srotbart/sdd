@@ -27,6 +27,14 @@ interface Spec {
   items: SpecItem[];
 }
 
+// Keys whose values are identifiers/enums/paths — safe (and documented) to
+// carry inline # comments. Free-text keys are deliberately absent.
+const STRUCTURAL_KEYS = new Set([
+  "id", "component", "domain", "abbrev", "status", "version", "aliases",
+  "scope", "spec-item", "gap-id", "audit-spec-version", "closed-by",
+  "contract-consumer", "contract-synced", "created", "discovered", "design",
+]);
+
 function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
   if (!content.startsWith("---")) {
     return { meta: {}, body: content };
@@ -42,13 +50,15 @@ function parseFrontmatter(content: string): { meta: Record<string, string>; body
     const colon = line.indexOf(":");
     if (colon === -1) continue;
     const key = line.slice(0, colon).trim();
-    // Strip inline comments ("component: hub/server  # note") — the artifact
-    // templates show them, so copied-verbatim files must still parse clean.
-    const val = line
-      .slice(colon + 1)
-      .replace(/\s+#.*$/, "")
-      .trim()
-      .replace(/^["']|["']$/g, "");
+    // Strip inline comments ("component: hub/server  # note") on STRUCTURAL
+    // keys only — the artifact templates show them there. Free-text fields
+    // (reasons, titles) may legitimately contain " #" (issue refs) and must
+    // never be truncated.
+    let raw = line.slice(colon + 1);
+    if (STRUCTURAL_KEYS.has(key)) {
+      raw = raw.replace(/\s+#.*$/, "");
+    }
+    const val = raw.trim().replace(/^["']|["']$/g, "");
     meta[key] = val;
   }
   return { meta, body };
@@ -162,10 +172,12 @@ interface Target {
   dialog: DialogTurn[];
 }
 
-// Derives a short abbreviation from a domain slug ("ui-screens" → "uisc").
+// Derives a short abbreviation from a domain slug ("ui-screens" → "uisc") or a
+// component path ("hub/client/screens" → the last segment's abbrev, "sc").
 // Intentionally mirrored in hub/client/src/App.tsx > mapApiTarget; keep in sync.
 function deriveDomainAbbrev(domain: string): string {
-  return domain.split("-").map((p) => p.slice(0, 2)).join("").slice(0, 6) || domain;
+  const leaf = domain.split("/").filter(Boolean).pop() ?? domain;
+  return leaf.split("-").map((p) => p.slice(0, 2)).join("").slice(0, 6) || leaf;
 }
 
 function parseTargetFile(filePath: string): Target | null {
@@ -553,18 +565,20 @@ export function parseStandards(sddPath: string): StandardsFile[] {
 export function collectSpecsTree(specsDir: string): {
   specFiles: string[];
   mappingFiles: Array<{ abbrev: string; filePath: string }>;
+  manifestFiles: Array<{ componentPath: string; filePath: string }>;
 } {
   const specFiles: string[] = [];
   const mappingFiles: Array<{ abbrev: string; filePath: string }> = [];
+  const manifestFiles: Array<{ componentPath: string; filePath: string }> = [];
 
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(specsDir, { withFileTypes: true });
   } catch {
-    return { specFiles, mappingFiles };
+    return { specFiles, mappingFiles, manifestFiles };
   }
 
-  const walk = (dir: string): void => {
+  const walk = (dir: string, rel: string): void => {
     let dirEntries: fs.Dirent[];
     try {
       dirEntries = fs.readdirSync(dir, { withFileTypes: true });
@@ -573,7 +587,11 @@ export function collectSpecsTree(specsDir: string): {
     }
     for (const e of dirEntries) {
       if (e.isDirectory()) {
-        if (e.name !== "archive") walk(path.join(dir, e.name));
+        if (e.name !== "archive") walk(path.join(dir, e.name), rel ? `${rel}/${e.name}` : e.name);
+        continue;
+      }
+      if (e.name === "component.md" && rel) {
+        manifestFiles.push({ componentPath: rel, filePath: path.join(dir, e.name) });
         continue;
       }
       const mappingMatch = /^SPEC-(.+)\.tests\.json$/i.exec(e.name);
@@ -589,12 +607,13 @@ export function collectSpecsTree(specsDir: string): {
 
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name === "archive") continue;
-    walk(path.join(specsDir, entry.name));
+    walk(path.join(specsDir, entry.name), entry.name);
   }
 
   specFiles.sort();
   mappingFiles.sort((a, b) => a.filePath.localeCompare(b.filePath));
-  return { specFiles, mappingFiles };
+  manifestFiles.sort((a, b) => a.componentPath.localeCompare(b.componentPath));
+  return { specFiles, mappingFiles, manifestFiles };
 }
 
 export function parseSpecs(sddPath: string): Spec[] {

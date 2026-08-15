@@ -84,7 +84,10 @@ function parseFrontmatter(content) {
 
 function field(fm, name) {
   const m = fm.match(new RegExp(`^${name}:\\s*(.+)$`, 'm'));
-  return m ? m[1].trim().replace(/^["']|["']$/g, '') : null;
+  if (!m) return null;
+  // Strip inline comments — the artifact templates show them on these fields
+  // ("status: active        # active | deprecated | aliased").
+  return m[1].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
 }
 
 /**

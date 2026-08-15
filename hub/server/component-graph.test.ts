@@ -139,6 +139,68 @@ describe("buildComponentGraph", () => {
     expect(byItem.get("SPEC-HSRV-021")).toBe("unknown");
   });
 
+  it("treats an empty or all-self-stamped contract-synced as unknown, never in-sync", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    // Only a self-stamp: ignored (can never converge), so zero usable entries.
+    fs.writeFileSync(
+      path.join(dir, "SPEC-hsrv-030.md"),
+      `---\nid: SPEC-hsrv-030\ncomponent: hub/server\nabbrev: hsrv\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [SPEC-hsrv-030@aaaaaaaa]\nversion: "aaaaaaaa"\n---\n\n# SPEC-hsrv-030 — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-001");
+
+    const graph = buildComponentGraph(sddPath);
+    const edge = graph.edges.find((e) => e.contractItem === "SPEC-HSRV-030");
+    expect(edge?.status).toBe("unknown");
+  });
+
+  it("a definite drift outranks an unknown entry regardless of order", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    // First entry unresolvable, second a real producer-side drift.
+    fs.writeFileSync(
+      path.join(dir, "SPEC-hsrv-031.md"),
+      `---\nid: SPEC-hsrv-031\ncomponent: hub/server\nabbrev: hsrv\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [SPEC-none-999@12345678, SPEC-hsrv-001@ffffffff]\nversion: "aaaaaaaa"\n---\n\n# SPEC-hsrv-031 — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    writeItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001"); // version 00000000 ≠ ffffffff
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-001");
+
+    const graph = buildComponentGraph(sddPath);
+    const edge = graph.edges.find((e) => e.contractItem === "SPEC-HSRV-031");
+    expect(edge?.status).toBe("producer-drifted");
+  });
+
+  it("dedupes repeated depends-on entries into a single edge", () => {
+    const sddPath = makeSdd();
+    writeItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001");
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-001");
+    writeManifest(sddPath, "hub/client", "hcli", ["hub/server", "hub/server"]);
+
+    const graph = buildComponentGraph(sddPath);
+    expect(graph.edges.filter((e) => e.kind === "depends-on")).toHaveLength(1);
+  });
+
+  it("strips inline comments from manifest and item structural fields", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "SPEC-hsrv-001.md"),
+      `---\nid: SPEC-hsrv-001\ncomponent: hub/server   # the producer\nabbrev: hsrv\nstatus: active   # active | deprecated | aliased\naliases: []\nversion: "00000000"\n---\n\n# SPEC-hsrv-001 — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.writeFileSync(
+      path.join(dir, "component.md"),
+      `---\ncomponent: hub/server   # full path\nabbrev: hsrv   # shorthand\nscope: [src/**]\ndepends-on: []\n---\n\n# hub/server\n\nDesc.\n`
+    );
+
+    const graph = buildComponentGraph(sddPath);
+    const server = graph.nodes.find((n) => n.path === "hub/server");
+    expect(server?.itemCount).toBe(1);
+    expect(server?.abbrev).toBe("hsrv");
+  });
+
   it("returns an empty graph for a missing specs directory", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-graph-empty-"));
     const graph = buildComponentGraph(path.join(root, ".sdd"));
