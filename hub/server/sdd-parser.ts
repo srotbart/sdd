@@ -529,9 +529,11 @@ export function parseSpecs(sddPath: string): Spec[] {
   // Components nest to any depth — walk the whole tree, skipping `archive`
   // dirs at every level. Legacy flat/subject layouts are shallow trees and
   // parse identically. Mapping files (SPEC-{abbrev}.tests.json) are collected
-  // wherever they sit and matched to items by abbrev.
+  // wherever they sit; several may share an abbrev (a documented
+  // misconfiguration), so all candidates are kept and disambiguated by
+  // directory proximity to the item.
   const specFilePaths: string[] = [];
-  const mappingPathsByAbbrev = new Map<string, string>();
+  const mappingFiles: Array<{ abbrev: string; filePath: string }> = [];
 
   const walk = (dir: string): void => {
     let dirEntries: fs.Dirent[];
@@ -545,9 +547,9 @@ export function parseSpecs(sddPath: string): Spec[] {
         if (e.name !== "archive") walk(path.join(dir, e.name));
         continue;
       }
-      const mappingMatch = /^SPEC-([a-z0-9-]+)\.tests\.json$/.exec(e.name);
+      const mappingMatch = /^SPEC-(.+)\.tests\.json$/i.exec(e.name);
       if (mappingMatch) {
-        mappingPathsByAbbrev.set(mappingMatch[1], path.join(dir, e.name));
+        mappingFiles.push({ abbrev: mappingMatch[1].toLowerCase(), filePath: path.join(dir, e.name) });
         continue;
       }
       if (e.name.startsWith("SPEC-") && e.name.endsWith(".md")) {
@@ -561,6 +563,16 @@ export function parseSpecs(sddPath: string): Spec[] {
     walk(path.join(specsDir, entry.name));
   }
 
+  // Deterministic order regardless of readdir order.
+  specFilePaths.sort();
+  mappingFiles.sort((a, b) => a.filePath.localeCompare(b.filePath));
+
+  // Per-item metadata needed after grouping: the frontmatter abbrev (the
+  // authoritative mapping-file key — item IDs may use a different shorthand,
+  // e.g. `id: SPEC-scr-001` under `abbrev: ui-screens`) and the item's
+  // directory (for proximity disambiguation).
+  const itemMeta = new Map<string, { abbrev: string; dir: string }>();
+
   for (const filePath of specFilePaths) {
     const parsed = parseSpecItemFile(filePath);
     if (!parsed) continue;
@@ -570,54 +582,84 @@ export function parseSpecs(sddPath: string): Spec[] {
       spec = { id: `SPEC-${parsed.abbrev}`, domain: parsed.domain, abbrev: parsed.abbrev, items: [] };
       specsByDomain.set(parsed.domain, spec);
     }
+    itemMeta.set(parsed.id, { abbrev: parsed.abbrev.toLowerCase(), dir: path.dirname(filePath) });
     const { domain: _d, abbrev: _a, ...item } = parsed;
     spec.items.push(item);
   }
 
-  const loadMapping = (mappingPath: string): TestMapping | null => {
-    let raw: string;
+  // A multi-component area holds items with several abbrevs; naming the group
+  // after whichever file parsed first would be arbitrary. When abbrevs are
+  // mixed, name the group after the area itself.
+  for (const spec of specsByDomain.values()) {
+    const abbrevs = new Set(spec.items.map((i) => itemMeta.get(i.id)?.abbrev ?? spec.abbrev.toLowerCase()));
+    if (abbrevs.size > 1) {
+      spec.abbrev = spec.domain;
+      spec.id = `SPEC-${spec.domain}`;
+    }
+  }
+
+  const mappingCache = new Map<string, { mapping: TestMapping; report: ParsedReport | null } | null>();
+  const loadMappingWithReport = (mappingPath: string): { mapping: TestMapping; report: ParsedReport | null } | null => {
+    if (mappingCache.has(mappingPath)) return mappingCache.get(mappingPath) ?? null;
+    let resolved: { mapping: TestMapping; report: ParsedReport | null } | null = null;
+    let raw: string | null = null;
     try {
       raw = fs.readFileSync(mappingPath, "utf8");
     } catch {
-      return null;
+      raw = null;
     }
-    return validateTestMapping(raw);
+    const mapping = raw === null ? null : validateTestMapping(raw);
+    if (mapping) {
+      const absReport = path.isAbsolute(mapping.report)
+        ? mapping.report
+        : path.join(workspaceRoot, mapping.report);
+      const report = mapping.runner === "vitest"
+        ? parseVitestReport(absReport)
+        : parseSurefireReports(absReport);
+      resolved = { mapping, report };
+    }
+    mappingCache.set(mappingPath, resolved);
+    return resolved;
+  };
+
+  // Length of the shared leading path between a mapping file's directory and
+  // an item's directory — the mapping sitting next to (or above) the item wins.
+  const proximity = (mappingPath: string, itemDir: string): number => {
+    const a = path.dirname(mappingPath).split(path.sep);
+    const b = itemDir.split(path.sep);
+    let n = 0;
+    while (n < a.length && n < b.length && a[n] === b[n]) n++;
+    return n;
   };
 
   for (const spec of specsByDomain.values()) {
     spec.items.sort((a, b) => a.id.localeCompare(b.id));
 
-    // Nested trees can hold one mapping file per component; resolve each
-    // item against the mapping for its own abbrev, falling back to the
-    // group's legacy mapping location.
-    const mappingCache = new Map<string, { mapping: TestMapping; report: ParsedReport | null } | null>();
-    const resolveForAbbrev = (abbrev: string): { mapping: TestMapping; report: ParsedReport | null } | null => {
-      if (mappingCache.has(abbrev)) return mappingCache.get(abbrev) ?? null;
-      const discovered = mappingPathsByAbbrev.get(abbrev);
-      const mapping = discovered
-        ? loadMapping(discovered)
-        : readTestMapping(sddPath, abbrev, spec.domain);
-      let resolved: { mapping: TestMapping; report: ParsedReport | null } | null = null;
-      if (mapping) {
-        const absReport = path.isAbsolute(mapping.report)
-          ? mapping.report
-          : path.join(workspaceRoot, mapping.report);
-        const report = mapping.runner === "vitest"
-          ? parseVitestReport(absReport)
-          : parseSurefireReports(absReport);
-        resolved = { mapping, report };
-      }
-      mappingCache.set(abbrev, resolved);
-      return resolved;
-    };
-
     for (const item of spec.items) {
       // Preserve skip state set by parseSpecItemFile — do not overwrite with computed status
       if (item.testStatus.status === "skipped") continue;
-      const abbrevMatch = /^SPEC-([a-z0-9-]+)-/i.exec(item.id);
-      const itemAbbrev = abbrevMatch ? abbrevMatch[1].toLowerCase() : spec.abbrev;
-      const resolved = resolveForAbbrev(itemAbbrev);
-      item.testStatus = computeTestStatus(item.id, resolved?.mapping ?? null, resolved?.report ?? null);
+
+      const meta = itemMeta.get(item.id);
+      const idMatch = /^SPEC-([a-z0-9-]+)-[a-z0-9]+$/i.exec(item.id);
+      // Candidate mapping keys: the frontmatter abbrev first (authoritative),
+      // then the ID-derived shorthand (covers mappings named after the ID form).
+      const candidates = new Set<string>();
+      if (meta) candidates.add(meta.abbrev);
+      if (idMatch) candidates.add(idMatch[1].toLowerCase());
+
+      const matches = mappingFiles.filter((m) => candidates.has(m.abbrev));
+      let best: { mapping: TestMapping; report: ParsedReport | null } | null = null;
+      if (matches.length > 0 && meta) {
+        matches.sort((a, b) => proximity(b.filePath, meta.dir) - proximity(a.filePath, meta.dir));
+        for (const m of matches) {
+          best = loadMappingWithReport(m.filePath);
+          if (best) break;
+        }
+      } else if (matches.length > 0) {
+        best = loadMappingWithReport(matches[0].filePath);
+      }
+
+      item.testStatus = computeTestStatus(item.id, best?.mapping ?? null, best?.report ?? null);
     }
   }
 
@@ -671,7 +713,16 @@ function validateTestMapping(raw: string): TestMapping | null {
   if (m["runner"] !== "vitest" && m["runner"] !== "maven") return null;
   if (typeof m["report"] !== "string") return null;
   if (typeof m["items"] !== "object" || m["items"] === null || Array.isArray(m["items"])) return null;
-  return parsed as TestMapping;
+  // Every items value must be an array of strings — computeTestStatus calls
+  // .map on it. Drop malformed entries rather than rejecting the whole file.
+  const items = m["items"] as Record<string, unknown>;
+  const cleaned: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(items)) {
+    if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+      cleaned[key] = value as string[];
+    }
+  }
+  return { runner: m["runner"], report: m["report"], items: cleaned } as TestMapping;
 }
 
 export function readTestMapping(sddPath: string, abbrev: string, domain: string): TestMapping | null {

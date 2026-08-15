@@ -7,24 +7,24 @@ const DEBOUNCE_MS = 200;
 function readReportPaths(sddPath: string): Set<string> {
   const specsDir = path.join(sddPath, "specs");
   const reportPaths = new Set<string>();
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(specsDir, { withFileTypes: true });
-  } catch {
-    return reportPaths;
-  }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const domainDir = path.join(specsDir, entry.name);
-    let files: string[];
+
+  // Mapping files live anywhere in the component tree (next to the items they
+  // map), so walk recursively — mirroring parseSpecs — skipping `archive/`.
+  const walk = (dir: string): void => {
+    let entries: fs.Dirent[];
     try {
-      files = fs.readdirSync(domainDir).filter((f) => f.endsWith(".tests.json"));
+      entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
-      continue;
+      return;
     }
-    for (const file of files) {
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (entry.name !== "archive") walk(path.join(dir, entry.name));
+        continue;
+      }
+      if (!entry.name.endsWith(".tests.json")) continue;
       try {
-        const raw = fs.readFileSync(path.join(domainDir, file), "utf8");
+        const raw = fs.readFileSync(path.join(dir, entry.name), "utf8");
         const mapping = JSON.parse(raw) as { report?: unknown };
         if (typeof mapping.report === "string" && mapping.report) {
           reportPaths.add(mapping.report);
@@ -33,7 +33,9 @@ function readReportPaths(sddPath: string): Set<string> {
         // skip malformed mapping files
       }
     }
-  }
+  };
+
+  walk(specsDir);
   return reportPaths;
 }
 

@@ -480,3 +480,90 @@ describe("parseSpecs — recursive component tree", () => {
     expect(item?.testStatus.status).toBe("not-run");
   });
 });
+
+describe("parseSpecs — mapping resolution edge cases (review fixes)", () => {
+  it("resolves the mapping via the frontmatter abbrev when it differs from the ID shorthand", () => {
+    // Real-world shape from this repo: ui-screens items have id SPEC-scr-* but
+    // abbrev ui-screens, and the mapping file is SPEC-ui-screens.tests.json.
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    fs.mkdirSync(path.join(sddPath, "specs", "ui-screens"), { recursive: true });
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "ui-screens", "SPEC-scr-001.md"),
+      `---\nid: SPEC-scr-001\ndomain: ui-screens\nabbrev: ui-screens\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-scr-001 — Screen item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.writeFileSync(path.join(workspaceRoot, "report.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "ui-screens", "SPEC-ui-screens.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-scr-001": ["Node.js server starts correctly"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "ui-screens")?.items[0];
+    expect(item?.testStatus.status).toBe("passing");
+  });
+
+  it("disambiguates duplicate-abbrev mapping files by directory proximity", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    const mk = (component: string, id: string) => {
+      const dir = path.join(sddPath, "specs", component);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, `${id}.md`),
+        `---\nid: ${id}\ncomponent: ${component}\nabbrev: api\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# ${id} — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+      );
+    };
+    mk("hub/api", "SPEC-api-001");
+    mk("pipeline/api", "SPEC-api-002");
+    fs.writeFileSync(path.join(workspaceRoot, "pass.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(path.join(workspaceRoot, "fail.json"), VITEST_REPORT_WITH_FAILURE);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "api", "SPEC-api.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "pass.json", items: { "SPEC-api-001": ["Node.js server starts correctly"] } })
+    );
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "pipeline", "api", "SPEC-api.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "fail.json", items: { "SPEC-api-002": ["React frontend renders"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const hubItem = specs.find((s) => s.domain === "hub")?.items[0];
+    const pipeItem = specs.find((s) => s.domain === "pipeline")?.items[0];
+    expect(hubItem?.testStatus.status).toBe("passing");
+    expect(pipeItem?.testStatus.status).toBe("failing");
+  });
+
+  it("drops mapping entries whose value is not a string array instead of crashing", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Item", "## Invariant\nx\n\n## Acceptance criteria\n- x");
+    fs.writeFileSync(path.join(workspaceRoot, "report.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "architecture", "SPEC-arch.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-arch-001": "not an array" } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "architecture")?.items[0];
+    // Malformed entry is dropped; the mapping itself survives, so the item is
+    // "missing" (report ran, no valid mapping entry) rather than a crash.
+    expect(item?.testStatus.status).toBe("missing");
+  });
+
+  it("names a mixed-abbrev area group after the area, deterministically", () => {
+    const { sddPath } = makeWorkspace();
+    const mk = (component: string, abbrev: string, id: string) => {
+      const dir = path.join(sddPath, "specs", component);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, `${id}.md`),
+        `---\nid: ${id}\ncomponent: ${component}\nabbrev: ${abbrev}\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# ${id} — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+      );
+    };
+    mk("hub/server", "hsrv", "SPEC-hsrv-001");
+    mk("hub/client", "hcli", "SPEC-hcli-001");
+
+    const specs = parseSpecs(sddPath);
+    const hub = specs.find((s) => s.domain === "hub");
+    expect(hub?.abbrev).toBe("hub");
+    expect(hub?.id).toBe("SPEC-hub");
+  });
+});
