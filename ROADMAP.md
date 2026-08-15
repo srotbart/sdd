@@ -78,6 +78,13 @@ Active targets, roughly ordered by how settled they are:
 
 ## Later / Aspirational
 
+- **Artifact CLI for agents** — a command-line tool the agents use to operate on SDD
+  artifacts (query state, mint IDs, create/update/close/archive gaps and work items,
+  recompute version hashes, resolve references) instead of manually globbing and
+  editing files. Skills shrink to intent and judgement; the mechanical file
+  conventions (frontmatter schemas, commit-before-archive, hash recomputation,
+  depth-agnostic scans) move into one deterministic, testable surface that the hub
+  and statusline can share.
 - **TGT-095 — Organic knowledge base for the worker** _(knowledge-base)_
   A graph + semantic-search store the worker queries before searching the codebase and
   writes back what it learns. Opens a new domain; storage tech, access surface, and
