@@ -135,7 +135,10 @@ function mapApiWorkItem(raw: Record<string, unknown>): WorkItem {
 // Derives a short abbreviation from a domain slug ("ui-screens" → "uisc").
 // Intentionally mirrored in hub/server/sdd-parser.ts > parseTargetFile; keep in sync.
 function deriveDomainAbbrev(domain: string): string {
-  return domain.split('-').map((p) => p.slice(0, 2)).join('').slice(0, 6) || domain;
+  // Component paths abbreviate from their last segment ("hub/client/screens" → "sc").
+  // Intentionally mirrored in hub/server/sdd-parser.ts > deriveDomainAbbrev; keep in sync.
+  const leaf = domain.split('/').filter(Boolean).pop() ?? domain;
+  return leaf.split('-').map((p) => p.slice(0, 2)).join('').slice(0, 6) || leaf;
 }
 
 function mapApiTarget(raw: Record<string, unknown>): Target {
