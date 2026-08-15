@@ -24,7 +24,7 @@ sdd-worker pattern) with `/sdd:sdd-doctor spawn`.
 
 ## The checks
 
-Run all nine, in order. Each check yields findings classified **mechanical**
+Run all ten, in order. Each check yields findings classified **mechanical**
 (the fix is unambiguous — apply it directly, except in `check` mode) or
 **judgement** (report; never guess).
 
@@ -121,7 +121,22 @@ every component directory containing spec items has a `component.md`.
 - **Mechanical fix:** none — write a missing manifest only if its content is
   fully derivable (path + abbrev shared by all member items); otherwise report.
 
-### 9. Leftover process files
+### 9. Binding drift and integrity
+
+For every contract item (frontmatter `contract-consumer` +
+`contract-synced`, see `references/artifacts/spec.md`):
+
+- **Malformed bindings are reported:** a `contract-consumer` naming no known
+  component, a `contract-synced` entry that doesn't parse as
+  `{spec-item-id}@{hash}`, or a referenced spec item that can't be found
+  (active, alias, or tracked spec archive).
+- **Drift is reported, never fixed:** compare each stamp to the referenced
+  item's current `version`. Producer- or consumer-drifted bindings route to
+  the worker — re-stamping requires re-verifying the contract against both
+  sides, which is verification work, not hygiene. The doctor only surfaces
+  the edge and which side moved.
+
+### 10. Leftover process files
 
 Flag lingering `COLLAPSE-*.md` / `MIGRATE-*.md` proposals older than 30 days,
 `.conflict.md` files whose target is no longer active, and `.tests.json`
@@ -144,6 +159,7 @@ crash consumers — report prominently).
 
 ### Stale (run the worker, not the doctor)
 - GAP-hcli-91bd202 stale vs SPEC-hcli-004 (a3f9c812 ≠ c4e1f205) → /sdd:spec-audit hub/client
+- binding SPEC-hsrv-012 → hub/client consumer-drifted (SPEC-hcli-004 9921bc0d ≠ c4e1f205) → re-verify + re-stamp
 
 ### Clean
 - {N} artifacts checked; structure, IDs, references OK

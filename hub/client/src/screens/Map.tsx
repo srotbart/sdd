@@ -14,11 +14,23 @@ export interface MapNode {
   uncovered: number;
   failing: number;
   dependsOn: string[];
+  contracts: MapContract[];
 }
+
+export type BindingStatus = 'in-sync' | 'producer-drifted' | 'consumer-drifted' | 'unknown';
 
 export interface MapEdge {
   from: string;
   to: string;
+  kind: 'depends-on' | 'contract';
+  contractItem?: string;
+  status?: BindingStatus;
+}
+
+export interface MapContract {
+  item: string;
+  consumer: string;
+  status: BindingStatus;
 }
 
 interface MapGraph {
@@ -34,6 +46,9 @@ interface MapProps {
 interface EdgePath {
   d: string;
   key: string;
+  kind: MapEdge['kind'];
+  status?: BindingStatus;
+  label: string;
 }
 
 function childrenOf(nodes: MapNode[], parentPath: string): MapNode[] {
@@ -161,8 +176,14 @@ export function Map({ workspaceId, refreshToken }: MapProps) {
         const bulge = 26 + (i % 3) * 12;
         i += 1;
         paths.push({
-          key: `${edge.from}→${edge.to}`,
+          key: `${edge.kind}:${edge.contractItem ?? ''}:${edge.from}→${edge.to}`,
           d: `M ${x1} ${y1} C ${x1 - bulge} ${y1}, ${x2 - bulge} ${y2}, ${x2} ${y2}`,
+          kind: edge.kind,
+          status: edge.status,
+          label:
+            edge.kind === 'contract'
+              ? `${edge.contractItem}: ${edge.from} → ${edge.to} (${edge.status})`
+              : `${edge.from} depends on ${edge.to}`,
         });
       }
       setEdgePaths(paths);
@@ -198,7 +219,14 @@ export function Map({ workspaceId, refreshToken }: MapProps) {
             </marker>
           </defs>
           {edgePaths.map((p) => (
-            <path key={p.key} d={p.d} className="map-edges__line" markerEnd="url(#map-arrow)" />
+            <path
+              key={p.key}
+              d={p.d}
+              className={`map-edges__line map-edges__line--${p.kind}${p.status ? ` map-edges__line--${p.status}` : ''}`}
+              markerEnd="url(#map-arrow)"
+            >
+              <title>{p.label}</title>
+            </path>
           ))}
         </svg>
         <div className="map-areas">
@@ -249,6 +277,22 @@ export function Map({ workspaceId, refreshToken }: MapProps) {
               <dt>manifest</dt>
               <dd>{selectedNode.hasManifest ? 'component.md' : 'none (derived from items)'}</dd>
             </div>
+            {selectedNode.contracts.length > 0 ? (
+              <div>
+                <dt>contracts (as producer)</dt>
+                <dd>
+                  <ul className="map-detail__contracts">
+                    {selectedNode.contracts.map((c) => (
+                      <li key={c.item}>
+                        <span className={`map-binding map-binding--${c.status}`} title={c.status} />
+                        {c.item} → {c.consumer}
+                        <span className="map-binding-status">{c.status}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </div>
+            ) : null}
           </dl>
         </aside>
       ) : null}

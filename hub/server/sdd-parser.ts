@@ -14,6 +14,10 @@ interface SpecItem {
   // Full component path (e.g. "hub/client/screens"). Legacy `domain:` items
   // get a one-segment path equal to the domain name.
   component?: string;
+  // Present on contract items: the binding to the consuming component, with
+  // endpoint-item version stamps from the last verification. Status is
+  // derived by comparing stamps to current versions — never stored.
+  contract?: { consumer: string; synced: Array<{ item: string; stamp: string }> };
 }
 
 interface Spec {
@@ -101,6 +105,19 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     ? { status: "skipped", skipReason: skipMatch[1].trim() }
     : { status: "not-run" };
 
+  // Contract binding: `contract-consumer` + inline `contract-synced` list of
+  // `{spec-item-id}@{version-hash}` stamps. Malformed entries are dropped.
+  let contract: SpecItem["contract"];
+  if (meta["contract-consumer"]) {
+    const synced: Array<{ item: string; stamp: string }> = [];
+    const rawSynced = (meta["contract-synced"] ?? "").replace(/^\[|\]$/g, "");
+    for (const entry of rawSynced.split(",")) {
+      const m = /^([A-Za-z0-9-]+)@([0-9a-fA-F]+)$/.exec(entry.trim());
+      if (m) synced.push({ item: m[1].toUpperCase(), stamp: m[2].toLowerCase() });
+    }
+    contract = { consumer: meta["contract-consumer"], synced };
+  }
+
   return {
     id: meta["id"].toUpperCase(),
     title,
@@ -112,6 +129,7 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     refs: parseRefs(bodyContent),
     testStatus,
     component: componentPath,
+    contract,
     // Grouping key: the area (first path segment). For legacy `domain:` items
     // the path has one segment, so this equals the old domain grouping.
     domain: componentPath.split("/")[0],
