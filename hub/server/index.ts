@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { getDb, getAllWorkspaces, getRecentWorkspaces, getWorkspaceById, updateWorkspace, insertWorkspace } from "./db/index.js";
 import { parseSpecs, parseTargets, parseGaps, parseWorkItems, parseIssues, parseImprovements, parseStandards } from "./sdd-parser.js";
+import { buildComponentGraph } from "./component-graph.js";
 import { attachUiWebSocketServer, broadcastUpdate, broadcastSddChanged } from "./ws-ui.js";
 import { getWorkspacesEnriched } from "./workspace-data.js";
 export type { WorkspaceCounts, WorkspaceData } from "./workspace-data.js";
@@ -231,6 +232,14 @@ async function handleApi(
     const ws = requireWorkspace(res, specsMatch[1]);
     if (!ws) { return true; }
     json(res, 200, parseSpecs(path.join(ws.path, ".sdd")));
+    return true;
+  }
+
+  const componentGraphMatch = /^\/workspaces\/([^/?]+)\/component-graph$/.exec(url);
+  if (method === "GET" && componentGraphMatch) {
+    const ws = requireWorkspace(res, componentGraphMatch[1]);
+    if (!ws) { return true; }
+    json(res, 200, buildComponentGraph(path.join(ws.path, ".sdd")));
     return true;
   }
 
