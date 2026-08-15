@@ -26,9 +26,12 @@ mkdir -p .sdd/targets/archive
 mkdir -p .sdd/specs
 mkdir -p .sdd/gaps/archive
 mkdir -p .sdd/work-items/archive
+mkdir -p .sdd/issues/archive
+mkdir -p .sdd/improvements/archive
+mkdir -p .sdd/standards
 ```
 
-No domain subdirectories are created up front — `.sdd/specs/{domain}/` and `.sdd/specs/{domain}/archive/` are created on demand by `target-engage` when the first spec item is written for a domain.
+No component directories are created up front — `.sdd/specs/{area}/{component}/` (with its `component.md` manifest and `archive/`) is created on demand by `target-engage` when the first spec item is written for a component. Components nest: sub-components are added later by splitting, which is a cheap `git mv` (IDs never change).
 
 ### 3. Scaffold a first target (if argument provided)
 
@@ -40,7 +43,7 @@ create `.sdd/targets/TGT-001.md` with that intent as the starting point:
 id: TGT-001
 status: awaiting-agent
 created: {today}
-domain: {inferred from intent}
+component: {inferred from intent}
 ---
 
 # Target: {intent}
@@ -66,11 +69,16 @@ If no argument was provided, skip this step.
 Created:
   .sdd/targets/       — user-written intent
   .sdd/targets/archive/
-  .sdd/specs/         — canonical specifications (durable)
+  .sdd/specs/         — canonical specifications (durable), organized as a
+                        component tree: areas contain components, components
+                        may nest
   .sdd/gaps/          — audit reports
   .sdd/gaps/archive/
   .sdd/work-items/    — tasks that close gaps
   .sdd/work-items/archive/
+  .sdd/issues/        — reviewer-flagged problems
+  .sdd/improvements/  — reviewer-proposed enhancements
+  .sdd/standards/     — user-authored coding standards (review rubric)
 
 [If target was scaffolded:]
   .sdd/targets/TGT-001.md — "{intent}" [awaiting-agent]
@@ -91,7 +99,7 @@ SDD separates **intent** from **execution**:
 - This phase requires judgment — it stays with you
 
 **Execution phase** (sdd-worker agent):
-- Once the spec is updated, run `/sdd:spawn-sdd-worker {domain}`
+- Once the spec is updated, run `/sdd:spawn-sdd-worker {component}`
 - The worker autonomously handles: spec audit → gap creation → work item closure
 - You are notified when it completes or hits a blocker
 

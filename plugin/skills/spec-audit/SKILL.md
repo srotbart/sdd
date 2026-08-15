@@ -6,7 +6,7 @@ version: 0.1.0
 
 # SDD Spec Audit
 
-Given a spec domain or a specific spec item, enumerate the relevant code paths,
+Given a component (or a specific spec item), enumerate the relevant code paths,
 reason about whether each invariant holds at each location, and write gap files
 for every divergence found. Every claim includes a one-line justification.
 Verifiability over vibes.
@@ -15,18 +15,25 @@ Verifiability over vibes.
 
 Accept one of:
 
-- **Domain name or spec file**: `authentication` or `SPEC-authentication` — audit all
-  active items in the domain
+- **Component path**: `hub/client` or an area like `hub` — audit all active items
+  in that component's subtree. A legacy flat domain name (`authentication`) is a
+  one-level component path and works identically.
 - **Spec item ID**: `SPEC-auth-003` — audit a single item only
-- **No argument**: if a single spec domain exists, default to it; otherwise ask
+- **No argument**: if a single top-level component exists, default to it; otherwise ask
 
 ## Procedure
 
 ### 1. Load the spec
 
-Glob `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` (skip `archive/` at either level). Read each active item file —
-parse frontmatter `id`, `status`, `version`, and the body. If auditing a single item,
-filter to that item only.
+Scan the component's subtree recursively — components may nest to any depth:
+
+```bash
+find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"
+```
+
+Read each active item file — parse frontmatter `id`, `status`, `version`,
+`component` (legacy `domain:` is read as the component path), and the body. If
+auditing a single item, filter to that item only.
 
 Each active spec item body must contain `## Invariant` and `## Acceptance criteria`
 sections. The audit reasons against the `## Invariant` section. If
@@ -41,8 +48,10 @@ written for a given spec item carries that item's `version` value as `audit-spec
 
 For each item being audited:
 
-a. **Extract keywords** from the item's statement — domain concepts, action verbs,
-   entity names (e.g., "MFA", "second factor", "admin", "session token").
+a. **Extract keywords** from the item's statement — subject-matter concepts, action
+   verbs, entity names (e.g., "MFA", "second factor", "admin", "session token").
+   The owning component's `component.md` `scope:` globs (when present) name the
+   code paths to search first.
 
 b. **Search the codebase** for those keywords:
    ```bash
@@ -88,7 +97,7 @@ referencing the same spec item.
   in which case update `file:line` and append a note to the reasoning.
 - **Existing open gap, now holds**: close it — set `status: closed`, set `closed-by`
   to the empty string (no work item closed it; the code was fixed outside the pipeline),
-  and move the file to `.sdd/gaps/archive/`.
+  commit the terminal state, then move the file to `.sdd/gaps/archive/`.
 - **New gap**: write a new gap file (see step 5).
 
 ### 5. Write new gap files
@@ -102,6 +111,7 @@ and are never renamed.
 
 Use the schema in `references/schemas.md` (Gaps section). Set:
 - `spec-item` — the spec item ID
+- `component` — the spec item's component path (its `component:` field, or legacy `domain:` value)
 - `status: open`
 - `discovered` — current ISO timestamp
 - `audit-spec-version` — the hash computed in step 1
@@ -142,17 +152,17 @@ Print a summary:
 
 ---
 2 new gaps, 1 existing gap refreshed, 2 locations hold.
-Next: Decompose gaps into work items. Run `/sdd:gap-to-work-items {domain}` to proceed.
+Next: Decompose gaps into work items. Run `/sdd:gap-to-work-items {component}` to proceed.
 ```
 
 Show holds alongside gaps — the audit is only credible if it demonstrates what was
 checked, not just what failed.
 
 The final line after `---` is conditional on the outcome:
-- **Gaps found:** `Run \`/sdd:gap-to-work-items {domain}\` to decompose into work items.`
-- **No gaps found:** `Run \`/sdd:spec-test {domain}\` to add test coverage.`
+- **Gaps found:** `Run \`/sdd:gap-to-work-items {component}\` to decompose into work items.`
+- **No gaps found:** `Run \`/sdd:spec-test {component}\` to add test coverage.`
 
-Substitute the actual domain abbreviation (e.g., `architecture`, `auth`) for `{domain}`.
+Substitute the audited component path (e.g., `hub/client`, `authentication`) for `{component}`.
 
 ## Constraints
 

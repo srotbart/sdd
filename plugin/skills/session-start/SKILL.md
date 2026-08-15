@@ -29,10 +29,10 @@ Then write your first target at .sdd/targets/TGT-001.md and run
 
 Read the following, skipping any `archive/` subdirectory:
 
-- `.sdd/targets/*.md` — parse `id`, `status`, `domain`, first `# Target:` heading, and optional `design:` frontmatter field
-- `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` — for each domain subdirectory, glob both patterns (skip `archive/` at either level); parse `id`, `domain`, `abbrev`, `version`; count items with a `**Tests:**` block
-- `.sdd/gaps/*.md` — parse `id`, `spec-item`, `domain`, `status`, `audit-spec-version`
-- `.sdd/work-items/*.md` — parse `id`, `gap-id`, `domain`, `status`
+- `.sdd/targets/*.md` — parse `id`, `status`, `component` (legacy `domain:` accepted), first `# Target:` heading, and optional `design:` frontmatter field
+- `.sdd/specs/**/SPEC-*.md` — scan the component tree recursively (components may nest to any depth; skip `archive/` at every level): `find .sdd/specs -name "SPEC-*.md" ! -path "*/archive/*"`; parse `id`, `component` (legacy `domain:` accepted), `abbrev`, `version`; count items with a `**Tests:**` block
+- `.sdd/gaps/*.md` — parse `id`, `spec-item`, `component` (legacy `domain:`), `status`, `audit-spec-version`
+- `.sdd/work-items/*.md` — parse `id`, `gap-id`, `component` (legacy `domain:`), `status`
 - `.sdd/design/*/design.md` — for each design directory, extract the design name (the directory component between `design/` and `/design.md`); collect the set of design names referenced by any target's `design:` frontmatter field; a design is "in progress without a target" when its name does not appear in any target's `design:` field
 
 ### 3. Detect stale gap audits
@@ -40,12 +40,11 @@ Read the following, skipping any `archive/` subdirectory:
 For each open gap, look up the referenced spec item file and read its `version` field from frontmatter:
 
 ```bash
-# spec items may live at domain root or one level deeper in a subject subdirectory
-grep "^version:" .sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md 2>/dev/null | head -1 || \
-  grep "^version:" .sdd/specs/{domain}/*/SPEC-{abbrev}-{seq}.md 2>/dev/null | head -1
+# spec items live anywhere in the component tree — resolve by recursive scan
+grep "^version:" "$(find .sdd/specs -name "SPEC-{abbrev}-{seq}.md" ! -path "*/archive/*" | head -1)" 2>/dev/null | head -1
 ```
 
-Mark a gap as stale when its `audit-spec-version` does not match the `version` field of the spec item file it references. For each stale gap, emit one warning naming the specific gap ID and the specific spec item ID it was generated against (e.g. `⚠ GAP-auth-001 is stale: audit-spec-version a3f9c812 ≠ SPEC-auth-001 version c4e1f205`). Collect the list of stale domains for the next-action footer.
+Mark a gap as stale when its `audit-spec-version` does not match the `version` field of the spec item file it references. For each stale gap, emit one warning naming the specific gap ID and the specific spec item ID it was generated against (e.g. `⚠ GAP-auth-001 is stale: audit-spec-version a3f9c812 ≠ SPEC-auth-001 version c4e1f205`). Collect the list of stale components for the next-action footer.
 
 If the Bash tool is unavailable, compare each gap's `discovered` timestamp against the spec item file's modification time as a fallback indicator.
 
@@ -59,10 +58,10 @@ Print sections in this order, omitting any section with no entries:
 4. Ready targets (`ready`) — settled, pending reconciliation with spec
 5. Draft targets (`draft`) — in progress, not yet submitted
 6. **Designs in progress** — designs in `.sdd/design/` with no corresponding target referencing them via `design:` frontmatter; each entry shows design name and path (`.sdd/design/{name}/design.md`)
-7. Specs summary — one line per domain: name, item count, coverage fraction
+7. Specs summary — one line per top-level component (area): name, item count (whole subtree), coverage fraction; indent one nested line per sub-component when a tree is deeper than one level
 8. Stale audit warnings — `⚠` prefix, gap ID, spec item ID, old vs current hash
 9. Uncovered spec items — items with no `**Tests:**` block
-10. Open gaps — grouped by domain, one line each
+10. Open gaps — grouped by component, one line each
 11. Active work items — ordered: `in-progress`, `blocked`, `pending`
 12. Footer — one concrete next-action suggestion
 
@@ -101,7 +100,7 @@ the artifact operating guides (it references them; it is not a divergent copy).
 3. **Project-specific context** — essential orientation for this repo's `.sdd/`:
    - ID conventions: `TGT-{seq}` and `SPEC-{abbrev}-{seq}` are sequential; ephemeral `GAP`/`WI`/`ISS`/`IMP` mint hash IDs `{prefix}-{abbrev}-{7hex}` (legacy `{seq}` forms remain valid). The next `TGT-{seq}` derives from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history scan (needs a full, non-shallow clone).
    - Artifact locations: derive from the active artifacts found in steps 2–3
-   - Active domains: list the domain subdirectories found under `.sdd/specs/`
+   - Active components: render the component tree found under `.sdd/specs/` (areas and their nested components; a legacy flat domain layout is a one-level tree)
 
 Keep the orientation to ≤15 lines. Reference `references/sdd-pipeline.md` and
 `plugin/skills/sdd-help/SKILL.md` as the authoritative source for the pipeline model.
@@ -140,7 +139,7 @@ Terminal → archive: accepted, archived
 Rules: dialog append-only; current statement editable by either party; soft cap ~3 rounds; atomic write (dialog + status in one edit); conflicts surface as .conflict.md, never auto-merge.
 Full guide: references/artifacts/target.md
 
-**Spec** (`SPEC-{abbrev}-{seq}` · `.sdd/specs/{domain}/`)
+**Spec** (`SPEC-{abbrev}-{seq}` · `.sdd/specs/{component-path}/`)
 States: active → deprecated/aliased
 Terminal → archive: deprecated, aliased
 Rules: version field recomputed on every write; one invariant per item; ## Invariant + ## Acceptance criteria sections mandatory; IDs never recycled; never deleted, only archived.
@@ -191,11 +190,11 @@ execution condition and suggest SendMessage instead of spawning.
 |---|---|
 | Targets `awaiting-user` exist | "N targets need your input. Run `/sdd:target-engage TGT-XXX` to continue." |
 | Ready targets exist | "Run `/sdd:target-engage TGT-XXX` to reconcile it with spec." |
-| Worker already running (sdd-worker active in session) | "Worker is running. Send it the domain: `SendMessage to \"sdd-worker\"` with the domain name." |
-| Stale audits exist | "Run `/sdd:spawn-sdd-worker {domain}` to hand off execution to the sdd-worker." |
-| Open gaps, no work items | "Run `/sdd:spawn-sdd-worker {domain}` to hand off execution to the sdd-worker." |
-| Work items pending/blocked | "Run `/sdd:spawn-sdd-worker {domain}` to hand off execution to the sdd-worker." |
-| Uncovered spec items, no open gaps | "Run `/sdd:spec-test {domain}` to add test coverage to spec items." |
+| Worker already running (sdd-worker active in session) | "Worker is running. Send it the component: `SendMessage to \"sdd-worker\"` with the component path." |
+| Stale audits exist | "Run `/sdd:spawn-sdd-worker {component}` to hand off execution to the sdd-worker." |
+| Open gaps, no work items | "Run `/sdd:spawn-sdd-worker {component}` to hand off execution to the sdd-worker." |
+| Work items pending/blocked | "Run `/sdd:spawn-sdd-worker {component}` to hand off execution to the sdd-worker." |
+| Uncovered spec items, no open gaps | "Run `/sdd:spec-test {component}` to add test coverage to spec items." |
 | Nothing active | "All clear. No open targets, gaps, or work items." |
 
 ## Output Format
@@ -216,7 +215,7 @@ execution condition and suggest SendMessage instead of spawning.
 ### Designs in progress (1)
 - sdd-explain: .sdd/design/sdd-explain/design.md  [no target yet]
 
-### Specs (2 domains)
+### Specs (2 areas)
 - SPEC-auth: Authentication — 3 items, 2/3 covered
 - SPEC-api: API — 5 items, 0/5 covered
 
@@ -252,7 +251,7 @@ Next: Engage the highest-priority target. Run `/sdd:target-engage TGT-007` to pr
 - Reference absent **and** the local archive cache is present (and does not contain it): a genuine orphan — flag with `⚠ WI-auth-007 references GAP-auth-004 which cannot be found.`
 - Reference absent **and** the archive cache is empty or absent (e.g. a fresh clone or worktree): report as unverifiable, not an error — `WI-auth-007 references GAP-auth-004 — unverifiable (archive is local-only).`
 
-**Multiple domain directories** — each domain should have exactly one subdirectory under `.sdd/specs/`. Multiple directories for the same domain cannot occur under the naming scheme.
+**Duplicate component abbrevs** — two components' manifests declare the same `abbrev`. Flag with: `⚠ abbrev "scr" is declared by hub/client/screens and hub/screens — spec IDs would collide; pick a new abbrev for one (existing item IDs keep theirs).`
 
 **Duplicate active ID** — two active artifacts of the same type share an ID. Hash-minted ephemeral IDs make this astronomically unlikely, but two `TGT-{seq}` targets minted in parallel branches could collide. Flag with: `⚠ TGT-042 is used by two active targets — rename one.`
 

@@ -1,6 +1,6 @@
 ---
 name: next
-description: This skill should be used when the user invokes `/sdd:next`, says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all domains with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill.
+description: This skill should be used when the user invokes `/sdd:next`, says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all components with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill.
 version: 0.1.0
 ---
 
@@ -13,7 +13,7 @@ matching SDD skill. The user selects; the agent routes.
 ## Input
 
 No argument required. Run at any time to get a prioritised view of what to do
-next across all domains. The state survey reuses the same reading logic as
+next across all components. The state survey reuses the same reading logic as
 `session-start` — it does not maintain a separate state model.
 
 ## Procedure
@@ -22,12 +22,12 @@ next across all domains. The state survey reuses the same reading logic as
 
 Perform the same state collection as `session-start` steps 2–3:
 
-- `.sdd/targets/*.md` — parse id, status, domain
-- `.sdd/specs/{domain}/SPEC-*.md` — count active items, coverage fraction
-- `.sdd/gaps/*.md` — parse id, spec-item, domain, status
-- `.sdd/work-items/*.md` — parse id, gap-id, domain, status
-- `.sdd/issues/*.md` — count open issues by domain
-- `.sdd/improvements/*.md` — count open improvements by domain
+- `.sdd/targets/*.md` — parse id, status, component (legacy `domain:` accepted)
+- `.sdd/specs/**/SPEC-*.md` — recursive scan (`find .sdd/specs -name "SPEC-*.md" ! -path "*/archive/*"`); count active items, coverage fraction
+- `.sdd/gaps/*.md` — parse id, spec-item, component, status
+- `.sdd/work-items/*.md` — parse id, gap-id, component, status
+- `.sdd/issues/*.md` — count open issues by component
+- `.sdd/improvements/*.md` — count open improvements by component
 
 **Do not duplicate this logic.** If the state was already collected during the
 current `session-start` run, reuse that view rather than re-reading all files.
@@ -49,17 +49,17 @@ actions. Annotate each with three signals:
 
 **Size** (`S` | `M` | `L`) — effort/scope estimate derived heuristically:
 - `S` — single-file change, one work item, one spec item
-- `M` — one domain, 2–5 work items, or a cross-artifact move
-- `L` — multiple domains, 6+ work items, or a structural change
+- `M` — one component, 2–5 work items, or a cross-artifact move
+- `L` — multiple components, 6+ work items, or a structural change
 
 **Routing** — the SDD skill to invoke for this action:
 - Target engagement → `/sdd:target-engage TGT-{id}`
-- Spec audit → `/sdd:spec-audit {domain}`
-- Gap decomposition → `/sdd:gap-to-work-items {domain}`
+- Spec audit → `/sdd:spec-audit {component}`
+- Gap decomposition → `/sdd:gap-to-work-items {component}`
 - Work item close → `/sdd:work-item-close WI-{id}`
-- Spec test → `/sdd:spec-test {domain}`
-- Review issues → `/sdd:review-issues {domain}`
-- Review improvements → `/sdd:review-improvements {domain}`
+- Spec test → `/sdd:spec-test {component}`
+- Review issues → `/sdd:review-issues {component}`
+- Review improvements → `/sdd:review-improvements {component}`
 - Issue engage → `/sdd:review-engage ISS-{id}`
 
 ### 3. Rank and present candidates
@@ -88,15 +88,15 @@ P1 ★★  M  2. Engage target TGT-009 — Rate limiting on public endpoints
 
 P2 ★★★ S  3. Close work item WI-auth-002 — Clear token cache on logout
               → /sdd:work-item-close WI-auth-002
-              Reason: Pending; closes the last open gap in authentication domain.
+              Reason: Pending; closes the last open gap in the authentication component.
 
-P2 ★★  M  4. Audit API domain spec — 5 active items, no gap audit yet
+P2 ★★  M  4. Audit API component spec — 5 active items, no gap audit yet
               → /sdd:spec-audit api
               Reason: Spec items exist but codebase has never been audited against them.
 
 P3 ★   S  5. Add spec tests for SPEC-auth-003
               → /sdd:spec-test authentication
-              Reason: 1 uncovered spec item in authentication domain.
+              Reason: 1 uncovered spec item in the authentication component.
 
 ---
 Pick a number (1–5), or press Enter to skip:
@@ -116,7 +116,7 @@ and stop.
 If `.sdd/` does not exist, print:
 
 ```
-No .sdd/ directory found. Run /sdd:init to start.
+No .sdd/ directory found. Run /sdd:sdd-init to start.
 ```
 
 ### 6. All-clear handling
@@ -128,7 +128,7 @@ If there are no actionable items (no targets, gaps, or work items), print:
 
 All clear — no open targets, gaps, or work items.
 
-P3 ★   M  1. Review authentication domain for issues
+P3 ★   M  1. Review authentication component for issues
               → /sdd:review-issues authentication
               Reason: No open work; proactive review is the next valuable step.
 
@@ -143,8 +143,8 @@ Pick a number (1–1), or press Enter to skip:
   from the same sources `session-start` uses.
 - **Size is heuristic.** Derive it from artifact type and counts:
   - A single work item → `S`
-  - An audit across one domain → `M`
-  - A cross-domain or structural change → `L`
+  - An audit across one component → `M`
+  - A cross-component or structural change → `L`
 - **At most 7 candidates.** Long lists reduce the value of prioritisation.
 - **Priority is SDD-state-driven.** It must reflect actual artifact states, not
   the agent's preference. Recommendation is the agent's judgment layer.
