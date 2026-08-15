@@ -388,3 +388,95 @@ describe("parseSpecs — SPEC-wf-018: subject subdirectory glob", () => {
     expect(ids).toContain("SPEC-ARCH-001");
   });
 });
+
+describe("parseSpecs — recursive component tree", () => {
+  function writeComponentItem(
+    sddPath: string,
+    componentPath: string,
+    abbrev: string,
+    id: string,
+    title: string
+  ): void {
+    const dir = path.join(sddPath, "specs", componentPath);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, `${id}.md`),
+      `---\nid: ${id}\ncomponent: ${componentPath}\nabbrev: ${abbrev}\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# ${id} — ${title}\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+  }
+
+  it("finds items at any depth and groups them by area (first path segment)", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Server item");
+    writeComponentItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001", "Deep screen item");
+    writeComponentItem(sddPath, "pipeline/artifacts", "wfa", "SPEC-wfa-001", "Artifact rule");
+
+    const specs = parseSpecs(sddPath);
+    const byDomain = new Map(specs.map((s) => [s.domain, s]));
+    expect(byDomain.get("hub")?.items.map((i) => i.id).sort()).toEqual(["SPEC-HSRV-001", "SPEC-SCR-001"]);
+    expect(byDomain.get("pipeline")?.items.map((i) => i.id)).toEqual(["SPEC-WFA-001"]);
+  });
+
+  it("exposes the full component path on each item; legacy domain items get a one-segment path", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001", "Deep item");
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Legacy item", "## Invariant\nx\n\n## Acceptance criteria\n- x");
+
+    const specs = parseSpecs(sddPath);
+    const deep = specs.find((s) => s.domain === "hub")?.items[0] as { component?: string };
+    const legacy = specs.find((s) => s.domain === "architecture")?.items[0] as { component?: string };
+    expect(deep?.component).toBe("hub/client/screens");
+    expect(legacy?.component).toBe("architecture");
+  });
+
+  it("skips archive directories at every depth", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Live item");
+    writeComponentItem(sddPath, "hub/server/archive", "hsrv", "SPEC-hsrv-002", "Archived item");
+
+    const specs = parseSpecs(sddPath);
+    const hub = specs.find((s) => s.domain === "hub");
+    expect(hub?.items.map((i) => i.id)).toEqual(["SPEC-HSRV-001"]);
+  });
+
+  it("does not parse component.md manifests as spec items", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Item");
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "server", "component.md"),
+      "---\ncomponent: hub/server\nabbrev: hsrv\nscope: [hub/server/**]\ndepends-on: []\n---\n\n# hub/server\n"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const hub = specs.find((s) => s.domain === "hub");
+    expect(hub?.items).toHaveLength(1);
+  });
+
+  it("discovers a .tests.json mapping sitting next to nested component items", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001", "Screen item");
+    const reportPath = path.join(workspaceRoot, "report.json");
+    fs.writeFileSync(reportPath, VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "client", "screens", "SPEC-scr.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-scr-001": ["Node.js server starts correctly"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "hub")?.items[0];
+    expect(item?.testStatus.status).toBe("passing");
+  });
+
+  it("treats a mapping file with missing report/items fields as absent instead of crashing", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Item");
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "server", "SPEC-hsrv.tests.json"),
+      "{}"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "hub")?.items[0];
+    expect(item?.testStatus.status).toBe("not-run");
+  });
+});

@@ -11,6 +11,9 @@ interface SpecItem {
   criteria: string[];
   refs: Array<{ kind: "gap" | "wi"; id: string }>;
   testStatus: TestStatus;
+  // Full component path (e.g. "hub/client/screens"). Legacy `domain:` items
+  // get a one-segment path equal to the domain name.
+  component?: string;
 }
 
 interface Spec {
@@ -63,7 +66,9 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
   }
 
   const { meta, body } = parseFrontmatter(content);
-  if (!meta["id"] || !meta["domain"] || !meta["abbrev"]) return null;
+  // `component:` (path form) supersedes legacy `domain:`; accept either.
+  const componentPath = meta["component"] ?? meta["domain"];
+  if (!meta["id"] || !componentPath || !meta["abbrev"]) return null;
 
   const titleMatch = /^# (SPEC-[^\s]+ — .+)$/m.exec(body);
   const title = titleMatch ? titleMatch[1].replace(/^SPEC-[^\s]+ — /, "").trim() : "";
@@ -104,7 +109,10 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     criteria,
     refs: parseRefs(bodyContent),
     testStatus,
-    domain: meta["domain"],
+    component: componentPath,
+    // Grouping key: the area (first path segment). For legacy `domain:` items
+    // the path has one segment, so this equals the old domain grouping.
+    domain: componentPath.split("/")[0],
     abbrev: meta["abbrev"],
   };
 }
@@ -518,75 +526,98 @@ export function parseSpecs(sddPath: string): Spec[] {
   const workspaceRoot = path.dirname(sddPath);
   const specsByDomain = new Map<string, Spec>();
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name === "archive") continue;
-    const domainDir = path.join(specsDir, entry.name);
+  // Components nest to any depth — walk the whole tree, skipping `archive`
+  // dirs at every level. Legacy flat/subject layouts are shallow trees and
+  // parse identically. Mapping files (SPEC-{abbrev}.tests.json) are collected
+  // wherever they sit and matched to items by abbrev.
+  const specFilePaths: string[] = [];
+  const mappingPathsByAbbrev = new Map<string, string>();
 
-    const specFilePaths: string[] = [];
-
-    let domainFiles: string[];
+  const walk = (dir: string): void => {
+    let dirEntries: fs.Dirent[];
     try {
-      domainFiles = fs.readdirSync(domainDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
+      dirEntries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
-      continue;
+      return;
     }
-    for (const f of domainFiles) {
-      specFilePaths.push(path.join(domainDir, f));
-    }
-
-    let subEntries: fs.Dirent[];
-    try {
-      subEntries = fs.readdirSync(domainDir, { withFileTypes: true });
-    } catch {
-      subEntries = [];
-    }
-    for (const sub of subEntries) {
-      if (!sub.isDirectory() || sub.name === "archive") continue;
-      const subDir = path.join(domainDir, sub.name);
-      let subFiles: string[];
-      try {
-        subFiles = fs.readdirSync(subDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
-      } catch {
+    for (const e of dirEntries) {
+      if (e.isDirectory()) {
+        if (e.name !== "archive") walk(path.join(dir, e.name));
         continue;
       }
-      for (const f of subFiles) {
-        specFilePaths.push(path.join(subDir, f));
+      const mappingMatch = /^SPEC-([a-z0-9-]+)\.tests\.json$/.exec(e.name);
+      if (mappingMatch) {
+        mappingPathsByAbbrev.set(mappingMatch[1], path.join(dir, e.name));
+        continue;
+      }
+      if (e.name.startsWith("SPEC-") && e.name.endsWith(".md")) {
+        specFilePaths.push(path.join(dir, e.name));
       }
     }
+  };
 
-    for (const filePath of specFilePaths) {
-      const parsed = parseSpecItemFile(filePath);
-      if (!parsed) continue;
-
-      let spec = specsByDomain.get(parsed.domain);
-      if (!spec) {
-        spec = { id: `SPEC-${parsed.abbrev}`, domain: parsed.domain, abbrev: parsed.abbrev, items: [] };
-        specsByDomain.set(parsed.domain, spec);
-      }
-      const { domain: _d, abbrev: _a, ...item } = parsed;
-      spec.items.push(item);
-    }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name === "archive") continue;
+    walk(path.join(specsDir, entry.name));
   }
+
+  for (const filePath of specFilePaths) {
+    const parsed = parseSpecItemFile(filePath);
+    if (!parsed) continue;
+
+    let spec = specsByDomain.get(parsed.domain);
+    if (!spec) {
+      spec = { id: `SPEC-${parsed.abbrev}`, domain: parsed.domain, abbrev: parsed.abbrev, items: [] };
+      specsByDomain.set(parsed.domain, spec);
+    }
+    const { domain: _d, abbrev: _a, ...item } = parsed;
+    spec.items.push(item);
+  }
+
+  const loadMapping = (mappingPath: string): TestMapping | null => {
+    let raw: string;
+    try {
+      raw = fs.readFileSync(mappingPath, "utf8");
+    } catch {
+      return null;
+    }
+    return validateTestMapping(raw);
+  };
 
   for (const spec of specsByDomain.values()) {
     spec.items.sort((a, b) => a.id.localeCompare(b.id));
 
-    const mapping = readTestMapping(sddPath, spec.abbrev, spec.domain);
-    let report = null;
-    if (mapping) {
-      const absReport = path.isAbsolute(mapping.report)
-        ? mapping.report
-        : path.join(workspaceRoot, mapping.report);
-      report = mapping.runner === "vitest"
-        ? parseVitestReport(absReport)
-        : parseSurefireReports(absReport);
-    }
+    // Nested trees can hold one mapping file per component; resolve each
+    // item against the mapping for its own abbrev, falling back to the
+    // group's legacy mapping location.
+    const mappingCache = new Map<string, { mapping: TestMapping; report: ParsedReport | null } | null>();
+    const resolveForAbbrev = (abbrev: string): { mapping: TestMapping; report: ParsedReport | null } | null => {
+      if (mappingCache.has(abbrev)) return mappingCache.get(abbrev) ?? null;
+      const discovered = mappingPathsByAbbrev.get(abbrev);
+      const mapping = discovered
+        ? loadMapping(discovered)
+        : readTestMapping(sddPath, abbrev, spec.domain);
+      let resolved: { mapping: TestMapping; report: ParsedReport | null } | null = null;
+      if (mapping) {
+        const absReport = path.isAbsolute(mapping.report)
+          ? mapping.report
+          : path.join(workspaceRoot, mapping.report);
+        const report = mapping.runner === "vitest"
+          ? parseVitestReport(absReport)
+          : parseSurefireReports(absReport);
+        resolved = { mapping, report };
+      }
+      mappingCache.set(abbrev, resolved);
+      return resolved;
+    };
 
     for (const item of spec.items) {
       // Preserve skip state set by parseSpecItemFile — do not overwrite with computed status
       if (item.testStatus.status === "skipped") continue;
-      item.testStatus = computeTestStatus(item.id, mapping, report);
+      const abbrevMatch = /^SPEC-([a-z0-9-]+)-/i.exec(item.id);
+      const itemAbbrev = abbrevMatch ? abbrevMatch[1].toLowerCase() : spec.abbrev;
+      const resolved = resolveForAbbrev(itemAbbrev);
+      item.testStatus = computeTestStatus(item.id, resolved?.mapping ?? null, resolved?.report ?? null);
     }
   }
 
@@ -624,6 +655,25 @@ export type TestStatus = {
   tests?: PerTestResult[];
 };
 
+// Shape-guard raw mapping JSON. A mapping file that parses as JSON but lacks
+// the required fields must yield null, not a TestMapping with undefined
+// members — `path.isAbsolute(undefined)` would throw deep in the request
+// path (and in the watcher) otherwise.
+function validateTestMapping(raw: string): TestMapping | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const m = parsed as Record<string, unknown>;
+  if (m["runner"] !== "vitest" && m["runner"] !== "maven") return null;
+  if (typeof m["report"] !== "string") return null;
+  if (typeof m["items"] !== "object" || m["items"] === null || Array.isArray(m["items"])) return null;
+  return parsed as TestMapping;
+}
+
 export function readTestMapping(sddPath: string, abbrev: string, domain: string): TestMapping | null {
   const mappingPath = path.join(sddPath, "specs", domain, `SPEC-${abbrev}.tests.json`);
   let raw: string;
@@ -632,11 +682,7 @@ export function readTestMapping(sddPath: string, abbrev: string, domain: string)
   } catch {
     return null;
   }
-  try {
-    return JSON.parse(raw) as TestMapping;
-  } catch {
-    return null;
-  }
+  return validateTestMapping(raw);
 }
 
 export function parseVitestReport(reportPath: string): ParsedReport | null {
@@ -725,7 +771,19 @@ export function computeTestStatus(
     return { status: "missing", lastRun: report.runAt, tests: [] };
   }
 
-  const substrings = mapping.items[specItemId];
+  // Mapping keys are matched case-insensitively: item IDs are normalized to
+  // uppercase at parse time, while mapping files are hand-authored and may use
+  // the natural "SPEC-abc-001" casing.
+  let substrings = mapping.items[specItemId];
+  if (!substrings) {
+    const wanted = specItemId.toUpperCase();
+    for (const key of Object.keys(mapping.items)) {
+      if (key.toUpperCase() === wanted) {
+        substrings = mapping.items[key];
+        break;
+      }
+    }
+  }
   if (!substrings || substrings.length === 0) {
     return { status: "missing", lastRun: report.runAt, tests: [] };
   }
