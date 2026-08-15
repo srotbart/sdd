@@ -35,8 +35,8 @@ with a plain `git mv` — **IDs never change**, so nothing references break.
 ### New since the change (works in both layouts)
 
 - **`/sdd:sdd-doctor`** — a health agent for `.sdd/` itself: schema validity,
-  version hashes (both conventions accepted), reference resolution, archive
-  hygiene, binding integrity. Run it any time; it never touches invariants.
+  version hashes, reference resolution, archive hygiene, binding integrity.
+  Run it any time; it never touches invariants.
 - **Contracts and bindings** — a rule binding two components (producer's
   promise, consumer's reliance) lives with the **producer** and carries
   `contract-consumer:` plus `contract-synced: [{item-id}@{hash}, …]` stamps.
