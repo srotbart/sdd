@@ -30,10 +30,12 @@ target (intent) → negotiate → fold into spec → audit codebase → gaps →
 
 Concrete skill chain: `target-engage` (intent) → then the execution loop
 `close-domain` drives — `spec-audit` → `gap-to-work-items` → `work-item-close`,
-capped by a cross-domain guardian audit — with `review-issues` /
+capped by a cross-component guardian audit — with `review-issues` /
 `review-improvements` / `review-engage` feeding findings back in. `session-start`
 snapshots the whole state; `spawn-sdd-worker` hands the execution phase to an
-autonomous worker that runs `close-domain` for the domain.
+autonomous worker that runs `close-domain` for a component subtree, and
+`sdd-doctor` keeps `.sdd/` itself healthy (schemas, hashes, references,
+archive hygiene).
 
 Terminal state: no open gaps, no pending work items.
 
@@ -44,7 +46,7 @@ All state lives under `.sdd/` at the project root:
 | Directory | Purpose | Who writes it |
 |---|---|---|
 | `.sdd/targets/` | User-written intent. Negotiated in-document. | User (agent responds) |
-| `.sdd/specs/` | Canonical, structured spec items. The source of truth. | Agent (from targets) |
+| `.sdd/specs/` | Canonical, structured spec items — a **component tree**: areas contain components, components may nest. The source of truth. | Agent (from targets) |
 | `.sdd/gaps/` | Audit findings — where the codebase diverges from the spec. | Agent (from audit) |
 | `.sdd/work-items/` | Scoped tasks that close gaps. | Agent (from gaps) |
 | `.sdd/issues/` | Reviewer-flagged problems. | Agent (review skills) |
@@ -53,6 +55,14 @@ All state lives under `.sdd/` at the project root:
 Supporting directories: `.sdd/design/` (optional pre-target design docs),
 `.sdd/standards/` (user-authored coding standards — the review rubric),
 `.sdd/projections/` (synthesised explanation documents from `/sdd:explain`).
+
+**Components.** Spec items attach to **components** — concrete units of the system,
+organized as a recursive directory tree under `.sdd/specs/`. Top-level components are
+**areas** (`hub`, `pipeline`); a component may hold sub-components, and an item at a
+non-leaf component governs its whole subtree. Each component carries a `component.md`
+manifest (abbrev, code-scope globs, `depends-on` edges — the data a future map screen
+renders). Legacy flat domain layouts are one-level component trees and keep working;
+`/sdd:migrate-components` converts them without changing a single ID.
 
 **IDs.** Sequential for durable artifacts (`TGT-{seq}`, `SPEC-{abbrev}-{seq}`); ephemeral
 artifacts mint collision-free hash IDs (`GAP-wf-b861c4b`, `WI-wf-dc57a5a`). Legacy
@@ -121,7 +131,12 @@ npm run dev     # server + client (Vite dev client on :22400)
 ```
 
 Or hand the execution phase (audit → gaps → work items → close) to an autonomous
-worker: `/sdd:spawn-sdd-worker authentication`.
+worker: `/sdd:spawn-sdd-worker authentication` — the argument is a component path
+at any depth (`hub`, `hub/client`, or a legacy flat domain name).
+
+Keep `.sdd/` itself healthy with `/sdd:sdd-doctor` (schemas, version hashes,
+references, archive hygiene), and adopt the component tree in an existing project
+with `/sdd:migrate-components` (reviewed mapping, file moves only, IDs unchanged).
 
 ## Target Status Lifecycle
 
@@ -153,6 +168,13 @@ decision, not burial.
 
 **One file per artifact.** Archiving is a file move, not an edit. This makes
 terminal-state transitions atomic and reversible.
+
+**Component-based specs.** Specs are organized by what they govern (components in
+areas), not by rule type. One recursive node type: an area is simply a top-level
+component. Items may attach to non-leaf components (governing the subtree); depth is
+discipline, not schema — start at two levels and split only when a component earns
+it, which is a cheap `git mv` because IDs never move with the tree. Manifests carry
+identity, scope globs, and dependency edges — never member lists.
 
 **History is the archive (ephemeral artifacts).** Terminal state is committed before
 the file moves into a gitignored local `archive/`. The repo stays slim; provenance

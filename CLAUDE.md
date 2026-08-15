@@ -34,14 +34,18 @@ to get the current state before working.
 
 **Quick reference:**
 - `.sdd/targets/` — user intent (negotiated in-document)
-- `.sdd/specs/` — canonical invariants (source of truth)
+- `.sdd/specs/` — canonical invariants (source of truth), organized as a component
+  tree: areas contain components, components may nest; each component has a
+  `component.md` manifest
 - `.sdd/gaps/` — codebase divergences from spec
 - `.sdd/work-items/` — scoped tasks to close gaps
 - `.sdd/issues/` — reviewer-flagged problems
 - `.sdd/improvements/` — reviewer-proposed enhancements
 
 **Skills:** `/sdd:session-start` → `/sdd:target-engage` → `/sdd:spec-audit` →
-`/sdd:gap-to-work-items` → `/sdd:work-item-close`
+`/sdd:gap-to-work-items` → `/sdd:work-item-close`; `/sdd:sdd-doctor` checks the
+health of `.sdd/` itself; `/sdd:migrate-components` converts a legacy domain
+layout to the component tree
 
 ---
 
