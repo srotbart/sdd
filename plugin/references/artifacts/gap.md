@@ -10,24 +10,30 @@ Each gap records exactly one divergence with a one-line justification.
 ## 1. Schema / ID Convention
 
 **File path:** `.sdd/gaps/GAP-{abbrev}-{7hex}.md`
-**ID pattern:** `GAP-{abbrev}-{7hex}` — abbreviation matches the spec domain
-(e.g., `auth`, `wf`); the 7-hex suffix is generated at mint time (`openssl rand -hex 4 | cut -c1-7`);
+**ID pattern:** `GAP-{abbrev}-{7hex}` — abbreviation matches the referenced
+spec item's abbrev (e.g., `auth`, `wf`); the 7-hex suffix is generated at mint
+time (`openssl rand -hex 4 | cut -c1-7`);
 no sequence scan and no archive lookup — collision-free by construction.
 
 **Required frontmatter:**
 
 ```markdown
 ---
-id: GAP-auth-001
-spec-item: SPEC-auth-001
-domain: authentication
+id: GAP-scr-b3a91f2
+spec-item: SPEC-scr-001
+component: hub/client/screens   # the spec item's component path
 status: open          # open | closed | accepted | deferred
 discovered: "2026-05-12T14:30:00Z"
 audit-spec-version: "a3f9c812"   # version of spec item at time of audit
-closed-by: null       # WI-{abbrev}-{seq} when closed; null until then
+closed-by: null       # WI id when closed; null until then
 deferred-reason: null # reason string when deferred; null until then
 ---
 ```
+
+**Legacy `domain:` field:** older gaps carry `domain: {name}` instead of
+`component:`. Readers MUST accept either, treating `domain: x` as
+`component: x`. Writers use `component:` only, copied from the referenced
+spec item (fall back to the item's `domain:` on unmigrated projects).
 
 **Required body:**
 
@@ -105,12 +111,14 @@ When a spec item's version changes (spec was edited), the gap's
 - If the gap still exists: update `audit-spec-version` to the current spec version.
   Do not change the gap's ID, location, or reasoning unless the location has moved.
 - If the gap no longer exists (fixed outside the pipeline): set `status: closed`,
-  set `closed-by: ""` (empty string — no work item closed it), archive the gap.
+  set `closed-by: ""` (empty string — no work item closed it; treated as "no
+  closer recorded", same as null), commit the terminal state, then archive the gap.
 
 ### Closing a gap (work-item-close)
 
 1. Set `status: closed` and `closed-by: {WI-id}`.
-2. Move the file to `.sdd/gaps/archive/`.
+2. Commit the terminal state (git history is the durable archive).
+3. Move the file to `.sdd/gaps/archive/`.
 
 ---
 
