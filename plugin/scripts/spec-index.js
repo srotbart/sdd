@@ -31,64 +31,20 @@
 
 const fs = require('fs');
 const path = require('path');
+const { findSddRoot, collectSpecFiles, frontmatterBlock, field } = require('./lib/sdd-tree.js');
 
 function resolveProjectRoot() {
   if (process.argv[2]) return path.resolve(process.argv[2]);
   // Walk up from cwd looking for .sdd/ — the script may live in the plugin
   // cache, far away from the project it indexes.
-  let dir = process.cwd();
-  for (;;) {
-    if (fs.existsSync(path.join(dir, '.sdd'))) return dir;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
+  const fromCwd = findSddRoot(process.cwd());
+  if (fromCwd) return fromCwd;
   const scriptDir = path.dirname(path.resolve(__filename));
   return path.resolve(scriptDir, '..', '..');
 }
 
 const repoRoot = resolveProjectRoot();
 const specsDir = path.join(repoRoot, '.sdd', 'specs');
-
-// ─── Collect active spec files ────────────────────────────────────────────────
-
-/**
- * Recursively walk a directory collecting `SPEC-*.md` files, skipping any
- * `archive/` directory at any depth.
- */
-function collectSpecFiles(dir) {
-  const found = [];
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return found;
-  }
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (entry.name === 'archive') continue;
-      found.push(...collectSpecFiles(path.join(dir, entry.name)));
-    } else if (entry.isFile() && /^SPEC-.*\.md$/.test(entry.name)) {
-      found.push(path.join(dir, entry.name));
-    }
-  }
-  return found;
-}
-
-// ─── Parse a spec item ────────────────────────────────────────────────────────
-
-function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
-  return match ? match[1] : null;
-}
-
-function field(fm, name) {
-  const m = fm.match(new RegExp(`^${name}:\\s*(.+)$`, 'm'));
-  if (!m) return null;
-  // Strip inline comments — the artifact templates show them on these fields
-  // ("status: active        # active | deprecated | aliased").
-  return m[1].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
-}
 
 /**
  * Parse the optional `scope:` list. Supports the inline form
@@ -133,7 +89,7 @@ const lines = [];
 
 for (const file of files) {
   const content = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
-  const fm = parseFrontmatter(content);
+  const fm = frontmatterBlock(content);
   if (!fm) continue;
   if (field(fm, 'status') !== 'active') continue;
 

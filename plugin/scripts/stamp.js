@@ -4,7 +4,8 @@
  *
  * Agents never compute or edit hashes by hand; this script is the one
  * imperative, deterministic way to do it. Same input tree → same output,
- * byte for byte.
+ * byte for byte. All field reads and writes are scoped to the frontmatter
+ * block — body text quoting frontmatter examples is never touched.
  *
  * Commands:
  *
@@ -47,6 +48,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { findSddRoot, collectSpecFiles, frontmatterBlock, field } = require('./lib/sdd-tree.js');
 
 function fail(msg) {
   process.stderr.write(`stamp: ${msg}\n`);
@@ -67,7 +69,9 @@ function readFile(file) {
  * SHA-256[:8] of content with every `version:` line removed — byte-identical
  * to `grep -v "^version:" f | shasum -a 256 | cut -c1-8`. grep newline-
  * terminates its final output line even when the input lacks a trailing
- * newline, so the stripped content is normalized the same way.
+ * newline, so the stripped content is normalized the same way. (grep is
+ * line-oriented and cannot distinguish frontmatter from body, so the strip
+ * applies file-wide by definition; the WRITE side below is frontmatter-scoped.)
  */
 function strippedHash(content) {
   let stripped = content
@@ -78,46 +82,48 @@ function strippedHash(content) {
   return crypto.createHash('sha256').update(stripped).digest('hex').slice(0, 8);
 }
 
-// ─── Frontmatter helpers (line-oriented; writes preserve everything else) ─────
+// ─── Frontmatter-scoped access ────────────────────────────────────────────────
+//
+// Every read and write below operates only on the frontmatter block. Spec
+// bodies legitimately quote `version:` / `contract-synced:` examples in
+// fenced code blocks; touching those corrupts the document.
 
-function getField(content, name) {
-  const m = content.match(new RegExp(`^${name}:\\s*(.+)$`, 'm'));
-  if (!m) return null;
-  return m[1].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
+function fmOf(file, content) {
+  const fm = frontmatterBlock(content);
+  if (fm === null) fail(`${file}: no frontmatter block`);
+  return fm;
 }
 
 function setVersion(file, content, hash) {
-  if (/^version:.*$/m.test(content)) {
-    return content.replace(/^version:.*$/m, `version: "${hash}"`);
-  }
-  // No version line yet: insert before the closing frontmatter delimiter
-  // (the second `---` line). CRLF-tolerant; a file without frontmatter is an
-  // error, never a silent no-op.
-  const lines = content.split('\n');
-  const isDelim = (l) => /^---\r?$/.test(l);
-  if (!isDelim(lines[0])) fail(`${file}: no frontmatter block to stamp`);
-  const close = lines.findIndex((l, i) => i > 0 && isDelim(l));
-  if (close === -1) fail(`${file}: unterminated frontmatter block`);
-  lines.splice(close, 0, `version: "${hash}"`);
-  return lines.join('\n');
+  const fm = fmOf(file, content);
+  const newFm = /^version:.*$/m.test(fm)
+    ? fm.replace(/^version:.*$/m, `version: "${hash}"`)
+    : `${fm}\nversion: "${hash}"`;
+  return spliceFm(file, content, newFm);
+}
+
+/** Rebuild the file with a new frontmatter inner block. */
+function spliceFm(file, content, newFm) {
+  const m = /^(---\r?\n)([\s\S]*?)(\r?\n---(?:\r?\n|$))/.exec(content);
+  if (!m) fail(`${file}: no frontmatter block`);
+  return m[1] + newFm + m[3] + content.slice(m[0].length);
 }
 
 /**
- * The raw `contract-synced` flow list, matched across wrapped lines so a
- * multi-line list is read whole and can be rewritten in place. Returns
- * { match, inner } or null when the field is absent. An opening `[` with no
- * closing `]` is a hard error — partial parses corrupt files.
+ * The raw `contract-synced` flow list within the frontmatter, matched across
+ * wrapped lines. Returns { match, inner } or null when absent. An opening
+ * `[` with no closing `]` is a hard error — partial parses corrupt files.
  */
-function matchSynced(file, content) {
-  const open = content.match(/^contract-synced:\s*/m);
+function matchSynced(file, fm) {
+  const open = fm.match(/^contract-synced:\s*/m);
   if (!open) return null;
-  const m = content.match(/^contract-synced:[ \t]*\[([^\]]*)\]/m);
+  const m = fm.match(/^contract-synced:[ \t]*\[([^\]]*)\]/m);
   if (!m) fail(`${file}: contract-synced must be a [...] flow list (closing ']' not found)`);
   return { match: m[0], inner: m[1] };
 }
 
-function parseSynced(file, content) {
-  const raw = matchSynced(file, content);
+function parseSynced(file, fm) {
+  const raw = matchSynced(file, fm);
   if (raw === null) return null;
   const entries = [];
   for (const part of raw.inner.split(',')) {
@@ -130,41 +136,13 @@ function parseSynced(file, content) {
 }
 
 function setSynced(file, content, entries) {
-  const raw = matchSynced(file, content);
+  const fm = fmOf(file, content);
+  const raw = matchSynced(file, fm);
   const rendered = `contract-synced: [${entries.map((e) => `${e.item}@${e.stamp}`).join(', ')}]`;
-  return content.replace(raw.match, rendered);
+  return spliceFm(file, content, fm.replace(raw.match, rendered));
 }
 
 // ─── Tree resolution ──────────────────────────────────────────────────────────
-
-function findSddRoot(startDir) {
-  let dir = path.resolve(startDir);
-  for (;;) {
-    if (fs.existsSync(path.join(dir, '.sdd'))) return dir;
-    const parent = path.dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
-}
-
-function collectSpecFiles(dir) {
-  const found = [];
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return found;
-  }
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (entry.name === 'archive') continue;
-      found.push(...collectSpecFiles(path.join(dir, entry.name)));
-    } else if (entry.isFile() && /^SPEC-.*\.md$/.test(entry.name)) {
-      found.push(path.join(dir, entry.name));
-    }
-  }
-  return found.sort();
-}
 
 /** id (uppercased) → { file } for every active-tree spec item, per project root. */
 const indexCache = new Map();
@@ -172,8 +150,7 @@ function indexItems(root) {
   if (indexCache.has(root)) return indexCache.get(root);
   const index = new Map();
   for (const file of collectSpecFiles(path.join(root, '.sdd', 'specs'))) {
-    const content = fs.readFileSync(file, 'utf8');
-    const id = getField(content, 'id');
+    const id = field(frontmatterBlock(fs.readFileSync(file, 'utf8')), 'id');
     if (!id) continue;
     index.set(id.toUpperCase(), { file });
   }
@@ -202,8 +179,9 @@ function resolveTargets(args, cwd) {
 /** Recompute and (when needed) rewrite one file's version. Returns the hash. */
 function restampVersion(file, report) {
   const content = readFile(file);
-  const id = getField(content, 'id') ?? path.basename(file);
-  const current = getField(content, 'version');
+  const fm = fmOf(file, content);
+  const id = field(fm, 'id') ?? path.basename(file);
+  const current = field(fm, 'version');
   // The hash strips every version line, so the stored value never feeds into
   // its own recomputation.
   const hash = strippedHash(content);
@@ -221,10 +199,11 @@ function cmdVersion(files) {
 function cmdContract(files) {
   for (const file of files) {
     let content = readFile(file);
-    const id = getField(content, 'id');
+    const fm = fmOf(file, content);
+    const id = field(fm, 'id');
     if (!id) fail(`${file}: no id field`);
-    const entries = parseSynced(file, content);
-    if (entries === null || getField(content, 'contract-consumer') === null) {
+    const entries = parseSynced(file, fm);
+    if (entries === null || field(fm, 'contract-consumer') === null) {
       fail(`${file}: not a contract item (needs contract-consumer and contract-synced)`);
     }
 
@@ -258,13 +237,15 @@ function cmdCheck(files) {
   let ok = true;
   for (const file of files) {
     const content = readFile(file);
-    const id = getField(content, 'id') ?? path.basename(file);
-    const stored = getField(content, 'version');
+    const fm = frontmatterBlock(content);
+    if (fm === null) continue; // not an artifact with frontmatter — nothing to verify
+    const id = field(fm, 'id') ?? path.basename(file);
+    const stored = field(fm, 'version');
     if (stored !== null && stored !== strippedHash(content)) {
       process.stdout.write(`${id}: version ${stored} does not match content (expected ${strippedHash(content)})\n`);
       ok = false;
     }
-    const entries = parseSynced(file, content);
+    const entries = parseSynced(file, fm);
     if (entries !== null) {
       // Stamps resolve against the file's own project tree — files from
       // different projects in one invocation each get their own index.
@@ -286,7 +267,7 @@ function cmdCheck(files) {
           ok = false;
           continue;
         }
-        const targetVersion = getField(fs.readFileSync(target.file, 'utf8'), 'version') ?? '';
+        const targetVersion = field(frontmatterBlock(fs.readFileSync(target.file, 'utf8')), 'version') ?? '';
         if (targetVersion.toLowerCase() !== e.stamp.toLowerCase()) {
           process.stdout.write(`${id}: ${e.item} drifted (stamped ${e.stamp}, current ${targetVersion})\n`);
           ok = false;
