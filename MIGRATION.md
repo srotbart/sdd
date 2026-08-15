@@ -41,6 +41,12 @@ with a plain `git mv` — **IDs never change**, so nothing references break.
   promise, consumer's reliance) lives with the **producer** and carries
   `contract-consumer:` plus `contract-synced: [{item-id}@{hash}, …]` stamps.
   Drift on either edge is detected by comparing stamps to current versions.
+- **The stamping script** — `plugin/scripts/stamp.js`: the one deterministic
+  way hashes get written. `stamp.js version {file}|--all` recomputes version
+  hashes, `stamp.js contract {file}` re-stamps a binding (after you re-verify
+  it), and `stamp.js check --all` verifies the whole tree — exit 1 on any
+  mismatch, so it drops straight into CI or a pre-commit hook. Agents never
+  hand-compute hashes.
 - **The hub `map` tab** — the component tree rendered live, with gap/coverage
   badges per component, `depends-on` edges, and contract edges colored by
   binding status. Works on unmigrated projects too (domains render as
