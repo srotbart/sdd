@@ -57,9 +57,21 @@ Recompute every active spec item's hash —
 `grep -v "^version:" {file} | shasum -a 256 | cut -c1-8` — and compare to its
 `version:` field.
 
-- **Mechanical fix:** update a mismatched `version:` to the recomputed value
-  (the documented recompute-on-write rule; the content is the truth).
-  Note in the report that any open gaps on that item now correctly read stale.
+**Two conventions are valid.** Older projects hashed the whole file
+(`shasum -a 256 {file}`); the current convention strips the `version:` line
+first. A stored hash matching **either** computation is healthy — never
+"fix" a valid legacy-convention hash: rewriting it would flip every open
+gap's `audit-spec-version` comparison to stale across the whole project in
+one run, with no underlying spec change. Existing projects must keep working
+untouched.
+
+- **Healthy:** stored hash matches the strip-line or the whole-file
+  computation. Note legacy-convention items once in the report as migration
+  candidates (they converge to the new convention on their next real write).
+- **Mechanical fix:** stored hash matches **neither** computation — update
+  `version:` to the strip-line value (the documented recompute-on-write rule;
+  the content is the truth). Note in the report that any open gaps on that
+  item now correctly read stale.
 
 ### 4. ID integrity
 

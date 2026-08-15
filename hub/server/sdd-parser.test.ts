@@ -456,3 +456,22 @@ describe("parseTargets", () => {
     expect(targets[0]?.status).toBe("archived");
   });
 });
+
+describe("component: frontmatter compatibility (review fixes)", () => {
+  it("parseGaps reads component: as the domain, falling back to legacy domain:", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-scr-b3a91f2.md"),
+      `---\nid: GAP-scr-b3a91f2\nspec-item: SPEC-scr-001\ncomponent: hub/client/screens\nstatus: open\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: null\n---\n\n# Gap: New-format gap\n\n**Location:** \`x.ts:1\`\n**Reasoning:** r\n`
+    );
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-arch-001.md"),
+      `---\nid: GAP-arch-001\nspec-item: SPEC-arch-001\ndomain: architecture\nstatus: open\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: null\n---\n\n# Gap: Legacy gap\n\n**Location:** \`y.ts:1\`\n**Reasoning:** r\n`
+    );
+
+    const gaps = parseGaps(root);
+    const byId = new Map(gaps.map((g) => [g.id, g]));
+    expect(byId.get("GAP-scr-b3a91f2")?.domain).toBe("hub/client/screens");
+    expect(byId.get("GAP-arch-001")?.domain).toBe("architecture");
+  });
+});

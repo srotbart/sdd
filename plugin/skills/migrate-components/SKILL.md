@@ -6,13 +6,23 @@ version: 0.1.0
 
 # SDD Migrate Components
 
-Convert a project's `.sdd/specs/` from the legacy flat domain layout
-(`.sdd/specs/{domain}/SPEC-*.md`) to the component tree
-(`.sdd/specs/{area}/{component}/.../SPEC-*.md`). The migration is two-phase:
-**propose** a mapping for user review, then **apply** it. Applying is file moves
-plus frontmatter updates — **no spec item ID ever changes**, so gaps, work items,
-and aliases stay valid with zero rewrites (references are ID-based and resolve
-by recursive scan).
+Convert a project's `.sdd/` from the legacy flat domain layout
+(`.sdd/specs/{domain}/SPEC-*.md`, `domain:` frontmatter everywhere) to the
+component tree (`.sdd/specs/{area}/{component}/.../SPEC-*.md`, `component:`
+frontmatter). The migration is two-phase: **propose** a mapping for user
+review, then **apply** it. Applying is file moves plus mechanical frontmatter
+updates — **no artifact ID ever changes**, so cross-references and aliases
+stay valid with zero content rewrites.
+
+## Compatibility — migration is optional
+
+An unmigrated project keeps working indefinitely. Every reader in the
+pipeline — skills, the hub, the statusline, spec-index, sdd-doctor — accepts
+the legacy layout and legacy `domain:` frontmatter (read as a one-level
+component path), and sdd-doctor accepts both version-hash conventions. Run
+this skill when a project *wants* the component tree, never because it must.
+Migration covers the whole `.sdd/` state, so a migrated project is fully on
+the new conventions — no half state.
 
 ## Input
 
@@ -134,20 +144,33 @@ For each mapping row, in one pass per item:
 4. Move any `SPEC-{abbrev}.tests.json` mapping file alongside its items; update
    report paths only if they were relative to the old directory.
 
-**Do not touch gaps, work items, targets, issues, or improvements.** Their
-spec-item references are IDs and resolve by recursive scan. Their legacy
-`domain:` fields stay valid (read as `component:`).
-
 Note: recomputing versions makes existing open gaps read as *stale* — that is
 correct and intentional; the next `spec-audit` refreshes their
 `audit-spec-version` without changing gap content.
+
+### 3b. Convert active ephemeral artifacts' frontmatter
+
+So the migrated project is fully on the new conventions, convert the **active**
+gaps, work items, targets, issues, and improvements: replace each file's
+`domain: {name}` line with `component: {mapped-path}`, where the mapped path is
+the component the referenced spec item moved to (for gaps: the `spec-item`'s
+row in the mapping; for work items: their gap's component; for
+targets/issues/improvements: the mapping row for their domain, or the closest
+matching component by judgement — flag ambiguous ones in the report instead of
+guessing).
+
+This is a **frontmatter field rename only** — never touch IDs, status, dialog,
+reasoning, scope, acceptance criteria, or any body content. Archived ephemeral
+artifacts are never touched (their archives are local-only caches; git history
+is the record).
 
 ### 4. Clean up and verify
 
 1. Remove now-empty legacy domain directories.
 2. Verify: `find .sdd/specs -name "SPEC-*.md" ! -path "*/archive/*"` count equals
    the pre-migration count; every item's `component:` matches its directory;
-   every component directory has a `component.md`; abbrevs unique.
+   every component directory has a `component.md`; abbrevs unique; no active
+   artifact anywhere in `.sdd/` still carries a `domain:` line.
 3. Flip the proposal file to `status: applied` and move it to
    `.sdd/specs/archive/` (create if needed) — it is provenance, not live state.
 4. Commit the whole migration as one commit ("migrate specs to component tree —
@@ -167,8 +190,11 @@ Next: Run `/sdd:sdd-doctor` to verify the migrated tree is healthy.
 
 ## Constraints
 
-- **IDs are untouchable.** No spec item is renamed, renumbered, or re-abbreved —
+- **IDs are untouchable.** No artifact is renamed, renumbered, or re-abbreved —
   ever. The migration is moves + frontmatter only.
+- **Ephemeral artifacts: frontmatter rename only.** The `domain:` →
+  `component:` conversion (step 3b) never changes IDs, status, references, or
+  body content, and never touches archived files.
 - **Propose and apply are separate invocations.** Never apply an unreviewed
   mapping.
 - **Every item maps exactly once.** A proposal that drops or duplicates an item
