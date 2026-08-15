@@ -59,21 +59,25 @@ script from the repo or the plugin cache; fall back to
 `grep -v "^version:" {file} | shasum -a 256 | cut -c1-8` per file only if the
 script is unavailable).
 
-**Two conventions are valid.** Older projects hashed the whole file
-(`shasum -a 256 {file}`); the current convention strips the `version:` line
-first. A stored hash matching **either** computation is healthy — never
-"fix" a valid legacy-convention hash: rewriting it would flip every open
-gap's `audit-spec-version` comparison to stale across the whole project in
-one run, with no underlying spec change. Existing projects must keep working
-untouched.
+**Legacy hashes cannot be verified post-hoc.** Older projects hashed the
+whole file (`shasum -a 256 {file}`) *before* writing the hash in, so the
+stored value is part of the content it would need to hash — unverifiable
+after the fact. Unmigrated projects still *function*: stale-gap detection
+compares stored-vs-stored values and never recomputes, so it stays
+self-consistent regardless of convention. That is why a mass restamp is
+never automatic — rewriting hashes flips every open gap's
+`audit-spec-version` comparison to stale across the whole project in one
+run, with no underlying spec change.
 
-- **Healthy:** stored hash matches the strip-line or the whole-file
-  computation. Note legacy-convention items once in the report as migration
-  candidates (they converge to the new convention on their next real write).
-- **Mechanical fix:** stored hash matches **neither** computation — restamp
-  with `node plugin/scripts/stamp.js version {file}` (the documented
-  recompute-on-write rule; the content is the truth). Note in the report that
-  any open gaps on that item now correctly read stale.
+- **Isolated mismatches** (a few items on an otherwise-verifying project):
+  mechanical fix — restamp each with
+  `node plugin/scripts/stamp.js version {file}` (the recompute-on-write rule;
+  the content is the truth) and note that open gaps on those items now
+  correctly read stale.
+- **Widespread mismatches** (most of the tree fails — a legacy-convention or
+  historically-unstamped project): report the count and recommend a
+  deliberate one-time `stamp.js version --all` followed by a re-audit.
+  **Never apply it as a mechanical fix.**
 
 ### 4. ID integrity
 

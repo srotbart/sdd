@@ -63,10 +63,14 @@ accept both worlds:
   every skill, the hub, the statusline, `spec-index.js`, and sdd-doctor.
 - **Flat directory layouts** parse as one-level component trees everywhere
   (all spec scans are recursive and depth-agnostic).
-- **Both version-hash conventions** (whole-file legacy and strip-version-line)
-  are treated as healthy by sdd-doctor; a valid legacy hash is never
-  "corrected" (that would falsely stale every open gap). Legacy hashes
-  converge to the new formula on each item's next real edit.
+- **Legacy version hashes keep functioning.** Stale-gap detection compares
+  stored-vs-stored values and never recomputes, so it stays self-consistent
+  whatever convention stamped them. (Old whole-file hashes can't be
+  *verified* after the fact — the stored value is part of what would be
+  hashed — so `stamp.js check` will flag them; restamping the tree is a
+  deliberate one-time decision, never automatic, because it flips open gaps
+  to stale.) Hashes converge to the new formula on each item's next real
+  edit.
 - **Both ID suffix forms** (`-001` sequential and `-3f9c2a1` hash) stay valid
   everywhere, as before.
 - **Mixed states parse fine** — you can sit mid-migration without breakage,
