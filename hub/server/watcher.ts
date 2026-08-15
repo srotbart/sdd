@@ -1,41 +1,28 @@
 import chokidar from "chokidar";
 import fs from "node:fs";
 import path from "node:path";
+import { collectSpecsTree } from "./sdd-parser.js";
 
 const DEBOUNCE_MS = 200;
 
 function readReportPaths(sddPath: string): Set<string> {
-  const specsDir = path.join(sddPath, "specs");
   const reportPaths = new Set<string>();
 
   // Mapping files live anywhere in the component tree (next to the items they
-  // map), so walk recursively — mirroring parseSpecs — skipping `archive/`.
-  const walk = (dir: string): void => {
-    let entries: fs.Dirent[];
+  // map). collectSpecsTree is the single source for the specs-tree walk, so
+  // the watcher and parseSpecs always agree on what counts as a mapping file.
+  const { mappingFiles } = collectSpecsTree(path.join(sddPath, "specs"));
+  for (const { filePath } of mappingFiles) {
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
+      const raw = fs.readFileSync(filePath, "utf8");
+      const mapping = JSON.parse(raw) as { report?: unknown };
+      if (typeof mapping.report === "string" && mapping.report) {
+        reportPaths.add(mapping.report);
+      }
     } catch {
-      return;
+      // skip malformed mapping files
     }
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        if (entry.name !== "archive") walk(path.join(dir, entry.name));
-        continue;
-      }
-      if (!entry.name.endsWith(".tests.json")) continue;
-      try {
-        const raw = fs.readFileSync(path.join(dir, entry.name), "utf8");
-        const mapping = JSON.parse(raw) as { report?: unknown };
-        if (typeof mapping.report === "string" && mapping.report) {
-          reportPaths.add(mapping.report);
-        }
-      } catch {
-        // skip malformed mapping files
-      }
-    }
-  };
-
-  walk(specsDir);
+  }
   return reportPaths;
 }
 

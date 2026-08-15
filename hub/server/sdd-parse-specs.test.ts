@@ -567,3 +567,49 @@ describe("parseSpecs — mapping resolution edge cases (review fixes)", () => {
     expect(hub?.id).toBe("SPEC-hub");
   });
 });
+
+describe("parseSpecs — foreign-mapping and ref-regex fixes", () => {
+  it("does not bind a foreign component's mapping via the ID shorthand alone", () => {
+    // Item in ui-screens/ (abbrev ui-screens, id SPEC-scr-001) has no mapping.
+    // An unrelated component elsewhere has abbrev+mapping named "scr". The
+    // ID-shorthand match must not reach outside the item's directory chain.
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    fs.mkdirSync(path.join(sddPath, "specs", "ui-screens"), { recursive: true });
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "ui-screens", "SPEC-scr-001.md"),
+      `---\nid: SPEC-scr-001\ndomain: ui-screens\nabbrev: ui-screens\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-scr-001 — Screen item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.mkdirSync(path.join(sddPath, "specs", "other", "scr"), { recursive: true });
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "other", "scr", "SPEC-scr-100.md"),
+      `---\nid: SPEC-scr-100\ncomponent: other/scr\nabbrev: scr\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-scr-100 — Foreign item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.writeFileSync(path.join(workspaceRoot, "report.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "other", "scr", "SPEC-scr.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-scr-100": ["Node.js server starts correctly"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const uiItem = specs.find((s) => s.domain === "ui-screens")?.items[0];
+    const foreignItem = specs.find((s) => s.domain === "other")?.items[0];
+    // The ui-screens item must stay not-run (no report of its own), not get
+    // stamped "missing" by the foreign scr mapping's report.
+    expect(uiItem?.testStatus.status).toBe("not-run");
+    expect(foreignItem?.testStatus.status).toBe("passing");
+  });
+
+  it("parses hash-ID and hyphenated-abbrev GAP/WI references in item bodies", () => {
+    const { sddPath } = makeWorkspace();
+    writeSpecItem(
+      sddPath, "architecture", "arch", "SPEC-arch-001", "Item",
+      "## Invariant\nAddressed by GAP-auth-3f9c2a1 and WI-ui-screens-001.\n\n## Acceptance criteria\n- x"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const refs = specs.find((s) => s.domain === "architecture")?.items[0]?.refs ?? [];
+    const ids = refs.map((r) => r.id);
+    expect(ids).toContain("GAP-AUTH-3F9C2A1");
+    expect(ids).toContain("WI-UI-SCREENS-001");
+  });
+});
