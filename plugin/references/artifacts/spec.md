@@ -141,9 +141,17 @@ referenced item's current `version`:
 
 **Re-syncing:** when an edge drifts, re-verify the contract against both sides
 (does the promise still hold as stated?), update the invariant if needed, then
-re-stamp `contract-synced` with the current hashes and recompute `version`.
-Re-stamping without re-verifying defeats the mechanism. Drift is *detection*,
+re-stamp with the script — it rewrites every endpoint stamp to the current
+versions, removes self-stamps, and recomputes the contract's own `version` in
+one deterministic write:
+```bash
+node plugin/scripts/stamp.js contract {contract-file}
+```
+Re-stamping without re-verifying defeats the mechanism — the script is the
+*record* of a verification, never a substitute for it. Drift is *detection*,
 not violation — the audit decides whether anything is actually broken.
+`node plugin/scripts/stamp.js check --all` verifies every hash and stamp in
+the tree (exit 1 on any mismatch — usable as a CI step or pre-commit hook).
 
 Consumers of the mechanism: the hub colors Map edges by binding status,
 `session-start` lists drifted bindings next to stale-audit warnings, and
@@ -219,13 +227,15 @@ never changes, so no references need rewriting.
    component's `abbrev` and scanning the component directory (plus git history)
    for the highest existing sequence.
 3. Write the file with all required frontmatter and body sections.
-4. Compute the version hash and set it in frontmatter — the version line is
-   stripped before hashing to avoid a circular dependency:
+4. Stamp the version hash with the script — never compute it by hand:
    ```bash
-   grep -v "^version:" .sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md | shasum -a 256 | cut -c1-8
+   node plugin/scripts/stamp.js version {file}    # or --all for the whole tree
    ```
-   On Windows or where `shasum` is unavailable, use the Node equivalent (see
-   Edge Cases).
+   (Resolve the script from the repo, or from the installed plugin cache:
+   `$HOME/.claude/plugins/cache/sdd/sdd/*/scripts/stamp.js`.) The definition
+   it implements: SHA-256 of the file with every `version:` line stripped,
+   first 8 hex chars — identical to
+   `grep -v "^version:" {file} | shasum -a 256 | cut -c1-8`.
 5. The file is now the source of truth for this invariant.
 
 ### Updating a spec item
