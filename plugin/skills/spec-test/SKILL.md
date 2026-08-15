@@ -19,14 +19,14 @@ with the normal CI pipeline.
 Accept one of:
 
 - **Spec item ID**: `SPEC-auth-001` — generate tests for a single item
-- **Domain name**: `authentication` — generate tests for all items in the domain that lack coverage
-- **No argument**: report coverage status for all domains, then ask which to cover
+- **Component path**: `hub/client` (or an area, or a legacy flat domain name) — generate tests for all items in the subtree that lack coverage
+- **No argument**: report coverage status for all components, then ask which to cover
 
 ## Procedure
 
 ### 1. Identify uncovered spec items
 
-Glob `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` (skip `archive/` at either level) for each domain being targeted.
+Scan the targeted component subtree recursively — `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"` — components may nest to any depth.
 For each active spec item file, check whether a `**Tests:**` block exists in the body.
 Items without it are uncovered. Report the list before proceeding.
 
@@ -86,7 +86,7 @@ separate `.sdd/` test directory.
 ### 5. Update the spec item
 
 For each spec item with newly written tests, add a `**Tests:**` block to its file
-(`.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md`) after the statement body:
+(`.sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md`) after the statement body:
 
 ```markdown
 # SPEC-auth-001 — Admin actions require two-factor verification
@@ -120,8 +120,9 @@ After updating a spec item file, recompute and update its `version` field in fro
 
 ### 6. Write or update the test mapping file
 
-After writing tests and updating spec item files, create or update the per-domain
-test mapping file at `.sdd/specs/{domain}/SPEC-{abbrev}.tests.json`. This file
+After writing tests and updating spec item files, create or update the per-component
+test mapping file at `.sdd/specs/{component-path}/SPEC-{abbrev}.tests.json`
+(sitting next to the items it maps). This file
 tells the Hub parser how to resolve each spec item's test coverage and compute live
 `testStatus` (rather than defaulting every item to `not-run`).
 

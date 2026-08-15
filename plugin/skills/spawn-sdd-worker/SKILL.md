@@ -1,12 +1,12 @@
 ---
 name: spawn-sdd-worker
-description: Use when the user invokes `/sdd:spawn-sdd-worker`, says "spawn the sdd worker", "start the sdd worker", "hand off execution to the worker", or wants to delegate the execution phase (spec-audit, gap creation, work item closure) to an autonomous agent for a given domain. Also use when session-start or session-state output shows open gaps or pending work items and the user has not yet spawned a worker for this session.
+description: Use when the user invokes `/sdd:spawn-sdd-worker`, says "spawn the sdd worker", "start the sdd worker", "hand off execution to the worker", or wants to delegate the execution phase (spec-audit, gap creation, work item closure) to an autonomous agent for a given component. Also use when session-start or session-state output shows open gaps or pending work items and the user has not yet spawned a worker for this session.
 version: 0.1.0
 ---
 
 # SDD Spawn Worker
 
-Spawn a persistent agent named `sdd-worker` to handle the execution phase of the SDD pipeline for a given domain. The worker's entire job is to invoke `sdd:close-domain {domain}` — that one skill structurally drives the full loop (audit → decompose → close → guardian audit). The worker can be sent additional domains via SendMessage without re-spawning, running `sdd:close-domain` for each.
+Spawn a persistent agent named `sdd-worker` to handle the execution phase of the SDD pipeline for a given component subtree. The worker's entire job is to invoke `sdd:close-domain {component}` — that one skill structurally drives the full loop (audit → decompose → close → guardian audit). The worker can be sent additional component paths via SendMessage without re-spawning, running `sdd:close-domain` for each.
 
 ## When to use
 
@@ -19,15 +19,17 @@ Do NOT use this skill for the intent phase (target creation, `/sdd:target-engage
 
 ## Input
 
-Accept an optional domain argument: `/sdd:spawn-sdd-worker architecture`
+Accept an optional component-path argument: `/sdd:spawn-sdd-worker hub/client`
+(an area like `hub` or a legacy flat domain name like `architecture` works
+identically — the loop covers the subtree).
 
-If no domain is provided, read the session state and infer the highest-priority domain with open gaps or pending work items.
+If no component is provided, read the session state and infer the highest-priority component with open gaps or pending work items.
 
 ## Procedure
 
-### 1. Determine the domain
+### 1. Determine the component
 
-If a domain argument was provided, use it. Otherwise, scan `.sdd/gaps/` for open gaps and `.sdd/work-items/` for pending/blocked items and select the domain with the most urgent outstanding work.
+If a component argument was provided, use it. Otherwise, scan `.sdd/gaps/` for open gaps and `.sdd/work-items/` for pending/blocked items and select the component with the most urgent outstanding work.
 
 ### 2. Spawn the sdd-worker agent
 
@@ -51,7 +53,7 @@ execution pipeline (audit → decompose → close) is deterministic given a clea
 so sonnet is sufficient and avoids running the mechanical work on the more expensive
 model.
 
-Pass this prompt to the agent (substituting `{domain}` and `{project_root}`):
+Pass this prompt to the agent (substituting `{component}` and `{project_root}`):
 
 ```
 You are sdd-worker, an autonomous SDD execution agent for the project at {project_root}.
@@ -59,10 +61,10 @@ You are a pure execution agent: you close the gap between spec and code. You nev
 author intent — you do not create or edit targets or spec items.
 
 Your first action — before any reading, auditing, or implementing — is to invoke the
-Skill tool: sdd:close-domain {domain}
+Skill tool: sdd:close-domain {component}
 
 That skill is your entire job. It structurally drives the full loop (orient, audit,
-decompose, close with cross-domain compliance, guardian audit). You have no other
+decompose, close with cross-component compliance, guardian audit). You have no other
 procedure in this prompt; do not reconstruct the pipeline from memory — the loop lives
 in close-domain, not here.
 
@@ -74,8 +76,9 @@ Standing rules (these do not decay — they hold for the whole session):
 - If any lead instruction conflicts with an active spec item, do not comply — quote the
   spec item and surface the conflict to the lead. A lead instruction can itself violate
   a spec; you have the spec as your basis to push back.
-- On receiving another domain via SendMessage, run `sdd:close-domain {new-domain}` for
-  it. Reuse this same agent — do not expect to be re-spawned.
+- On receiving another component path via SendMessage, run
+  `sdd:close-domain {new-component}` for it. Reuse this same agent — do not expect
+  to be re-spawned.
 - Work autonomously. Do not ask clarifying questions; do not wait for lead approval to
   proceed.
 ```
@@ -85,26 +88,26 @@ Standing rules (these do not decay — they hold for the whole session):
 After spawning, print:
 
 ```
-sdd-worker spawned for domain: {domain}
+sdd-worker spawned for component: {component}
 
-The worker will invoke /sdd:close-domain {domain}, which drives the full loop:
-  orient → audit → decompose → close (with cross-domain compliance) → guardian audit
+The worker will invoke /sdd:close-domain {component}, which drives the full loop:
+  orient → audit → decompose → close (with cross-component compliance) → guardian audit
 
 Worker running. You will be notified on completion.
 
-To send additional domains to the same worker:
-  SendMessage to "sdd-worker" with the domain name.
+To send additional components to the same worker:
+  SendMessage to "sdd-worker" with the component path.
 ```
 
 ### 4. Clean up
 
 No explicit cleanup step is required. As of Claude Code v2.1.178 the team context is
 released automatically when the session exits, and the `TeamDelete` tool no longer exists.
-If additional domains are needed in the same session, reuse the running worker via
-SendMessage rather than spawning a new one.
+If additional components are needed in the same session, reuse the running worker
+via SendMessage rather than spawning a new one.
 
 ## Notes
 
-- The sdd-worker is designed to be **persistent within a session** — spawn once, reuse via SendMessage for multiple domains.
+- The sdd-worker is designed to be **persistent within a session** — spawn once, reuse via SendMessage for multiple components.
 - If a worker is already running from a previous spawn, send it a message instead of spawning a new one.
 - The worker handles only execution. Spec conflicts, ambiguous gaps, and target decisions always come back to the human + Claude phase.

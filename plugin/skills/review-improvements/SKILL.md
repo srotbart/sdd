@@ -1,6 +1,6 @@
 ---
 name: review-improvements
-description: This skill should be used when the user invokes `/sdd:review-improvements`, says "find improvements", "suggest refactors", "what can be simplified", "propose enhancements", or wants a 3-agent team to propose improvements — enhancements, refactors, simplifications, performance, ergonomics, better patterns. The team writes IMP-{domain}-{seq} artifacts but never auto-applies changes.
+description: This skill should be used when the user invokes `/sdd:review-improvements`, says "find improvements", "suggest refactors", "what can be simplified", "propose enhancements", or wants a 3-agent team to propose improvements — enhancements, refactors, simplifications, performance, ergonomics, better patterns. The team writes IMP-{abbrev}-{7hex} artifacts but never auto-applies changes.
 version: 0.1.0
 ---
 
@@ -8,7 +8,7 @@ version: 0.1.0
 
 Spawn 3 agents via the Agent tool to sweep the codebase and specs for
 improvement opportunities — enhancements, refactors, simplifications, performance,
-ergonomics, and better patterns. Each proposal is written as an `IMP-{domain}-{7hex}`
+ergonomics, and better patterns. Each proposal is written as an `IMP-{abbrev}-{7hex}`
 artifact under `.sdd/improvements/`. This is the enhancement-focused sibling of
 `/sdd:review-issues`. **The team never auto-applies improvements.**
 
@@ -16,9 +16,9 @@ artifact under `.sdd/improvements/`. This is the enhancement-focused sibling of
 
 Accept one of:
 
-- **Domain name**: `authentication` — propose improvements for this domain
+- **Component path**: `hub/client` (or an area, or a legacy flat domain name) — propose improvements for this component subtree
 - **Path or glob**: `src/auth/` — review a specific area
-- **No argument**: sweep the entire codebase and all spec domains
+- **No argument**: sweep the entire codebase and the whole component tree
 
 ## Procedure
 
@@ -35,7 +35,7 @@ avoid duplicate coverage:
 - **Agent B** — performance and ergonomics: inefficient patterns, poor APIs,
   confusing interfaces, unnecessary complexity in the public surface
 - **Agent C** — architecture and patterns: structure improvements, better design
-  patterns, missed opportunities for consistency with the spec/domain model
+  patterns, missed opportunities for consistency with the spec/component model
 
 Each agent independently produces a list of improvement proposals.
 
@@ -53,10 +53,10 @@ de-duplicate across agents:
 
 ### 3. Write improvement files
 
-For each distinct proposal, create `.sdd/improvements/IMP-{domain}-{7hex}.md`,
-minting the ID as `IMP-{domain}-{7hex}` where `{7hex}` is 7 random lowercase hex
+For each distinct proposal, create `.sdd/improvements/IMP-{abbrev}-{7hex}.md`,
+minting the ID as `IMP-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex
 characters (e.g. `openssl rand -hex 4 | cut -c1-7`) — no sequence scan, collision-free
-by construction. Existing sequential `IMP-{domain}-{seq}` IDs remain
+by construction. Existing sequential `IMP-{abbrev}-{seq}` IDs remain
 valid and are never renamed.
 
 **Required frontmatter:**
@@ -64,7 +64,7 @@ valid and are never renamed.
 ```markdown
 ---
 id: IMP-auth-001
-domain: authentication
+component: authentication   # component path; legacy `domain:` accepted
 status: open     # open | accepted | dismissed
 location: "src/auth/session.py:45"
 effort: medium   # low | medium | high
@@ -135,12 +135,12 @@ Next: Engage proposals with the user. Run `/sdd:review-engage IMP-auth-001` to p
 
 ## Artifact Storage
 
-Improvements live at `.sdd/improvements/IMP-{domain}-{7hex}.md`.
+Improvements live at `.sdd/improvements/IMP-{abbrev}-{7hex}.md`.
 Archived improvements (accepted/dismissed) move to `.sdd/improvements/archive/` — a
 gitignored local-only cache.
 
-**ID convention:** `IMP-{domain}-{7hex}` — a 7-char lowercase hex hash minted at
-creation, no lookup required. Legacy sequential `IMP-{domain}-{seq}`
+**ID convention:** `IMP-{abbrev}-{7hex}` — a 7-char lowercase hex hash minted at
+creation, no lookup required. Legacy sequential `IMP-{abbrev}-{seq}`
 IDs remain valid and are never renamed or recycled.
 
 **Terminal states → archive:** `accepted`, `dismissed`

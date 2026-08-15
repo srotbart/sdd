@@ -57,7 +57,7 @@ runs for you.
 
 Terminal state: no open gaps, no pending work items.
 
-## The Six Skills
+## The Core Skills
 
 ### `/sdd:session-start`
 Start every session with this. Scans `.sdd/` and prints a status snapshot
@@ -77,7 +77,7 @@ Acts on a target based on its status:
 The Dialog section is append-only. The Current statement can be edited by
 either party. Status flips coordinate turn-taking.
 
-### `/sdd:spec-audit [domain or SPEC-item-id]`
+### `/sdd:spec-audit [component or SPEC-item-id]`
 Enumerates code paths relevant to a spec item, reasons about whether each
 invariant holds, and writes gap files for every divergence. Every gap includes
 a `file:line` location and a one-line justification. Holds are shown alongside
@@ -85,7 +85,7 @@ gaps — the audit is only credible if it demonstrates what passed.
 
 Gap files are stamped with the spec version hash so stale audits are detectable.
 
-### `/sdd:gap-to-work-items [domain or GAP-id]`
+### `/sdd:gap-to-work-items [component or GAP-id]`
 Decomposes open gap files into scoped work items. Handles:
 - One gap → one work item (default)
 - One gap → many work items (fix requires distinct steps)
@@ -144,7 +144,7 @@ runs them (audit → decompose → close, then a guardian audit) in one invocati
 ## All Skills
 
 ### `/sdd:close-domain` — Close Domain
-The sdd-worker's operating loop — drives the full execution pipeline for one domain (audit → decompose → close → guardian audit)
+The sdd-worker's operating loop — drives the full execution pipeline for one component subtree (audit → decompose → close → guardian audit)
 
 ### `/sdd:explain` — Explain
 asks to "explain how X works", "document X", "write an explanation of X", or wants a deep-dive document on a component, concept, or subsystem in the current project
@@ -156,7 +156,7 @@ says "decompose gaps into work items", "create work items for GAP-auth", "genera
 invokes `/sdd:install-statusline` or asks to "install the SDD statusline", "set up the statusline", or "add SDD statusline to Claude Code"
 
 ### `/sdd:next` — Next
-says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all domains with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill
+says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all components with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill
 
 ### `/sdd:projection-comments` — Projection Comments
 says "address projection comments for <name>", "process comments on <name>", or wants to apply and prune pending comments on a projection document
@@ -168,7 +168,7 @@ says "engage issue ISS-auth-001", "engage improvement IMP-auth-001", "discuss th
 says "find improvements", "suggest refactors", "what can be simplified", "propose enhancements", or wants a 3-agent team to propose improvements — enhancements, refactors, simplifications, performance, ergonomics, better patterns
 
 ### `/sdd:review-issues` — Review Issues
-says "run a code review", "find issues in the codebase", "sweep for problems", "review domain X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts
+says "run a code review", "find issues in the codebase", "sweep for problems", "review component X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts
 
 ### `/sdd:sdd-help` — Sdd Help
 says "how does SDD work", "explain spec-driven development", "what is the SDD workflow", "how do I use SDD", "explain the SDD pipeline", "what are SDD skills", or wants to understand spec-driven development before starting or when confused about the workflow
@@ -180,7 +180,7 @@ says "initialize SDD", "set up SDD", "create the SDD folder", "bootstrap SDD for
 says "start my SDD session", "show SDD state", "what's pending in SDD", "what targets are waiting", "check my SDD", or begins work on a spec-driven project and wants a status snapshot
 
 ### `/sdd:spawn-sdd-worker` — Spawn Sdd Worker
-says "spawn the sdd worker", "start the sdd worker", "hand off execution to the worker", or wants to delegate the execution phase (spec-audit, gap creation, work item closure) to an autonomous agent for a given domain
+says "spawn the sdd worker", "start the sdd worker", "hand off execution to the worker", or wants to delegate the execution phase (spec-audit, gap creation, work item closure) to an autonomous agent for a given component
 
 ### `/sdd:spec-audit` — Spec Audit
 says "audit the spec", "audit authentication spec", "check the codebase against spec", "find gaps in SPEC-auth", "run a gap audit", "audit SPEC-auth-003", or wants to know where the codebase diverges from a spec

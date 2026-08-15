@@ -1,12 +1,12 @@
 ---
 name: gap-to-work-items
-description: This skill should be used when the user invokes `/sdd:gap-to-work-items`, says "decompose gaps into work items", "create work items for GAP-auth", "generate work items from gap report", "break down gaps for authentication", or wants to turn open gap files into actionable work items. Takes a domain or specific gap ID as input and produces scoped work-item files.
+description: This skill should be used when the user invokes `/sdd:gap-to-work-items`, says "decompose gaps into work items", "create work items for GAP-auth", "generate work items from gap report", "break down gaps for authentication", or wants to turn open gap files into actionable work items. Takes a component path or specific gap ID as input and produces scoped work-item files.
 version: 0.1.0
 ---
 
 # SDD Gap to Work Items
 
-Read open gap files for a domain (or a single gap), decompose them into concrete
+Read open gap files for a component (or a single gap), decompose them into concrete
 scoped work items, and write work-item files. Handles one-gap-to-many and
 many-gaps-to-one decomposition. Separate from spec-audit so audits can be accepted
 independently of decomposition.
@@ -15,9 +15,10 @@ independently of decomposition.
 
 Accept one of:
 
-- **Domain name**: `authentication` — decompose all open gaps for the domain
+- **Component path**: `hub/client` or an area like `hub` — decompose all open gaps
+  for that component's subtree (a legacy flat domain name works identically)
 - **Gap ID**: `GAP-auth-003` — decompose a single gap
-- **No argument**: if a single domain has open gaps, default to it; otherwise ask
+- **No argument**: if a single component has open gaps, default to it; otherwise ask
 
 ## Procedure
 
@@ -27,9 +28,9 @@ Read all active `.sdd/gaps/GAP-{abbrev}-*.md` for the target scope. Filter to
 `status: open`. Skip gaps that already have work items — check by scanning
 `.sdd/work-items/WI-{abbrev}-*.md` for entries referencing each gap ID.
 
-When resolving a gap's linked `spec-item` to read its title or invariant, search
-both `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md`,
-excluding `archive/` at either level.
+When resolving a gap's linked `spec-item` to read its title or invariant, scan the
+component tree recursively — `find .sdd/specs -name "SPEC-{abbrev}-{seq}.md"
+! -path "*/archive/*"` — components may nest to any depth.
 
 ### 2. Determine decomposition strategy per gap
 
@@ -61,6 +62,7 @@ are never renamed.
 
 Use the schema in `references/schemas.md` (Work Items section). Set:
 - `gap-id` — the referenced gap ID (or an array for many-to-one)
+- `component` — the gap's component path (its `component:` field, or legacy `domain:` value)
 - `status: pending`
 - `created` — current ISO timestamp
 - `abandoned-reason: null`

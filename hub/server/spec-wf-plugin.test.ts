@@ -40,7 +40,7 @@ describe("SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent", 
 
   it("SPEC-wf-002: the worker prompt's first action is to invoke sdd:close-domain, with no embedded pipeline", () => {
     // The loop lives in close-domain (SPEC-wf-038), not in the prompt.
-    expect(skill).toMatch(/first action[^]*sdd:close-domain \{domain\}/i);
+    expect(skill).toMatch(/first action[^]*sdd:close-domain \{(?:domain|component)\}/i);
     // The old three-step audit→decompose→close procedure is gone from the prompt.
     expect(skill).not.toMatch(/1\.\s*Run \/sdd:spec-audit/);
     expect(skill).not.toMatch(/Run \/sdd:gap-to-work-items \{domain\}/);
@@ -48,7 +48,7 @@ describe("SPEC-wf-002: spawn-sdd-worker creates a persistent sdd-worker agent", 
 
   it("SPEC-wf-002: documents reuse via SendMessage for additional domains without re-spawning", () => {
     expect(skill).toMatch(/SendMessage/);
-    expect(skill.toLowerCase()).toMatch(/additional domain/);
+    expect(skill.toLowerCase()).toMatch(/additional (?:domain|component)/);
   });
 });
 
@@ -147,7 +147,7 @@ describe("SPEC-wf-006: sdd-worker prompt defines role, responsibilities, and gap
   });
 
   it("SPEC-wf-006: prompt's only imperative is invoking sdd:close-domain (no embedded procedure)", () => {
-    expect(skill).toMatch(/sdd:close-domain \{domain\}/);
+    expect(skill).toMatch(/sdd:close-domain \{(?:domain|component)\}/);
     expect(skill).not.toMatch(/1\.\s*Run \/sdd:spec-audit/);
   });
 
@@ -379,7 +379,7 @@ describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () =>
   it("SPEC-wf-025: findings are ISS-{domain}-{seq|7hex} under .sdd/issues/ recording location, problem, rationale, severity", () => {
     // Per SPEC-wf-037 the suffix may be sequential ({seq}) or a 7-hex hash ({7hex});
     // consumers accept both forms.
-    expect(skill).toMatch(/ISS-\{domain\}-\{(?:seq|7hex)\}/);
+    expect(skill).toMatch(/ISS-\{(?:domain|abbrev)\}-\{(?:seq|7hex)\}/);
     expect(skill).toMatch(/\.sdd\/issues\//);
     expect(skill.toLowerCase()).toMatch(/location/);
     expect(skill.toLowerCase()).toMatch(/rationale/);
@@ -394,7 +394,7 @@ describe("SPEC-wf-025: Issues are a reviewer-team-produced artifact type", () =>
     // Per SPEC-wf-035, ephemeral archive dirs are gitignored and may be absent on a
     // fresh clone/worktree; no tool (tests included) may depend on their presence.
     // Assert the documented storage shape, not on-disk directory existence.
-    expect(skill).toMatch(/\.sdd\/issues\/ISS-\{domain\}-\{(?:seq|7hex)\}\.md/);
+    expect(skill).toMatch(/\.sdd\/issues\/ISS-\{(?:domain|abbrev)\}-\{(?:seq|7hex)\}\.md/);
     expect(skill).toMatch(/\.sdd\/issues\/archive\//);
   });
 });
@@ -413,7 +413,7 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
 
   it("SPEC-wf-026: proposals are IMP-{domain}-{seq|7hex} under .sdd/improvements/ recording effort and impact", () => {
     // Per SPEC-wf-037 the suffix may be sequential ({seq}) or a 7-hex hash ({7hex}).
-    expect(skill).toMatch(/IMP-\{domain\}-\{(?:seq|7hex)\}/);
+    expect(skill).toMatch(/IMP-\{(?:domain|abbrev)\}-\{(?:seq|7hex)\}/);
     expect(skill).toMatch(/\.sdd\/improvements\//);
     expect(skill.toLowerCase()).toMatch(/effort/);
     expect(skill.toLowerCase()).toMatch(/impact/);
@@ -427,7 +427,7 @@ describe("SPEC-wf-026: Improvements are a team-produced enhancement artifact typ
     // Per SPEC-wf-035, ephemeral archive dirs are gitignored and may be absent on a
     // fresh clone/worktree; no tool (tests included) may depend on their presence.
     // Assert the documented storage shape, not on-disk directory existence.
-    expect(skill).toMatch(/\.sdd\/improvements\/IMP-\{domain\}-\{(?:seq|7hex)\}\.md/);
+    expect(skill).toMatch(/\.sdd\/improvements\/IMP-\{(?:domain|abbrev)\}-\{(?:seq|7hex)\}\.md/);
     expect(skill).toMatch(/\.sdd\/improvements\/archive\//);
   });
 });
@@ -492,6 +492,8 @@ describe("SPEC-wf-035: Ephemeral artifact archives are local-only, never version
   it("SPEC-wf-035: lint-check.sh fails when a file under an ignored archive path is force-added", () => {
     const abs = path.join(REPO_ROOT, PROBE);
     try {
+      // Archive dirs are gitignored local-only caches and absent on fresh clones.
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
       fs.writeFileSync(abs, "probe\n");
       execFileSync("git", ["add", "-f", "--", PROBE], { cwd: REPO_ROOT });
       expect(runLint()).toMatch(ARCHIVE_FAIL);
@@ -575,8 +577,8 @@ describe("SPEC-wf-037: ephemeral minting skills mint {7hex} hash IDs, not archiv
   const CASES = [
     { skill: "plugin/skills/spec-audit/SKILL.md", mint: /GAP-\{abbrev\}-\{7hex\}/, oldScan: /gaps\/archive\/GAP-\{abbrev\}-\*\.md/ },
     { skill: "plugin/skills/gap-to-work-items/SKILL.md", mint: /WI-\{abbrev\}-\{7hex\}/, oldScan: /work-items\/archive\/WI-\{abbrev\}-\*\.md/ },
-    { skill: "plugin/skills/review-issues/SKILL.md", mint: /ISS-\{domain\}-\{7hex\}/, oldScan: /next available sequence number/i },
-    { skill: "plugin/skills/review-improvements/SKILL.md", mint: /IMP-\{domain\}-\{7hex\}/, oldScan: /next available sequence number/i },
+    { skill: "plugin/skills/review-issues/SKILL.md", mint: /ISS-\{(?:domain|abbrev)\}-\{7hex\}/, oldScan: /next available sequence number/i },
+    { skill: "plugin/skills/review-improvements/SKILL.md", mint: /IMP-\{(?:domain|abbrev)\}-\{7hex\}/, oldScan: /next available sequence number/i },
   ];
 
   for (const { skill, mint, oldScan } of CASES) {
@@ -817,7 +819,7 @@ describe("SPEC-wf-038: close-domain skill drives the full execution loop for a d
     // description/preamble must name it as the sdd-worker's operating loop
     expect(skill).toMatch(/sdd-worker's operating loop/i);
     // must redirect lead/main sessions to spawn-sdd-worker
-    expect(skill).toMatch(/spawn-sdd-worker \{domain\}/);
+    expect(skill).toMatch(/spawn-sdd-worker \{(?:domain|component)\}/);
     // "equally usable by a human driver" framing must be gone
     expect(skill).not.toMatch(/equally usable by a human driver/i);
   });
@@ -844,7 +846,7 @@ describe("SPEC-wf-041: guardian cross-domain audit gates worker completion", () 
 
   it("SPEC-wf-041: maps changed files to spec items across all domains", () => {
     const skill = read(rel).toLowerCase();
-    expect(skill).toMatch(/across all domains/);
+    expect(skill).toMatch(/across (?:all domains|the entire component tree)/i);
   });
 
   it("SPEC-wf-041: own-run violations are fixed inline with no gap artifacts", () => {
@@ -919,14 +921,14 @@ describe("SPEC-wf-040: work items are closed with cross-domain spec context and 
 
   it("SPEC-wf-040: work-item-close instructs a cross-domain diff self-check from close-domain", () => {
     const skill = read(wic).toLowerCase();
-    expect(skill).toMatch(/cross-domain self-check/);
-    expect(skill).toMatch(/every cross-domain spec item provided/);
+    expect(skill).toMatch(/cross-(?:domain|component) self-check/);
+    expect(skill).toMatch(/every cross-(?:domain|component) spec item provided/);
   });
 
   it("SPEC-wf-040: close-domain selects relevant spec items across all domains before implementing", () => {
     const skill = read(cd).toLowerCase();
     expect(skill).toMatch(/select the governing spec items/);
-    expect(skill).toMatch(/across all domains/);
+    expect(skill).toMatch(/across (?:all domains|the entire component tree)/i);
     // Discovery: index/scope first, read-only subagent only when inconclusive, fallback reported.
     expect(skill).toMatch(/spec-discovery subagent/);
     expect(skill).toMatch(/never silently skipped/);

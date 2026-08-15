@@ -29,9 +29,9 @@ Parse `.sdd/work-items/WI-{abbrev}-{seq}.md`. Extract:
 For each gap ID referenced, read `.sdd/gaps/GAP-{abbrev}-{seq}.md`. Confirm `status: open`.
 The gap's `**Location:**` and `**Reasoning:**` are the ground truth for what needs fixing.
 
-When resolving the gap's `spec-item` field to read the spec item file, search both
-`.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md`, excluding
-`archive/` at either level.
+When resolving the gap's `spec-item` field to read the spec item file, scan the
+component tree recursively — `find .sdd/specs -name "SPEC-{abbrev}-{seq}.md"
+! -path "*/archive/*"` — components may nest to any depth.
 
 ### 3. Flip work item to in-progress
 
@@ -77,7 +77,7 @@ If the spec item has no `**Tests:**` block, note it in the report: "SPEC-auth-00
 has no spec-level tests — consider running /sdd:spec-test after this work item closes."
 Do not block archiving on missing spec tests; only block on failing ones.
 
-### 6b. Verify acceptance criteria and cross-domain compliance
+### 6b. Verify acceptance criteria and cross-component compliance
 
 **"Tests pass" alone is not completion.** Before marking the work item done:
 
@@ -85,16 +85,17 @@ Do not block archiving on missing spec tests; only block on failing ones.
   against the code** — not merely that the test suite is green. A criterion that no
   test happens to exercise must still be confirmed by reading the implementation.
   If any criterion is not actually satisfied, keep working — do not flip to done.
-- **Cross-domain self-check.** When this skill is invoked from `sdd:close-domain`,
-  self-check the diff against **every cross-domain spec item provided
+- **Cross-component self-check.** When this skill is invoked from `sdd:close-domain`,
+  self-check the diff against **every cross-component spec item provided
   in context**, not only the gap's own spec item. The code a work item touches is
-  often governed by spec items from other domains; a change that closes its own gap
-  while violating another domain's invariant is not done. If the diff conflicts with
-  a provided cross-domain item, resolve it before proceeding (or surface it, per the
+  often governed by spec items from other components (including ancestors of the
+  gap's component); a change that closes its own gap while violating another
+  component's invariant is not done. If the diff conflicts with a provided
+  cross-component item, resolve it before proceeding (or surface it, per the
   close-domain guardian rules).
 
 Proceed to mark the work item done only once every acceptance criterion is verified
-against the code and the diff is clean against all provided cross-domain items.
+against the code and the diff is clean against all provided cross-component items.
 
 ### 6c. Scope backfill — mechanical write to the spec item (permitted)
 
@@ -105,8 +106,8 @@ subject to the escalation rule for spec item edits:
 1. Derive globs from the files changed by this work item.
 2. If the spec item has no `scope:` field, add one with the derived globs;
    if it already has one, extend it to cover any paths not yet included.
-3. Recompute the spec item's `version:` hash (SHA-256 of the full file content,
-   first 8 hex chars) and update it.
+3. Recompute the spec item's `version:` hash (SHA-256 of the file content with
+   the `version:` line stripped, first 8 hex chars) and update it.
 4. Include the scope backfill in the terminal-state commit (step 8).
 
 **Never touch `## Invariant` or `## Acceptance criteria` content.** Scope backfill
@@ -147,12 +148,12 @@ and closed within a single branch.
 **Work item:** WI-auth-001 → archived
 
 ---
-Next: Continue with the next work item or verify the domain. Run `/sdd:work-item-close WI-{next-id}` to proceed.
+Next: Continue with the next work item or verify the component. Run `/sdd:work-item-close WI-{next-id}` to proceed.
 ```
 
-The final line after `---` is conditional on remaining work in the domain:
+The final line after `---` is conditional on remaining work in the component:
 - **Work items remain:** `Run \`/sdd:work-item-close WI-{next-id}\` to continue.` (substitute the next pending/in-progress WI ID)
-- **All work items closed:** `Run \`/sdd:spec-audit {domain}\` to verify the spec holds.` (substitute the domain name)
+- **All work items closed:** `Run \`/sdd:spec-audit {component}\` to verify the spec holds.` (substitute the component path)
 
 ## Constraints
 
