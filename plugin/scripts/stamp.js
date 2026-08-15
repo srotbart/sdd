@@ -11,50 +11,71 @@
  *   node stamp.js version <file>... | --all
  *     Recompute each spec item's `version:` field (SHA-256 of the file with
  *     every `version:` line stripped, first 8 hex chars — identical to
- *     `grep -v "^version:" f | shasum -a 256 | cut -c1-8`). Writes only when
- *     the stored value differs. Prints one line per change: `id old → new`.
+ *     `grep -v "^version:" f | shasum -a 256 | cut -c1-8`, including grep's
+ *     newline-termination of the final line). Writes only when the stored
+ *     value differs; inserts the field before the closing frontmatter
+ *     delimiter when absent. Prints one line per change: `id old → new`.
  *
  *   node stamp.js contract <file>...
- *     Re-stamp a contract item's `contract-synced` entries with each
- *     referenced item's CURRENT version, then recompute the contract's own
- *     `version:` (in that order — stamps change the content the version
- *     covers). Self-stamps (the contract referencing itself) are removed:
- *     they can never converge. Unresolvable entry IDs are a hard error —
- *     nothing is guessed, nothing is partially written.
- *     ONLY run this after re-verifying the contract against both sides;
- *     stamping IS the record of that verification.
+ *     Re-stamp a contract item's `contract-synced` entries. For each
+ *     endpoint: the endpoint's own `version:` is recomputed first (and
+ *     rewritten if stale or missing — reported), then stamped — so stamps
+ *     are always current-content hashes, independent of stale stored values.
+ *     Self-stamps (the contract referencing itself) are removed: they can
+ *     never converge. Multi-line `contract-synced` flow lists are read whole
+ *     and rewritten single-line. Unresolvable entry IDs are a hard error —
+ *     nothing is written. Does not accept --all: re-stamping records a
+ *     verification, which is per-contract and deliberate.
+ *     ONLY run this after re-verifying the contract against both sides.
  *
  *   node stamp.js check <file>... | --all
- *     Verify without writing. Exit 0 when every checked file's `version:`
- *     (and, for contract items, every stamp) matches; exit 1 otherwise,
- *     printing one line per mismatch. Accepts BOTH hash conventions for
- *     `version:` (strip-line and legacy whole-file) so unmigrated projects
- *     pass; stamps are always compared against current versions.
+ *     Verify without writing: every `version:` against the canonical
+ *     strip-line hash, and every binding stamp against its endpoint's
+ *     current stored version (plus self-stamp and malformed-entry
+ *     detection). Exit 0 clean, 1 on any mismatch. Note: hashes written
+ *     under the retired whole-file convention cannot be verified post-hoc
+ *     (the stored hash is part of what would be hashed) — on such projects
+ *     expect widespread mismatches; restamping them is a deliberate,
+ *     one-time `version --all` decision, never an automatic fix, because it
+ *     flips open gaps to stale.
  *
- * The project root is the nearest ancestor of the first file (or of the
- * cwd for --all) containing `.sdd/`. Files may be given relative or
- * absolute. Exit codes: 0 success, 1 check-mismatch, 2 usage/resolution
- * error.
+ * The project root is the nearest ancestor of each file (or of the cwd for
+ * --all) containing `.sdd/`. Exit codes: 0 success, 1 check-mismatch,
+ * 2 usage/resolution error.
  */
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+function fail(msg) {
+  process.stderr.write(`stamp: ${msg}\n`);
+  process.exit(2);
+}
+
+function readFile(file) {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    fail(`${file}: ${e.code === 'ENOENT' ? 'no such file' : e.message}`);
+  }
+}
+
 // ─── Hashing ──────────────────────────────────────────────────────────────────
 
-/** SHA-256[:8] of content with every `version:` line removed (the canonical rule). */
+/**
+ * SHA-256[:8] of content with every `version:` line removed — byte-identical
+ * to `grep -v "^version:" f | shasum -a 256 | cut -c1-8`. grep newline-
+ * terminates its final output line even when the input lacks a trailing
+ * newline, so the stripped content is normalized the same way.
+ */
 function strippedHash(content) {
-  const stripped = content
+  let stripped = content
     .split('\n')
     .filter((line) => !line.startsWith('version:'))
     .join('\n');
+  if (!stripped.endsWith('\n')) stripped += '\n';
   return crypto.createHash('sha256').update(stripped).digest('hex').slice(0, 8);
-}
-
-/** SHA-256[:8] of the whole file (legacy convention, accepted by `check`). */
-function wholeFileHash(content) {
-  return crypto.createHash('sha256').update(content).digest('hex').slice(0, 8);
 }
 
 // ─── Frontmatter helpers (line-oriented; writes preserve everything else) ─────
@@ -65,20 +86,41 @@ function getField(content, name) {
   return m[1].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
 }
 
-function setVersion(content, hash) {
+function setVersion(file, content, hash) {
   if (/^version:.*$/m.test(content)) {
     return content.replace(/^version:.*$/m, `version: "${hash}"`);
   }
-  // No version line yet: insert before the closing frontmatter delimiter.
-  return content.replace(/^---$/m, '---').replace(/\n---\n/, `\nversion: "${hash}"\n---\n`);
+  // No version line yet: insert before the closing frontmatter delimiter
+  // (the second `---` line). CRLF-tolerant; a file without frontmatter is an
+  // error, never a silent no-op.
+  const lines = content.split('\n');
+  const isDelim = (l) => /^---\r?$/.test(l);
+  if (!isDelim(lines[0])) fail(`${file}: no frontmatter block to stamp`);
+  const close = lines.findIndex((l, i) => i > 0 && isDelim(l));
+  if (close === -1) fail(`${file}: unterminated frontmatter block`);
+  lines.splice(close, 0, `version: "${hash}"`);
+  return lines.join('\n');
 }
 
-function parseSynced(content) {
-  const raw = getField(content, 'contract-synced');
+/**
+ * The raw `contract-synced` flow list, matched across wrapped lines so a
+ * multi-line list is read whole and can be rewritten in place. Returns
+ * { match, inner } or null when the field is absent. An opening `[` with no
+ * closing `]` is a hard error — partial parses corrupt files.
+ */
+function matchSynced(file, content) {
+  const open = content.match(/^contract-synced:\s*/m);
+  if (!open) return null;
+  const m = content.match(/^contract-synced:[ \t]*\[([^\]]*)\]/m);
+  if (!m) fail(`${file}: contract-synced must be a [...] flow list (closing ']' not found)`);
+  return { match: m[0], inner: m[1] };
+}
+
+function parseSynced(file, content) {
+  const raw = matchSynced(file, content);
   if (raw === null) return null;
-  const inner = raw.replace(/^\[|\]$/g, '');
   const entries = [];
-  for (const part of inner.split(',')) {
+  for (const part of raw.inner.split(',')) {
     const trimmed = part.trim();
     if (!trimmed) continue;
     const m = /^([A-Za-z0-9-]+)@([0-9a-fA-F]+)$/.exec(trimmed);
@@ -87,9 +129,10 @@ function parseSynced(content) {
   return entries;
 }
 
-function setSynced(content, entries) {
-  const rendered = `[${entries.map((e) => `${e.item}@${e.stamp}`).join(', ')}]`;
-  return content.replace(/^contract-synced:.*$/m, `contract-synced: ${rendered}`);
+function setSynced(file, content, entries) {
+  const raw = matchSynced(file, content);
+  const rendered = `contract-synced: [${entries.map((e) => `${e.item}@${e.stamp}`).join(', ')}]`;
+  return content.replace(raw.match, rendered);
 }
 
 // ─── Tree resolution ──────────────────────────────────────────────────────────
@@ -116,23 +159,32 @@ function collectSpecFiles(dir) {
     if (entry.isDirectory()) {
       if (entry.name === 'archive') continue;
       found.push(...collectSpecFiles(path.join(dir, entry.name)));
-    } else if (entry.isFile() && /^SPEC-.*\.md$/.test(entry.name) && !entry.name.endsWith('.tests.json')) {
+    } else if (entry.isFile() && /^SPEC-.*\.md$/.test(entry.name)) {
       found.push(path.join(dir, entry.name));
     }
   }
   return found.sort();
 }
 
-/** id (uppercased) → { file, version } for every active-tree spec item. */
-function indexVersions(specsDir) {
+/** id (uppercased) → { file } for every active-tree spec item, per project root. */
+const indexCache = new Map();
+function indexItems(root) {
+  if (indexCache.has(root)) return indexCache.get(root);
   const index = new Map();
-  for (const file of collectSpecFiles(specsDir)) {
+  for (const file of collectSpecFiles(path.join(root, '.sdd', 'specs'))) {
     const content = fs.readFileSync(file, 'utf8');
     const id = getField(content, 'id');
     if (!id) continue;
-    index.set(id.toUpperCase(), { file, version: getField(content, 'version') ?? '' });
+    index.set(id.toUpperCase(), { file });
   }
+  indexCache.set(root, index);
   return index;
+}
+
+function rootFor(file) {
+  const root = findSddRoot(path.dirname(file));
+  if (!root) fail(`${file}: no .sdd/ found above the file`);
+  return root;
 }
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
@@ -147,38 +199,36 @@ function resolveTargets(args, cwd) {
   return args.map((f) => path.resolve(cwd, f)).sort();
 }
 
-function fail(msg) {
-  process.stderr.write(`stamp: ${msg}\n`);
-  process.exit(2);
+/** Recompute and (when needed) rewrite one file's version. Returns the hash. */
+function restampVersion(file, report) {
+  const content = readFile(file);
+  const id = getField(content, 'id') ?? path.basename(file);
+  const current = getField(content, 'version');
+  // The hash strips every version line, so the stored value never feeds into
+  // its own recomputation.
+  const hash = strippedHash(content);
+  if (current !== hash) {
+    fs.writeFileSync(file, setVersion(file, content, hash));
+    if (report) process.stdout.write(`${id} ${current ?? '(none)'} → ${hash}\n`);
+  }
+  return hash;
 }
 
 function cmdVersion(files) {
-  for (const file of files) {
-    const content = fs.readFileSync(file, 'utf8');
-    const id = getField(content, 'id') ?? path.basename(file);
-    const current = getField(content, 'version') ?? '(none)';
-    // The hash strips every version line, so the stored value never feeds
-    // into its own recomputation — compute straight from the content.
-    const hash = strippedHash(content);
-    if (current === hash) continue;
-    fs.writeFileSync(file, setVersion(content, hash));
-    process.stdout.write(`${id} ${current} → ${hash}\n`);
-  }
+  for (const file of files) restampVersion(file, true);
 }
 
 function cmdContract(files) {
   for (const file of files) {
-    let content = fs.readFileSync(file, 'utf8');
+    let content = readFile(file);
     const id = getField(content, 'id');
     if (!id) fail(`${file}: no id field`);
-    const entries = parseSynced(content);
+    const entries = parseSynced(file, content);
     if (entries === null || getField(content, 'contract-consumer') === null) {
       fail(`${file}: not a contract item (needs contract-consumer and contract-synced)`);
     }
 
-    const root = findSddRoot(path.dirname(file));
-    if (!root) fail(`${file}: no .sdd/ found above the file`);
-    const index = indexVersions(path.join(root, '.sdd', 'specs'));
+    const index = indexItems(rootFor(file));
 
     const malformed = entries.filter((e) => e.item === null).map((e) => e.raw);
     if (malformed.length > 0) fail(`${file}: malformed contract-synced entries: ${malformed.join(', ')}`);
@@ -189,9 +239,15 @@ function cmdContract(files) {
     if (unresolved.length > 0) fail(`${file}: cannot resolve endpoint item(s): ${unresolved.join(', ')} — nothing written`);
     if (kept.length === 0) fail(`${file}: no usable endpoint entries after removing self-stamps — a binding needs at least one other endpoint`);
 
-    const restamped = kept.map((e) => ({ item: e.item, stamp: index.get(e.item.toUpperCase()).version }));
-    content = setSynced(content, restamped);
-    content = setVersion(content, strippedHash(content));
+    // Endpoints are restamped from current content first, so the stamp never
+    // bakes in a stale or missing stored version.
+    const restamped = kept.map((e) => ({
+      item: e.item,
+      stamp: restampVersion(index.get(e.item.toUpperCase()).file, true),
+    }));
+
+    content = setSynced(file, content, restamped);
+    content = setVersion(file, content, strippedHash(content));
     fs.writeFileSync(file, content);
     if (dropped > 0) process.stdout.write(`${id}: removed ${dropped} self-stamp(s) (can never converge)\n`);
     process.stdout.write(`${id}: stamped ${restamped.map((e) => `${e.item}@${e.stamp}`).join(', ')}\n`);
@@ -200,26 +256,19 @@ function cmdContract(files) {
 
 function cmdCheck(files) {
   let ok = true;
-  let index = null;
   for (const file of files) {
-    const content = fs.readFileSync(file, 'utf8');
+    const content = readFile(file);
     const id = getField(content, 'id') ?? path.basename(file);
     const stored = getField(content, 'version');
-    if (stored !== null) {
-      const stripHash = strippedHash(content);
-      const legacyHash = wholeFileHash(content);
-      if (stored !== stripHash && stored !== legacyHash) {
-        process.stdout.write(`${id}: version ${stored} matches neither convention (expected ${stripHash})\n`);
-        ok = false;
-      }
+    if (stored !== null && stored !== strippedHash(content)) {
+      process.stdout.write(`${id}: version ${stored} does not match content (expected ${strippedHash(content)})\n`);
+      ok = false;
     }
-    const entries = parseSynced(content);
+    const entries = parseSynced(file, content);
     if (entries !== null) {
-      if (index === null) {
-        const root = findSddRoot(path.dirname(file));
-        if (!root) fail(`${file}: no .sdd/ found above the file`);
-        index = indexVersions(path.join(root, '.sdd', 'specs'));
-      }
+      // Stamps resolve against the file's own project tree — files from
+      // different projects in one invocation each get their own index.
+      const index = indexItems(rootFor(file));
       for (const e of entries) {
         if (e.item === null) {
           process.stdout.write(`${id}: malformed stamp '${e.raw}'\n`);
@@ -235,8 +284,11 @@ function cmdCheck(files) {
         if (!target) {
           process.stdout.write(`${id}: stamp references unknown item ${e.item}\n`);
           ok = false;
-        } else if (target.version.toLowerCase() !== e.stamp.toLowerCase()) {
-          process.stdout.write(`${id}: ${e.item} drifted (stamped ${e.stamp}, current ${target.version})\n`);
+          continue;
+        }
+        const targetVersion = getField(fs.readFileSync(target.file, 'utf8'), 'version') ?? '';
+        if (targetVersion.toLowerCase() !== e.stamp.toLowerCase()) {
+          process.stdout.write(`${id}: ${e.item} drifted (stamped ${e.stamp}, current ${targetVersion})\n`);
           ok = false;
         }
       }
@@ -255,7 +307,10 @@ switch (command) {
     cmdVersion(resolveTargets(rest, cwd));
     break;
   case 'contract':
-    cmdContract(resolveTargets(rest.filter((a) => a !== '--all'), cwd));
+    if (rest.includes('--all')) {
+      fail('contract does not support --all — re-stamping records a per-contract verification; name the contract file(s)');
+    }
+    cmdContract(resolveTargets(rest, cwd));
     break;
   case 'check':
     cmdCheck(resolveTargets(rest, cwd));

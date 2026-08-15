@@ -101,7 +101,7 @@ describe("stamp.js", () => {
     // Stored 00000000 matches neither convention.
     const bad = run(["check", item], root);
     expect(bad.code).toBe(1);
-    expect(bad.stdout).toContain("matches neither convention");
+    expect(bad.stdout).toContain("does not match content");
 
     run(["version", item], root);
     expect(run(["check", item], root).code).toBe(0);
@@ -117,6 +117,91 @@ describe("stamp.js", () => {
     const drift = run(["check", contract], root);
     expect(drift.code).toBe(1);
     expect(drift.stdout).toContain("drifted");
+  });
+
+  it("version: matches the shell pipeline for files without a trailing newline", () => {
+    const root = makeProject();
+    const file = path.join(root, ".sdd", "specs", "hub", "server", "SPEC-hsrv-002.md");
+    fs.writeFileSync(
+      file,
+      `---\nid: SPEC-hsrv-002\ncomponent: hub/server\nabbrev: x\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-hsrv-002 — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x`
+    );
+    run(["version", file], root);
+    const stored = /version: "([0-9a-f]{8})"/.exec(fs.readFileSync(file, "utf8"))![1];
+    expect(stored).toBe(shellStripHash(file));
+  });
+
+  it("version: inserts a missing version field before the closing frontmatter delimiter", () => {
+    const root = makeProject();
+    const file = path.join(root, ".sdd", "specs", "hub", "server", "SPEC-hsrv-003.md");
+    fs.writeFileSync(
+      file,
+      `---\nid: SPEC-hsrv-003\ncomponent: hub/server\nabbrev: x\nstatus: active\naliases: []\n---\n\n# SPEC-hsrv-003 — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    const first = run(["version", file], root);
+    expect(first.code).toBe(0);
+    expect(first.stdout).toContain("(none) →");
+    const content = fs.readFileSync(file, "utf8");
+    expect(content.match(/^version: "[0-9a-f]{8}"$/m)).not.toBeNull();
+    // Idempotent after insertion.
+    expect(run(["version", file], root).stdout).toBe("");
+    expect(run(["check", file], root).code).toBe(0);
+  });
+
+  it("contract: reads a wrapped multi-line synced list whole and rewrites it single-line", () => {
+    const root = makeProject();
+    writeItem(root, "hub/client/SPEC-hcli-004.md", "SPEC-hcli-004", "hub/client");
+    writeItem(root, "hub/client/SPEC-hcli-005.md", "SPEC-hcli-005", "hub/client");
+    const contract = path.join(root, ".sdd", "specs", "hub", "server", "SPEC-hsrv-013.md");
+    fs.writeFileSync(
+      contract,
+      `---\nid: SPEC-hsrv-013\ncomponent: hub/server\nabbrev: x\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [SPEC-hcli-004@deadbeef,\n  SPEC-hcli-005@deadbeef]\nversion: "00000000"\n---\n\n# SPEC-hsrv-013 — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    run(["version", "--all"], root);
+
+    const result = run(["contract", contract], root);
+    expect(result.code).toBe(0);
+    const content = fs.readFileSync(contract, "utf8");
+    // Single-line list, both endpoints stamped, no orphan continuation line.
+    expect(content).toMatch(/^contract-synced: \[SPEC-hcli-004@[0-9a-f]{8}, SPEC-hcli-005@[0-9a-f]{8}\]$/m);
+    expect(content).not.toMatch(/^\s+SPEC-hcli-005/m);
+    expect(run(["check", contract], root).code).toBe(0);
+  });
+
+  it("contract: restamps a stale or version-less endpoint before stamping it", () => {
+    const root = makeProject();
+    // Endpoint with no version field at all.
+    const endpoint = path.join(root, ".sdd", "specs", "hub", "client", "SPEC-hcli-006.md");
+    fs.writeFileSync(
+      endpoint,
+      `---\nid: SPEC-hcli-006\ncomponent: hub/client\nabbrev: x\nstatus: active\naliases: []\n---\n\n# SPEC-hcli-006 — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    const contract = writeItem(
+      root,
+      "hub/server/SPEC-hsrv-014.md",
+      "SPEC-hsrv-014",
+      "hub/server",
+      "contract-consumer: hub/client\ncontract-synced: [SPEC-hcli-006@deadbeef]\n"
+    );
+    run(["version", contract], root);
+
+    const result = run(["contract", contract], root);
+    expect(result.code).toBe(0);
+    // No malformed 'ID@' stamp; endpoint gained a version and the stamp matches it.
+    const stamped = /contract-synced: \[SPEC-hcli-006@([0-9a-f]{8})\]/.exec(fs.readFileSync(contract, "utf8"));
+    expect(stamped).not.toBeNull();
+    const endpointVersion = /version: "([0-9a-f]{8})"/.exec(fs.readFileSync(endpoint, "utf8"))![1];
+    expect(stamped![1]).toBe(endpointVersion);
+    expect(run(["check", "--all"], root).code).toBe(0);
+  });
+
+  it("errors with exit 2 on missing files and on contract --all", () => {
+    const root = makeProject();
+    expect(run(["check", "no/such/SPEC-x-001.md"], root).code).toBe(2);
+    expect(run(["version", "no/such/SPEC-x-001.md"], root).code).toBe(2);
+    const all = run(["contract", "--all"], root);
+    expect(all.code).toBe(2);
+    expect(all.stdout).toContain("does not support --all");
   });
 
   it("check: flags self-stamps as non-convergent", () => {
