@@ -10,22 +10,27 @@ before the item is considered done. Work items are produced exclusively by
 ## 1. Schema / ID Convention
 
 **File path:** `.sdd/work-items/WI-{abbrev}-{7hex}.md`
-**ID pattern:** `WI-{abbrev}-{7hex}` — abbreviation matches the spec domain
-(e.g., `auth`, `wf`); the 7-hex suffix is generated at mint time (`openssl rand -hex 4 | cut -c1-7`);
+**ID pattern:** `WI-{abbrev}-{7hex}` — abbreviation matches the referenced
+spec item's abbrev (e.g., `auth`, `wf`); the 7-hex suffix is generated at mint
+time (`openssl rand -hex 4 | cut -c1-7`);
 no sequence scan and no archive lookup — collision-free by construction.
 
 **Required frontmatter:**
 
 ```markdown
 ---
-id: WI-auth-001
-gap-id: GAP-auth-001          # single ID, or array for many-to-one: [GAP-auth-001, GAP-auth-002]
-domain: authentication
+id: WI-scr-9c4e21a
+gap-id: GAP-scr-b3a91f2       # single ID, or array for many-to-one: [GAP-scr-b3a91f2, GAP-scr-77d01ce]
+component: hub/client/screens # the gap's component path
 status: pending               # pending | in-progress | done | blocked | abandoned
 created: "2026-05-12T15:00:00Z"
 abandoned-reason: null        # reason string when abandoned; null until then
 ---
 ```
+
+**Legacy `domain:` field:** older work items carry `domain: {name}` instead of
+`component:`. Readers MUST accept either, treating `domain: x` as
+`component: x`. Writers use `component:` only, copied from the referenced gap.
 
 **Required body:**
 

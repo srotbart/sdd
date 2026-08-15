@@ -15,7 +15,9 @@ target-engage: reconcile ready target with spec
   → no-op / extension / conflict (surfaced for review, never auto-merged)
 
 ── Execution phase (autonomous sdd-worker) ──
-spawn-sdd-worker: spawn the persistent sdd-worker for a domain
+spawn-sdd-worker: spawn the persistent sdd-worker for a component
+  (a component path at any depth — `hub`, `hub/client` — the loop covers its subtree;
+   legacy flat domains are just one-level component trees)
        ↓
 close-domain: drive the whole loop — the worker's entire job
   Phase 0  orient     — build the spec index, record the run's git start point
@@ -38,7 +40,7 @@ close-domain is invoked by the sdd-worker (and usable manually). Its inner skill
 |---|---|---|---|
 | session-start | all `.sdd/` | nothing | nothing |
 | target-engage | target file, spec files | target file, spec files | target (on accepted/archived) |
-| spec-audit | spec files, codebase | gap files | nothing |
+| spec-audit | spec files, codebase | gap files | gaps that now hold (closed, `closed-by: ""`) |
 | gap-to-work-items | gap files | work-item files | nothing |
 | work-item-close | work-item file, gap file, codebase | codebase, work-item file, gap file | work-item (done), gap (closed) |
 | spec-collapse | spec files | spec files (consolidation proposal) | nothing (proposal only) |
@@ -48,6 +50,17 @@ close-domain is invoked by the sdd-worker (and usable manually). Its inner skill
 | review-issues | codebase, spec files | issue files (`.sdd/issues/`) | nothing |
 | review-improvements | codebase, spec files | improvement files (`.sdd/improvements/`) | nothing |
 | review-engage | issue/improvement file, spec files | spec files or gap files | issue/improvement (on accepted/dismissed) |
+| migrate-components | all `.sdd/specs/` | mapping proposal, then moved spec files + manifests | nothing |
+| sdd-doctor | all `.sdd/` | mechanical fixes to artifact files; health report | terminal items left unarchived |
+
+## The component tree
+
+Spec items are organized by **component** — a concrete unit of the system.
+Components nest to any depth; the top-level components are called **areas**.
+An item attaches to exactly one component (its directory); an item at a non-leaf
+component governs the whole subtree. Manifests (`component.md`) carry identity,
+code-scope globs, and `depends-on` edges. Legacy flat `{domain}/` layouts are
+one-level component trees and keep working; `migrate-components` converts them.
 
 ## Key invariants
 

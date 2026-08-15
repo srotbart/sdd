@@ -19,7 +19,7 @@ into the spec.
 id: TGT-007
 status: awaiting-user   # see Lifecycle
 created: 2026-05-12
-domain: authentication  # the spec domain this target belongs to
+component: authentication  # the component (path) this target belongs to; legacy `domain:` is accepted
 ---
 ```
 
@@ -101,7 +101,8 @@ the initial intent in the Dialog section. When ready for agent response, flip
 
 ### Folding a ready target (`ready`)
 
-1. Read the Current statement and all active spec items in the target's domain.
+1. Read the Current statement and all active spec items in the target's
+   component subtree (`.sdd/specs/{component-path}/`, recursive).
 2. Determine the outcome:
    - **No conflict, extends spec:** Write new or updated spec item(s), archive target (`accepted`).
    - **Conflict with existing spec:** Write a `.conflict.md` file, keep target `ready`, stop.
@@ -140,14 +141,16 @@ artifact is terminal. Report and stop — nothing to do.
 spec item (one file per TGT-id + SPEC-id pair). Each file is deleted separately
 after resolution.
 
-**Missing `domain` frontmatter:** Infer the domain from the target's title or content
-if possible; otherwise ask the user before proceeding to fold.
+**Missing `component` frontmatter:** Infer the component from the target's title
+or content if possible; otherwise ask the user before proceeding to fold. A
+legacy `domain:` field is read as `component:`.
 
 **Concurrent edits:** If another tool or session has modified the target since reading
 it, re-read before writing to avoid clobbering changes.
 
-**No active spec items in domain:** When folding into a new domain, create the domain
-subdirectory under `.sdd/specs/` and write the first spec item there.
+**No active spec items in component:** When folding into a new component, create
+the component directory under `.sdd/specs/` (nested under its area), write its
+`component.md` manifest, and write the first spec item there.
 
 ---
 
