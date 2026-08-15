@@ -155,6 +155,9 @@ says "decompose gaps into work items", "create work items for GAP-auth", "genera
 ### `/sdd:install-statusline` — Install Statusline
 invokes `/sdd:install-statusline` or asks to "install the SDD statusline", "set up the statusline", or "add SDD statusline to Claude Code"
 
+### `/sdd:migrate-components` — Migrate Components
+says "migrate to components", "convert domains to components", "restructure the spec tree", "adopt the component layout", or wants to convert an existing project's flat domain-based `.sdd/specs/` layout into the area/component tree
+
 ### `/sdd:next` — Next
 says "what should I do next", "what's the next step", "recommend a next action", "prioritise SDD work", or wants a ranked list of candidate next actions across all components with priority, recommendation, and size signals, and then routes the chosen action to the appropriate skill
 
@@ -169,6 +172,9 @@ says "find improvements", "suggest refactors", "what can be simplified", "propos
 
 ### `/sdd:review-issues` — Review Issues
 says "run a code review", "find issues in the codebase", "sweep for problems", "review component X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts
+
+### `/sdd:sdd-doctor` — Sdd Doctor
+says "check SDD health", "validate the .sdd directory", "is my spec tree consistent", "run the sdd doctor", "fix the sdd structure", or wants an agent focused on the health of `.sdd/` itself — artifact schemas, structure, version hashes, references, and archive hygiene — rather than the project code
 
 ### `/sdd:sdd-help` — Sdd Help
 says "how does SDD work", "explain spec-driven development", "what is the SDD workflow", "how do I use SDD", "explain the SDD pipeline", "what are SDD skills", or wants to understand spec-driven development before starting or when confused about the workflow
