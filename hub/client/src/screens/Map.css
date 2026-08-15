@@ -46,6 +46,26 @@
   stroke: var(--accent-soft);
   stroke-width: 1.5;
   opacity: 0.75;
+  pointer-events: stroke;
+}
+
+/* Contract edges are colored by binding status; depends-on stays accent. */
+.map-edges__line--contract {
+  stroke-width: 2;
+}
+
+.map-edges__line--in-sync {
+  stroke: var(--dot-passing);
+}
+
+.map-edges__line--producer-drifted,
+.map-edges__line--consumer-drifted {
+  stroke: var(--dot-failing);
+}
+
+.map-edges__line--unknown {
+  stroke: var(--dot-not-run);
+  stroke-dasharray: 4 3;
 }
 
 .map-edges__arrow {
@@ -234,4 +254,38 @@
   font-size: 12px;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+
+.map-detail__contracts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+}
+
+.map-binding {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--dot-not-run);
+}
+
+.map-binding--in-sync {
+  background: var(--dot-passing);
+}
+
+.map-binding--producer-drifted,
+.map-binding--consumer-drifted {
+  background: var(--dot-failing);
+}
+
+.map-binding-status {
+  margin-left: 6px;
+  color: var(--ink-3);
 }

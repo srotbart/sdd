@@ -75,7 +75,7 @@ describe("buildComponentGraph", () => {
     expect(client?.description).toBe("What this component is.");
     expect(client?.dependsOn).toEqual(["hub/server", "nonexistent/target"]);
     // Only the resolvable edge is emitted.
-    expect(graph.edges).toEqual([{ from: "hub/client", to: "hub/server" }]);
+    expect(graph.edges).toEqual([{ from: "hub/client", to: "hub/server", kind: "depends-on" }]);
   });
 
   it("counts open gaps per subtree and uncovered items per node", () => {
@@ -92,6 +92,51 @@ describe("buildComponentGraph", () => {
     expect(server?.openGaps).toBe(1);
     expect(hub?.openGaps).toBe(1); // rolls up the subtree
     expect(server?.uncovered).toBe(1); // no **Tests:** block in the body
+  });
+
+  it("derives binding status on contract edges from synced version stamps", () => {
+    const sddPath = makeSdd();
+    // Producer-side contract item, stamped against itself and the consumer item.
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "SPEC-hsrv-012.md"),
+      `---\nid: SPEC-hsrv-012\ncomponent: hub/server\nabbrev: hsrv\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [SPEC-hsrv-012@aaaaaaaa, SPEC-hcli-004@bbbbbbbb]\nversion: "aaaaaaaa"\n---\n\n# SPEC-hsrv-012 — WS message schemas match client types\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-004");
+    // hcli-004 was written with version 00000000 — the bbbbbbbb stamp is stale.
+
+    const graph = buildComponentGraph(sddPath);
+    const edge = graph.edges.find((e) => e.kind === "contract");
+    expect(edge).toMatchObject({
+      from: "hub/client",
+      to: "hub/server",
+      contractItem: "SPEC-HSRV-012",
+      status: "consumer-drifted",
+    });
+    const server = graph.nodes.find((n) => n.path === "hub/server");
+    expect(server?.contracts).toEqual([
+      { item: "SPEC-HSRV-012", consumer: "hub/client", status: "consumer-drifted" },
+    ]);
+  });
+
+  it("reports in-sync when all stamps match and unknown when an endpoint is missing", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub", "server");
+    fs.mkdirSync(dir, { recursive: true });
+    const writeContract = (id: string, synced: string) =>
+      fs.writeFileSync(
+        path.join(dir, `${id}.md`),
+        `---\nid: ${id}\ncomponent: hub/server\nabbrev: hsrv\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [${synced}]\nversion: "aaaaaaaa"\n---\n\n# ${id} — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+      );
+    writeContract("SPEC-hsrv-020", "SPEC-hsrv-020@aaaaaaaa, SPEC-hcli-004@00000000");
+    writeContract("SPEC-hsrv-021", "SPEC-none-999@12345678");
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-004");
+
+    const graph = buildComponentGraph(sddPath);
+    const byItem = new globalThis.Map(graph.edges.filter((e) => e.kind === "contract").map((e) => [e.contractItem, e.status]));
+    expect(byItem.get("SPEC-HSRV-020")).toBe("in-sync");
+    expect(byItem.get("SPEC-HSRV-021")).toBe("unknown");
   });
 
   it("returns an empty graph for a missing specs directory", () => {

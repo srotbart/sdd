@@ -48,6 +48,10 @@ Mark a gap as stale when its `audit-spec-version` does not match the `version` f
 
 If the Bash tool is unavailable, compare each gap's `discovered` timestamp against the spec item file's modification time as a fallback indicator.
 
+### 3b. Detect drifted bindings
+
+For each contract item (frontmatter `contract-consumer` + `contract-synced`, see `references/artifacts/spec.md`), compare every `{spec-item-id}@{hash}` stamp against that item's current `version`. Emit one warning per drifted binding naming the contract item, the consumer, the side that moved, and the hashes (e.g. `⚠ binding SPEC-hsrv-012 → hub/client is consumer-drifted: SPEC-hcli-004 stamped 9921bc0d ≠ current c4e1f205`). Render these in the stale-audit warnings section. A drifted binding means the contract needs re-verification against both sides — not that anything is necessarily broken.
+
 ### 4. Render the status report
 
 Print sections in this order, omitting any section with no entries:
@@ -59,7 +63,7 @@ Print sections in this order, omitting any section with no entries:
 5. Draft targets (`draft`) — in progress, not yet submitted
 6. **Designs in progress** — designs in `.sdd/design/` with no corresponding target referencing them via `design:` frontmatter; each entry shows design name and path (`.sdd/design/{name}/design.md`)
 7. Specs summary — one line per top-level component (area): name, item count (whole subtree), coverage fraction; indent one nested line per sub-component when a tree is deeper than one level
-8. Stale audit warnings — `⚠` prefix, gap ID, spec item ID, old vs current hash
+8. Stale audit warnings — `⚠` prefix, gap ID, spec item ID, old vs current hash; drifted-binding warnings (step 3b) render here too
 9. Uncovered spec items — items with no `**Tests:**` block
 10. Open gaps — grouped by component, one line each
 11. Active work items — ordered: `in-progress`, `blocked`, `pending`

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Map, type MapNode } from './Map';
+import { Map, type MapNode, type MapEdge } from './Map';
 
 function node(partial: Partial<MapNode> & { path: string }): MapNode {
   return {
@@ -16,11 +16,12 @@ function node(partial: Partial<MapNode> & { path: string }): MapNode {
     uncovered: 0,
     failing: 0,
     dependsOn: [],
+    contracts: [],
     ...partial,
   };
 }
 
-function mockFetch(graph: { nodes: MapNode[]; edges: Array<{ from: string; to: string }> }) {
+function mockFetch(graph: { nodes: MapNode[]; edges: MapEdge[] }) {
   return vi.fn(() =>
     Promise.resolve({
       ok: true,
@@ -41,7 +42,7 @@ describe('Map screen', () => {
         node({ path: 'hub/server', abbrev: 'hsrv', itemCount: 2, subtreeItemCount: 2, openGaps: 2, failing: 1 }),
         node({ path: 'hub/client', itemCount: 1, subtreeItemCount: 1, uncovered: 1 }),
       ],
-      edges: [{ from: 'hub/client', to: 'hub/server' }],
+      edges: [{ from: 'hub/client', to: 'hub/server', kind: 'depends-on' as const }],
     });
 
     render(<Map workspaceId="ws1" />);
@@ -90,6 +91,31 @@ describe('Map screen', () => {
     await waitFor(() =>
       expect(screen.getByText(/No components yet/)).toBeInTheDocument()
     );
+  });
+
+  it('lists contracts with binding status in the detail panel', async () => {
+    global.fetch = mockFetch({
+      nodes: [
+        node({ path: 'hub', subtreeItemCount: 2 }),
+        node({
+          path: 'hub/server',
+          itemCount: 2,
+          subtreeItemCount: 2,
+          contracts: [{ item: 'SPEC-HSRV-012', consumer: 'hub/client', status: 'consumer-drifted' }],
+        }),
+        node({ path: 'hub/client' }),
+      ],
+      edges: [
+        { from: 'hub/client', to: 'hub/server', kind: 'contract' as const, contractItem: 'SPEC-HSRV-012', status: 'consumer-drifted' as const },
+      ],
+    });
+
+    render(<Map workspaceId="ws1" />);
+    await waitFor(() => expect(screen.getByText('server')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByText('server'));
+    expect(screen.getByText(/SPEC-HSRV-012/)).toBeInTheDocument();
+    expect(screen.getByText('consumer-drifted')).toBeInTheDocument();
   });
 
   it('shows the manifest hint when there are nodes but no edges', async () => {

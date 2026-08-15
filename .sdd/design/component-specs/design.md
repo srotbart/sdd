@@ -148,6 +148,20 @@ count, open gaps, failing/uncovered tests, stalest audit age. Clicking a
 component filters the existing Specs/Gaps screens to its subtree. All data
 comes from manifests + existing parsers — no new artifact types.
 
+### 6b. Contracts and bindings
+
+A **contract** binds two components (producer's promise, consumer's reliance).
+Convention: the producer owns the contract item; the consumer is declared in
+frontmatter (`contract-consumer:`), and `contract-synced:` stamps every
+endpoint item's version hash at last verification
+(`[SPEC-hsrv-012@a3f9c812, SPEC-hcli-004@9921bc0d]`). Binding status is
+derived at read time — in-sync / producer-drifted / consumer-drifted /
+unknown — the same compute-at-read pattern as stale gaps. The hub colors Map
+edges by status, session-start warns on drift, sdd-doctor reports drifted or
+malformed bindings (re-stamping requires re-verification, the worker's job).
+Cross-cutting rules (the concepts axis) and the code-hash drift layer are
+follow-ups recorded in the backlog.
+
 ### 7. SDD health — `sdd-doctor`
 
 A dedicated agent, mirroring the sdd-worker pattern, whose subject is `.sdd/`

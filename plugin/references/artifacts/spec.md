@@ -96,6 +96,48 @@ spec items are those of the most-specific component whose scope matches the
 file, **plus all ancestor components** (an ancestor's rules bind descendants by
 definition), plus any item-level `scope:` glob hits anywhere in the tree.
 
+**Contract items and bindings.** A **contract** is an invariant about how two
+components interact — one component's promise, relied on by another (an API's
+response shape, a message schema, a shared file format). Contracts are
+inherently edges, so placement follows one convention: **the producer owns the
+contract** — the item lives in the providing component, and the consumer is
+declared in frontmatter. (Genuinely symmetric peer protocols may live at the
+two components' lowest common ancestor instead.)
+
+A contract item carries a **binding**: the consumer path plus a hash stamp of
+every endpoint spec item at the time the contract was last verified in sync:
+
+```markdown
+---
+id: SPEC-hsrv-012
+component: hub/server              # the producer — the item lives here
+...
+contract-consumer: hub/client
+contract-synced: [SPEC-hsrv-012@a3f9c812, SPEC-hcli-004@9921bc0d]
+---
+```
+
+Each `contract-synced` entry is `{spec-item-id}@{version-hash}`. **Binding
+status is derived, never stored** — compare each stamp against the referenced
+item's current `version`:
+
+- all match → **in-sync**
+- a producer-side item drifted → **producer-drifted**; a consumer-side item
+  drifted → **consumer-drifted** (side = whether the drifted item's component
+  sits under the contract's component or under `contract-consumer`)
+- a referenced item can't be found → **unknown** (surfaced, never guessed)
+
+**Re-syncing:** when an edge drifts, re-verify the contract against both sides
+(does the promise still hold as stated?), update the invariant if needed, then
+re-stamp `contract-synced` with the current hashes and recompute `version`.
+Re-stamping without re-verifying defeats the mechanism. Drift is *detection*,
+not violation — the audit decides whether anything is actually broken.
+
+Consumers of the mechanism: the hub colors Map edges by binding status,
+`session-start` lists drifted bindings next to stale-audit warnings, and
+`sdd-doctor` reports drifted or malformed bindings (report-only — re-stamping
+requires verification, which is the worker's job).
+
 **Required body sections (in order):**
 
 ```markdown

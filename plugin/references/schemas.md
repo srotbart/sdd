@@ -197,6 +197,14 @@ grep -v "^version:" .sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md | shasum 
 
 **Status values per item:** `active | deprecated | aliased`
 
+**Contract items (optional):** a spec item that binds two components carries a
+binding — `contract-consumer: {component-path}` plus
+`contract-synced: [{spec-item-id}@{version-hash}, …]`, the endpoint items'
+hashes at last verification. The item lives with the **producer** (its own
+`component:`). Binding status is derived at read time by comparing stamps to
+current versions: in-sync / producer-drifted / consumer-drifted / unknown.
+See `artifacts/spec.md` (Contract items and bindings) for the full rules.
+
 **Aliasing on spec-collapse:** when SPEC-auth-001 merges into SPEC-auth-core-001,
 the surviving item's `aliases:` frontmatter list gains `SPEC-auth-001` and the
 merged item's file moves to its component's `archive/`. Existing gap files

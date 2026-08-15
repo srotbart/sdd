@@ -20,11 +20,24 @@ export interface ComponentNode {
   uncovered: number; // direct items with no **Tests:** block (session-start's definition)
   failing: number; // direct items with failing tests
   dependsOn: string[]; // manifest depends-on entries (component paths)
+  contracts: ContractSummary[]; // contracts this component owns (as producer)
 }
+
+export type BindingStatus = "in-sync" | "producer-drifted" | "consumer-drifted" | "unknown";
 
 export interface ComponentEdge {
   from: string;
   to: string;
+  kind: "depends-on" | "contract";
+  // Contract edges only: the owning contract item and its derived binding status.
+  contractItem?: string;
+  status?: BindingStatus;
+}
+
+export interface ContractSummary {
+  item: string; // contract spec item id
+  consumer: string;
+  status: BindingStatus;
 }
 
 export interface ComponentGraph {
@@ -135,26 +148,63 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
     }
   };
 
+  interface ItemContract {
+    consumer: string;
+    synced: Array<{ item: string; stamp: string }>;
+  }
   interface ItemInfo {
+    id: string;
     component: string;
+    version: string;
     uncovered: boolean;
     failing: boolean;
+    contract?: ItemContract;
   }
   const items: ItemInfo[] = [];
   for (const spec of specs) {
     for (const item of spec.items) {
       const component = (item as { component?: string }).component ?? spec.domain;
       addWithAncestors(component);
+      const contract = (item as { contract?: ItemContract }).contract;
+      // A contract's consumer is a component by declaration, even before it
+      // holds items of its own — the edge needs both endpoints to exist.
+      if (contract) addWithAncestors(contract.consumer);
       items.push({
+        id: item.id,
         component,
+        version: item.version,
         // Uncovered = no **Tests:** block at all — matching session-start.
         // A covered item whose report simply hasn't run is not "uncovered".
         uncovered: !item.body.includes("**Tests:**"),
         failing: item.testStatus.status === "failing",
+        contract,
       });
     }
   }
   for (const m of manifests) addWithAncestors(m.dirPath);
+
+  // Binding status: compare each synced stamp against the referenced item's
+  // current version. Derived here, never stored in the artifact.
+  const itemByUpperId = new globalThis.Map<string, ItemInfo>(items.map((i) => [i.id.toUpperCase(), i]));
+  const inSubtreeOf = (root: string, componentPath: string): boolean =>
+    componentPath === root || componentPath.startsWith(root + "/");
+
+  const bindingStatus = (producer: string, contract: ItemContract): BindingStatus => {
+    let sawUnknown = false;
+    for (const entry of contract.synced) {
+      const current = itemByUpperId.get(entry.item.toUpperCase());
+      if (!current) {
+        sawUnknown = true;
+        continue;
+      }
+      if (current.version.toLowerCase() !== entry.stamp.toLowerCase()) {
+        if (inSubtreeOf(producer, current.component)) return "producer-drifted";
+        if (inSubtreeOf(contract.consumer, current.component)) return "consumer-drifted";
+        return "unknown";
+      }
+    }
+    return sawUnknown ? "unknown" : "in-sync";
+  };
 
   const manifestByPath = new Map(manifests.map((m) => [m.dirPath, m]));
 
@@ -182,6 +232,13 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
         uncovered: direct.filter((i) => i.uncovered).length,
         failing: direct.filter((i) => i.failing).length,
         dependsOn: manifest?.dependsOn ?? [],
+        contracts: direct
+          .filter((i) => i.contract)
+          .map((i) => ({
+            item: i.id,
+            consumer: i.contract!.consumer,
+            status: bindingStatus(p, i.contract!),
+          })),
       };
     });
 
@@ -191,9 +248,23 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
   for (const m of manifests) {
     for (const target of m.dependsOn) {
       if (nodePaths.has(target)) {
-        edges.push({ from: m.dirPath, to: target });
+        edges.push({ from: m.dirPath, to: target, kind: "depends-on" });
       }
     }
+  }
+
+  // Contract edges: consumer → producer (the consumer relies on the
+  // producer's promise; the item lives with the producer).
+  for (const i of items) {
+    if (!i.contract) continue;
+    if (!nodePaths.has(i.contract.consumer)) continue;
+    edges.push({
+      from: i.contract.consumer,
+      to: i.component,
+      kind: "contract",
+      contractItem: i.id,
+      status: bindingStatus(i.component, i.contract),
+    });
   }
 
   return { nodes, edges };
