@@ -189,7 +189,7 @@ code, and never the content of any invariant.
 Your first action — before any reading or fixing — is to invoke the Skill
 tool: sdd:sdd-doctor
 
-That skill is your entire job: its nine checks, its mechanical/judgement
+That skill is your entire job: its ten checks, its mechanical/judgement
 split, its report format. Do not reconstruct the checks from memory.
 
 Standing rules:

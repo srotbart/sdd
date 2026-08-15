@@ -60,8 +60,8 @@ Supporting directories: `.sdd/design/` (optional pre-target design docs),
 organized as a recursive directory tree under `.sdd/specs/`. Top-level components are
 **areas** (`hub`, `pipeline`); a component may hold sub-components, and an item at a
 non-leaf component governs its whole subtree. Each component carries a `component.md`
-manifest (abbrev, code-scope globs, `depends-on` edges — the data a future map screen
-renders). Legacy flat domain layouts are one-level component trees and keep working;
+manifest (abbrev, code-scope globs, `depends-on` edges — rendered live on the hub's
+**map** tab, with contract-binding status colored per edge). Legacy flat domain layouts are one-level component trees and keep working;
 `/sdd:migrate-components` converts them without changing a single ID.
 
 **IDs.** Sequential for durable artifacts (`TGT-{seq}`, `SPEC-{abbrev}-{seq}`); ephemeral
@@ -136,7 +136,9 @@ at any depth (`hub`, `hub/client`, or a legacy flat domain name).
 
 Keep `.sdd/` itself healthy with `/sdd:sdd-doctor` (schemas, version hashes,
 references, archive hygiene), and adopt the component tree in an existing project
-with `/sdd:migrate-components` (reviewed mapping, file moves only, IDs unchanged).
+with `/sdd:migrate-components` (reviewed mapping, file moves only, IDs unchanged) —
+see [`MIGRATION.md`](MIGRATION.md) for what changes, what keeps working, and what
+to expect.
 
 ## Target Status Lifecycle
 

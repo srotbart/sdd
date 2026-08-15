@@ -70,7 +70,8 @@ function parseManifest(filePath: string, dirPath: string): Manifest | null {
   const line = (name: string): string | null => {
     const m = new RegExp(`^${name}:\\s*(.+)$`, "m").exec(fm);
     if (!m) return null;
-    const v = m[1].trim().replace(/^["']|["']$/g, "");
+    // Strip inline comments — the documented templates carry them.
+    const v = m[1].replace(/\s+#.*$/, "").trim().replace(/^["']|["']$/g, "");
     return v.startsWith("[") ? null : v || null;
   };
 
@@ -86,7 +87,7 @@ function parseManifest(filePath: string, dirPath: string): Manifest | null {
     if (block) {
       return block[1]
         .split("\n")
-        .map((l) => l.replace(/^\s*-\s*/, "").trim().replace(/^["']|["']$/g, ""))
+        .map((l) => l.replace(/^\s*-\s*/, "").replace(/\s+#.*$/, "").trim().replace(/^["']|["']$/g, ""))
         .filter(Boolean);
     }
     return [];
@@ -254,10 +255,10 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
   }
 
   // Contract edges: consumer → producer (the consumer relies on the
-  // producer's promise; the item lives with the producer).
+  // producer's promise; the item lives with the producer). The consumer node
+  // always exists — addWithAncestors registered it when the item was read.
   for (const i of items) {
     if (!i.contract) continue;
-    if (!nodePaths.has(i.contract.consumer)) continue;
     edges.push({
       from: i.contract.consumer,
       to: i.component,

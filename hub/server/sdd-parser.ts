@@ -42,7 +42,13 @@ function parseFrontmatter(content: string): { meta: Record<string, string>; body
     const colon = line.indexOf(":");
     if (colon === -1) continue;
     const key = line.slice(0, colon).trim();
-    const val = line.slice(colon + 1).trim().replace(/^["']|["']$/g, "");
+    // Strip inline comments ("component: hub/server  # note") — the artifact
+    // templates show them, so copied-verbatim files must still parse clean.
+    const val = line
+      .slice(colon + 1)
+      .replace(/\s+#.*$/, "")
+      .trim()
+      .replace(/^["']|["']$/g, "");
     meta[key] = val;
   }
   return { meta, body };
@@ -52,8 +58,10 @@ function parseRefs(text: string): Array<{ kind: "gap" | "wi"; id: string }> {
   const refs: Array<{ kind: "gap" | "wi"; id: string }> = [];
   // Both suffix forms are valid (sequential and 7-hex hash), and abbrevs may
   // contain hyphens: GAP-auth-001, GAP-auth-3f9c2a1, GAP-ui-screens-001.
-  const gapRe = /GAP-[a-z][a-z0-9-]*-[a-z0-9]+/gi;
-  const wiRe = /WI-[a-z][a-z0-9-]*-[a-z0-9]+/gi;
+  // The suffix is anchored to digits or 7-hex so prose like
+  // "gap-to-work-items" never mints a ref.
+  const gapRe = /GAP-[a-z][a-z0-9-]*?-(?:\d+|[0-9a-f]{7})\b/gi;
+  const wiRe = /WI-[a-z][a-z0-9-]*?-(?:\d+|[0-9a-f]{7})\b/gi;
   for (const m of text.matchAll(gapRe)) {
     refs.push({ kind: "gap", id: m[0].toUpperCase() });
   }

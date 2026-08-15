@@ -115,6 +115,7 @@ function NodeCard({
 
 export function Map({ workspaceId, refreshToken }: MapProps) {
   const [graph, setGraph] = useState<MapGraph | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [edgePaths, setEdgePaths] = useState<EdgePath[]>([]);
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -125,10 +126,14 @@ export function Map({ workspaceId, refreshToken }: MapProps) {
     fetch(`/workspaces/${workspaceId}/component-graph`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: MapGraph) => {
-        if (!cancelled) setGraph(data);
+        if (!cancelled) {
+          setLoadError(false);
+          setGraph(data);
+        }
       })
       .catch(() => {
-        if (!cancelled) setGraph({ nodes: [], edges: [] });
+        // A failed load is an error state, not an empty project.
+        if (!cancelled) setLoadError(true);
       });
     return () => {
       cancelled = true;
@@ -169,10 +174,13 @@ export function Map({ workspaceId, refreshToken }: MapProps) {
         const a = fromEl.getBoundingClientRect();
         const b = toEl.getBoundingClientRect();
         if (a.width === 0 || b.width === 0) continue;
-        const x1 = a.left - canvasRect.left;
-        const y1 = a.top - canvasRect.top + a.height / 2;
-        const x2 = b.left - canvasRect.left;
-        const y2 = b.top - canvasRect.top + b.height / 2;
+        // Content-relative coordinates: the SVG scrolls with the canvas, so
+        // add the scroll offset — visible-box coordinates would drift by the
+        // scroll amount on any recompute while scrolled.
+        const x1 = a.left - canvasRect.left + canvas.scrollLeft;
+        const y1 = a.top - canvasRect.top + canvas.scrollTop + a.height / 2;
+        const x2 = b.left - canvasRect.left + canvas.scrollLeft;
+        const y2 = b.top - canvasRect.top + canvas.scrollTop + b.height / 2;
         const bulge = 26 + (i % 3) * 12;
         i += 1;
         paths.push({
@@ -192,7 +200,17 @@ export function Map({ workspaceId, refreshToken }: MapProps) {
     compute();
     window.addEventListener('resize', compute);
     return () => window.removeEventListener('resize', compute);
-  }, [graph]);
+    // `selected` is a dep because the detail panel mounting/unmounting
+    // narrows the canvas and rewraps the cards.
+  }, [graph, selected]);
+
+  if (loadError) {
+    return (
+      <div className="map-screen map-screen--empty">
+        Couldn't load the component map — check the hub server log and reload.
+      </div>
+    );
+  }
 
   if (!graph) {
     return <div className="map-screen map-screen--empty">Loading component map…</div>;
