@@ -139,8 +139,10 @@ For each mapping row, in one pass per item:
    (archived items move to `{to}/archive/`).
 2. Edit frontmatter: set `component: {to-path}`, remove the `domain:` line
    (keep `abbrev` unchanged).
-3. Recompute the `version` hash (frontmatter changed):
-   `grep -v "^version:" {file} | shasum -a 256 | cut -c1-8` — and update it.
+3. Recompute the `version` hash (frontmatter changed) with the stamping
+   script: `node plugin/scripts/stamp.js version {file}` (or one
+   `stamp.js version --all` after all moves; resolve the script from the repo
+   or the plugin cache).
 4. Move any `SPEC-{abbrev}.tests.json` mapping file alongside its items; update
    report paths only if they were relative to the old directory.
 

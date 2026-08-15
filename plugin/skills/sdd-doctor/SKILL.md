@@ -53,9 +53,11 @@ the type's enum, timestamps parseable, `aliases`/`scope` are lists.
 
 ### 3. Spec version hashes
 
-Recompute every active spec item's hash —
-`grep -v "^version:" {file} | shasum -a 256 | cut -c1-8` — and compare to its
-`version:` field.
+Run the stamping script in check mode — it verifies every item and binding
+deterministically (`node plugin/scripts/stamp.js check --all`, resolving the
+script from the repo or the plugin cache; fall back to
+`grep -v "^version:" {file} | shasum -a 256 | cut -c1-8` per file only if the
+script is unavailable).
 
 **Two conventions are valid.** Older projects hashed the whole file
 (`shasum -a 256 {file}`); the current convention strips the `version:` line
@@ -68,10 +70,10 @@ untouched.
 - **Healthy:** stored hash matches the strip-line or the whole-file
   computation. Note legacy-convention items once in the report as migration
   candidates (they converge to the new convention on their next real write).
-- **Mechanical fix:** stored hash matches **neither** computation — update
-  `version:` to the strip-line value (the documented recompute-on-write rule;
-  the content is the truth). Note in the report that any open gaps on that
-  item now correctly read stale.
+- **Mechanical fix:** stored hash matches **neither** computation — restamp
+  with `node plugin/scripts/stamp.js version {file}` (the documented
+  recompute-on-write rule; the content is the truth). Note in the report that
+  any open gaps on that item now correctly read stale.
 
 ### 4. ID integrity
 
