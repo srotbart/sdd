@@ -12,6 +12,7 @@ import { Activity } from './screens/Activity';
 import { Settings } from './screens/Settings';
 import { PluginReference } from './screens/PluginReference';
 import { Projections } from './screens/Projections';
+import { Map as MapScreen } from './screens/Map';
 import { Designs } from './screens/Designs';
 import { Issues } from './screens/Issues';
 import { Improvements } from './screens/Improvements';
@@ -39,6 +40,7 @@ const URL_TAB_TO_INTERNAL: Record<string, string> = {
   'session': 'session',
   'targets': 'targets',
   'specs': 'specs',
+  'map': 'map',
   'projections': 'projections',
   'designs': 'designs',
   'gaps': 'gaps',
@@ -55,6 +57,7 @@ const INTERNAL_TAB_TO_URL: Record<string, string> = {
   'session': 'session',
   'targets': 'targets',
   'specs': 'specs',
+  'map': 'map',
   'projections': 'projections',
   'designs': 'designs',
   'gaps': 'gaps',
@@ -221,6 +224,7 @@ export function App() {
   const [liveImprovements, setLiveImprovements] = useState<Improvement[]>([]);
   const [liveActivity, setLiveActivity] = useState<ActivityLine[]>([]);
   const [projectionsRefreshToken, setProjectionsRefreshToken] = useState<number>(0);
+  const [mapRefreshToken, setMapRefreshToken] = useState<number>(0);
   const [designsRefreshToken, setDesignsRefreshToken] = useState<number>(0);
   const [standardsRefreshToken, setStandardsRefreshToken] = useState<number>(0);
   const [liveProjectionsCount, setLiveProjectionsCount] = useState<number>(0);
@@ -336,10 +340,12 @@ export function App() {
           });
         } else if (artifact === 'specs') {
           fetchInto(workspaceId, 'specs', setLiveSpecs, [], noOp);
+          setMapRefreshToken((t) => t + 1);
         } else if (artifact === 'gaps') {
           fetchInto(workspaceId, 'gaps', setLiveGaps, [], {
             map: (d) => (d as Record<string, unknown>[]).map(mapApiGap), ...noOp,
           });
+          setMapRefreshToken((t) => t + 1);
         } else if (artifact === 'work-items') {
           fetchInto(workspaceId, 'work-items', setLiveWorkItems, [], {
             map: (d) => (d as Record<string, unknown>[]).map(mapApiWorkItem), ...noOp,
@@ -537,6 +543,8 @@ export function App() {
         return <Targets targets={liveTargets} initialTargetId={selectedItemId ?? undefined} />;
       case 'specs':
         return <Specs specs={liveSpecs} gaps={liveGaps} workItems={liveWorkItems} initialSpecId={selectedItemId ?? undefined} onNav={() => {}} />;
+      case 'map':
+        return <MapScreen workspaceId={activeWorkspace.id} refreshToken={mapRefreshToken} />;
       case 'projections':
         return <Projections workspaceId={activeWorkspace.id} refreshToken={projectionsRefreshToken} />;
       case 'designs':
