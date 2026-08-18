@@ -29,7 +29,7 @@ If no component is provided, read the session state and infer the highest-priori
 
 ### 1. Determine the component
 
-If a component argument was provided, use it. Otherwise, scan `.sdd/gaps/` for open gaps and `.sdd/work-items/` for pending/blocked items and select the component with the most urgent outstanding work.
+If a component argument was provided, use it. Otherwise select the component with the most urgent outstanding work from the artifact CLI: `node plugin/cli/sdd.js list gaps --status=open --json` and the pending/blocked rows of `node plugin/cli/sdd.js list work-items --json` (resolve the script from the repo or the installed plugin cache).
 
 ### 2. Spawn the sdd-worker agent
 

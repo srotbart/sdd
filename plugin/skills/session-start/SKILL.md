@@ -27,24 +27,44 @@ Then write your first target at .sdd/targets/TGT-001.md and run
 
 ### 2. Collect active artifacts
 
-Read the following, skipping any `archive/` subdirectory:
+Collect through the artifact CLI — deterministic, depth-agnostic, archive-aware —
+resolving the script from the repo or the installed plugin cache:
 
-- `.sdd/targets/*.md` — parse `id`, `status`, `component` (legacy `domain:` accepted), first `# Target:` heading, and optional `design:` frontmatter field
-- `.sdd/specs/**/SPEC-*.md` — scan the component tree recursively (components may nest to any depth; skip `archive/` at every level): `find .sdd/specs -name "SPEC-*.md" ! -path "*/archive/*"`; parse `id`, `component` (legacy `domain:` accepted), `abbrev`, `version`; count items with a `**Tests:**` block
-- `.sdd/gaps/*.md` — parse `id`, `spec-item`, `component` (legacy `domain:`), `status`, `audit-spec-version`
-- `.sdd/work-items/*.md` — parse `id`, `gap-id`, `component` (legacy `domain:`), `status`
-- `.sdd/design/*/design.md` — for each design directory, extract the design name (the directory component between `design/` and `/design.md`); collect the set of design names referenced by any target's `design:` frontmatter field; a design is "in progress without a target" when its name does not appear in any target's `design:` field
+```bash
+sdd_cli=$(ls plugin/cli/sdd.js 2>/dev/null || ls "$HOME/.claude/plugins/cache/sdd/sdd/"*/cli/sdd.js 2>/dev/null | head -1)
+node "$sdd_cli" state --json           # counts by status per type + uncovered specs
+node "$sdd_cli" list targets --json    # id, status, component, title, design
+node "$sdd_cli" list specs --json      # id, status, component, title, version, covered
+node "$sdd_cli" list gaps --json       # id, status, component, title, specItem, auditSpecVersion
+node "$sdd_cli" list work-items --json # id, status, component, title, gapIds
+```
+
+Legacy `domain:` frontmatter is already read as a one-level component path.
+Additionally read `.sdd/design/*/design.md` — for each design directory, extract
+the design name (the directory component between `design/` and `/design.md`);
+collect the set of design names referenced by any target's `design` field; a
+design is "in progress without a target" when its name does not appear in any
+target's `design` field.
+
+Fallback when the CLI is unavailable (no Bash tool / script not found): read the
+artifacts directly, skipping every `archive/` subdirectory —
+`find .sdd/specs -name "SPEC-*.md" ! -path "*/archive/*"` for the component tree
+(any depth), `.sdd/{targets,gaps,work-items}/*.md` for the flat types — and parse
+the same fields from frontmatter.
 
 ### 3. Detect stale gap audits
 
-For each open gap, look up the referenced spec item file and read its `version` field from frontmatter:
+Mark a gap as stale when its `auditSpecVersion` does not match the `version` of
+the spec item it references (`specItem`) — both are in the step-2 JSON; join
+them by ID. When falling back to manual reads, the spec item's version comes
+from its file:
 
 ```bash
 # spec items live anywhere in the component tree — resolve by recursive scan
 grep "^version:" "$(find .sdd/specs -name "SPEC-{abbrev}-{seq}.md" ! -path "*/archive/*" | head -1)" 2>/dev/null | head -1
 ```
 
-Mark a gap as stale when its `audit-spec-version` does not match the `version` field of the spec item file it references. For each stale gap, emit one warning naming the specific gap ID and the specific spec item ID it was generated against (e.g. `⚠ GAP-auth-001 is stale: audit-spec-version a3f9c812 ≠ SPEC-auth-001 version c4e1f205`). Collect the list of stale components for the next-action footer.
+For each stale gap, emit one warning naming the specific gap ID and the specific spec item ID it was generated against (e.g. `⚠ GAP-auth-001 is stale: audit-spec-version a3f9c812 ≠ SPEC-auth-001 version c4e1f205`). Collect the list of stale components for the next-action footer.
 
 If the Bash tool is unavailable, compare each gap's `discovered` timestamp against the spec item file's modification time as a fallback indicator.
 
@@ -102,7 +122,7 @@ the artifact operating guides (it references them; it is not a divergent copy).
    (spawn-sdd-worker runs that loop autonomously)
 
 3. **Project-specific context** — essential orientation for this repo's `.sdd/`:
-   - ID conventions: `TGT-{seq}` and `SPEC-{abbrev}-{seq}` are sequential; ephemeral `GAP`/`WI`/`ISS`/`IMP` mint hash IDs `{prefix}-{abbrev}-{7hex}` (legacy `{seq}` forms remain valid). The next `TGT-{seq}` derives from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history scan (needs a full, non-shallow clone).
+   - ID conventions: `TGT-{seq}` and `SPEC-{abbrev}-{seq}` are sequential; ephemeral `GAP`/`WI`/`ISS`/`IMP` mint hash IDs `{prefix}-{abbrev}-{7hex}` (legacy `{seq}` forms remain valid). Mint deterministically via the artifact CLI: `node "$sdd_cli" mint <gap|work-item|issue|improvement> {abbrev}`, and `node "$sdd_cli" mint target` for the next `TGT-{seq}` (derived from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history scan; needs a full, non-shallow clone). Look up any artifact by ID with `node "$sdd_cli" resolve <ID>` / `show <ID>` instead of globbing.
    - Artifact locations: derive from the active artifacts found in steps 2–3
    - Active components: render the component tree found under `.sdd/specs/` (areas and their nested components; a legacy flat domain layout is a one-level tree)
 

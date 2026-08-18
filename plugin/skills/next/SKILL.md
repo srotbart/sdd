@@ -20,14 +20,14 @@ next across all components. The state survey reuses the same reading logic as
 
 ### 1. Survey the current state
 
-Perform the same state collection as `session-start` steps 2–3:
+Perform the same state collection as `session-start` steps 2–3, through the
+artifact CLI (resolve the script from `plugin/cli/sdd.js` or the installed
+plugin cache at `$HOME/.claude/plugins/cache/sdd/sdd/*/cli/sdd.js`):
 
-- `.sdd/targets/*.md` — parse id, status, component (legacy `domain:` accepted)
-- `.sdd/specs/**/SPEC-*.md` — recursive scan (`find .sdd/specs -name "SPEC-*.md" ! -path "*/archive/*"`); count active items, coverage fraction
-- `.sdd/gaps/*.md` — parse id, spec-item, component, status
-- `.sdd/work-items/*.md` — parse id, gap-id, component, status
-- `.sdd/issues/*.md` — count open issues by component
-- `.sdd/improvements/*.md` — count open improvements by component
+- `node "$sdd_cli" state --json` — counts by status per type, uncovered specs
+- `node "$sdd_cli" list <type> --json` for targets, specs, gaps, work-items,
+  issues, improvements — id, status, component, title, plus the per-type
+  cross-reference fields (`specItem`/`auditSpecVersion`, `gapIds`, `version`/`covered`)
 
 **Do not duplicate this logic.** If the state was already collected during the
 current `session-start` run, reuse that view rather than re-reading all files.

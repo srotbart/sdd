@@ -11,8 +11,8 @@ Each gap records exactly one divergence with a one-line justification.
 
 **File path:** `.sdd/gaps/GAP-{abbrev}-{7hex}.md`
 **ID pattern:** `GAP-{abbrev}-{7hex}` — abbreviation matches the referenced
-spec item's abbrev (e.g., `auth`, `wf`); the 7-hex suffix is generated at mint
-time (`openssl rand -hex 4 | cut -c1-7`);
+spec item's abbrev (e.g., `auth`, `wf`); the ID is minted with the artifact CLI
+(`node plugin/cli/sdd.js mint gap {abbrev}`; fallback: `openssl rand -hex 4 | cut -c1-7`);
 no sequence scan and no archive lookup — collision-free by construction.
 
 **Required frontmatter:**
@@ -97,8 +97,9 @@ already set, report the anomaly rather than overwriting.
 2. Locate the decision point: the file and line where the invariant is violated.
 3. Write one line of reasoning explaining the violation specifically enough that
    a future reader can verify it without re-reading the code.
-4. Mint a hash ID: `GAP-{abbrev}-{7hex}`. Generate the suffix with
-   `openssl rand -hex 4 | cut -c1-7` (or equivalent random 7 lowercase hex chars).
+4. Mint a hash ID: `GAP-{abbrev}-{7hex}`, via the artifact CLI —
+   `node plugin/cli/sdd.js mint gap {abbrev}` (fallback:
+   `openssl rand -hex 4 | cut -c1-7` or equivalent random 7 lowercase hex chars).
    No sequence scan and no archive lookup — collision-free by construction.
 5. Set `audit-spec-version` to the spec item's current `version`.
 6. Set `status: open`, `closed-by: null`, `deferred-reason: null`.

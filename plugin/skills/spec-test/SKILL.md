@@ -26,9 +26,13 @@ Accept one of:
 
 ### 1. Identify uncovered spec items
 
-Scan the targeted component subtree recursively — `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"` — components may nest to any depth.
-For each active spec item file, check whether a `**Tests:**` block exists in the body.
-Items without it are uncovered. Report the list before proceeding.
+List the targeted component subtree with the artifact CLI:
+`node plugin/cli/sdd.js list specs --component={component-path} --json`
+(resolve the script from the repo or the installed plugin cache) — each row
+carries `covered`, whether a `**Tests:**` block exists in the body. Rows with
+`covered: false` are the uncovered items. Report the list before proceeding.
+(Fallback: `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"`
+and check each body by hand.)
 
 If all items are covered, report that and stop — ask the user whether to update
 an existing test or add additional coverage.

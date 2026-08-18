@@ -29,9 +29,16 @@ Parse `.sdd/work-items/WI-{abbrev}-{seq}.md`. Extract:
 For each gap ID referenced, read `.sdd/gaps/GAP-{abbrev}-{seq}.md`. Confirm `status: open`.
 The gap's `**Location:**` and `**Reasoning:**` are the ground truth for what needs fixing.
 
-When resolving the gap's `spec-item` field to read the spec item file, scan the
-component tree recursively — `find .sdd/specs -name "SPEC-{abbrev}-{seq}.md"
-! -path "*/archive/*"` — components may nest to any depth.
+When resolving the gap's `spec-item` field to read the spec item file, use the
+artifact CLI — depth-agnostic, archive-aware, alias-following:
+
+```bash
+sdd_cli=$(ls plugin/cli/sdd.js 2>/dev/null || ls "$HOME/.claude/plugins/cache/sdd/sdd/"*/cli/sdd.js 2>/dev/null | head -1)
+node "$sdd_cli" show SPEC-{abbrev}-{seq}     # prints path + content; `resolve` for the path only
+```
+
+(Fallback: `find .sdd/specs -name "SPEC-{abbrev}-{seq}.md" ! -path "*/archive/*"` —
+components may nest to any depth.)
 
 ### 3. Flip work item to in-progress
 

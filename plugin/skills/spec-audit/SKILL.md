@@ -25,11 +25,15 @@ Accept one of:
 
 ### 1. Load the spec
 
-Scan the component's subtree recursively — components may nest to any depth:
+Enumerate the component's subtree with the artifact CLI — depth-agnostic,
+archive-aware — resolving the script from the repo or the installed plugin cache:
 
 ```bash
-find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"
+sdd_cli=$(ls plugin/cli/sdd.js 2>/dev/null || ls "$HOME/.claude/plugins/cache/sdd/sdd/"*/cli/sdd.js 2>/dev/null | head -1)
+node "$sdd_cli" list specs --component={component-path} --json   # rows carry id, status, component, version, covered, file
 ```
+
+(Fallback: `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"`.)
 
 Read each active item file — parse frontmatter `id`, `status`, `version`,
 `component` (legacy `domain:` is read as the component path), and the body. If
@@ -89,7 +93,8 @@ re-reading the code. "Calls execute() without checking MFA status" is good.
 
 ### 4. Check for existing gap files
 
-Before writing new gaps, scan `.sdd/gaps/GAP-{abbrev}-*.md` for existing open gaps
+Before writing new gaps, list existing open gaps for the component
+(`node "$sdd_cli" list gaps --status=open --component={component-path} --json`)
 referencing the same spec item.
 
 - **Existing open gap, still a gap**: update its `audit-spec-version` to the current
@@ -102,12 +107,19 @@ referencing the same spec item.
 
 ### 5. Write new gap files
 
-For each new gap found, create `.sdd/gaps/GAP-{abbrev}-{7hex}.md`, minting the ID as
-`GAP-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
-`openssl rand -hex 4 | cut -c1-7`). Minting requires no sequence scan and no archive
-lookup — hash IDs are collision-free by construction and safe to mint in parallel
-worktrees. Existing sequential `GAP-{abbrev}-{seq}` IDs remain valid
-and are never renamed.
+For each new gap found, create `.sdd/gaps/GAP-{abbrev}-{7hex}.md`, minting the ID
+with the artifact CLI:
+
+```bash
+sdd_cli=$(ls plugin/cli/sdd.js 2>/dev/null || ls "$HOME/.claude/plugins/cache/sdd/sdd/"*/cli/sdd.js 2>/dev/null | head -1)
+node "$sdd_cli" mint gap {abbrev}     # prints GAP-{abbrev}-{7hex}
+```
+
+(Fallback when the script is unavailable: `{7hex}` is 7 random lowercase hex
+characters, e.g. `openssl rand -hex 4 | cut -c1-7`.) Minting requires no sequence
+scan and no archive lookup — hash IDs are collision-free by construction and safe
+to mint in parallel worktrees. Existing sequential `GAP-{abbrev}-{seq}` IDs remain
+valid and are never renamed.
 
 Use the schema in `references/schemas.md` (Gaps section). Set:
 - `spec-item` — the spec item ID

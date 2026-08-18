@@ -53,10 +53,12 @@ de-duplicate across reviewers:
 ### 3. Write issue files
 
 For each distinct finding, create `.sdd/issues/ISS-{abbrev}-{7hex}.md`, minting the
-ID as `ISS-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
-`openssl rand -hex 4 | cut -c1-7`) — no sequence scan, collision-free by construction. Existing sequential
-`ISS-{abbrev}-{seq}` IDs remain valid and are never
-renamed.
+ID with the artifact CLI (`node plugin/cli/sdd.js mint issue {abbrev}`,
+resolving the script from the repo or the installed plugin cache at
+`$HOME/.claude/plugins/cache/sdd/sdd/*/cli/sdd.js`; fallback: `{7hex}` is 7
+random lowercase hex characters, e.g. `openssl rand -hex 4 | cut -c1-7`) — no
+sequence scan, collision-free by construction. Existing sequential
+`ISS-{abbrev}-{seq}` IDs remain valid and are never renamed.
 
 **Required frontmatter:**
 

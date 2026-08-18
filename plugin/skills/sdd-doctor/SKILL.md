@@ -91,8 +91,9 @@ run, with no underlying spec change.
 
 ### 5. Reference resolution
 
-- Every gap's `spec-item` resolves: recursive scan of active items, then
-  `aliases:` fields, then the tracked spec archive.
+- Every gap's `spec-item` resolves: `node plugin/cli/sdd.js resolve {ID}`
+  (or the installed plugin cache copy) — covers active items, `aliases:`
+  fields, and the tracked spec archive in one lookup.
 - Every work item's `gap-id` resolves against active gaps, or — because
   ephemeral archives are local-only — reports as **unverifiable (archive is
   local-only)** when the local archive cache is empty or absent; a genuine

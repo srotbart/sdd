@@ -78,7 +78,7 @@ This is the authoritative statement of intent. Ignore the Dialog for reconciliat
 
 ### 2. Identify the relevant spec file
 
-Use the target's `component` frontmatter field (legacy `domain:` reads the same) to locate `.sdd/specs/{component-path}/`. If no directory exists for this component, go to the **New component** outcome below. Enumerate active spec items by scanning the subtree recursively: `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"`.
+Use the target's `component` frontmatter field (legacy `domain:` reads the same) to locate `.sdd/specs/{component-path}/`. If no directory exists for this component, go to the **New component** outcome below. Enumerate active spec items with the artifact CLI: `node plugin/cli/sdd.js list specs --component={component-path} --json` (resolve the script from the repo or the installed plugin cache; fallback: `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"`).
 
 ### 3. Reason about the relationship
 
