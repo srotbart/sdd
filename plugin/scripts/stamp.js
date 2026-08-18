@@ -48,7 +48,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { findSddRoot, collectSpecFiles, frontmatterBlock, field } = require('./lib/sdd-tree.js');
+const { findSddRoot, collectSpecFiles, frontmatterBlock, field } = require('../cli/lib/sdd-tree.js');
 
 function fail(msg) {
   process.stderr.write(`stamp: ${msg}\n`);

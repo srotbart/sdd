@@ -31,7 +31,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { findSddRoot, collectSpecFiles, frontmatterBlock, field, fieldList } = require('./lib/sdd-tree.js');
+const { findSddRoot, collectSpecFiles, frontmatterBlock, field, fieldList } = require('../cli/lib/sdd-tree.js');
 
 function resolveProjectRoot() {
   if (process.argv[2]) return path.resolve(process.argv[2]);

@@ -1,6 +1,7 @@
 /**
- * sdd-tree.js — shared helpers for the plugin's Node scripts (spec-index.js,
- * stamp.js). One source for the spec-tree walk, project-root resolution, and
+ * sdd-tree.js — shared helpers for the artifact CLI (sdd.js) and the legacy
+ * scripts that will fold into it (plugin/scripts/spec-index.js, stamp.js).
+ * One source for the spec-tree walk, project-root resolution, and
  * frontmatter access, per the one-source-per-mechanism standard.
  */
 
