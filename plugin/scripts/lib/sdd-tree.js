@@ -59,7 +59,9 @@ function frontmatterBlock(content) {
 /** A single-line frontmatter field value, inline `# comment` stripped. */
 function field(fm, name) {
   if (fm === null) return null;
-  const m = fm.match(new RegExp(`^${name}:\\s*(.+)$`, 'm'));
+  // `[ \t]*`, not `\s*`: with the `m` flag `\s` crosses the newline, so an
+  // empty `name:` line would capture the NEXT frontmatter line as its value.
+  const m = fm.match(new RegExp(`^${name}:[ \\t]*(.+)$`, 'm'));
   if (!m) return null;
   return m[1].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
 }

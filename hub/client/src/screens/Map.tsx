@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { useWorkspaceResource } from '../hooks/useWorkspaceResource';
 import './Map.css';
 
 export interface MapNode {
@@ -114,31 +115,15 @@ function NodeCard({
 }
 
 export function Map({ workspaceId, refreshToken }: MapProps) {
-  const [graph, setGraph] = useState<MapGraph | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const { data: graph, error: loadError } = useWorkspaceResource<MapGraph>(
+    workspaceId,
+    'component-graph',
+    refreshToken
+  );
   const [selected, setSelected] = useState<string | null>(null);
   const [edgePaths, setEdgePaths] = useState<EdgePath[]>([]);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const nodeEls = useRef(new window.Map<string, HTMLDivElement>());
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/workspaces/${workspaceId}/component-graph`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data: MapGraph) => {
-        if (!cancelled) {
-          setLoadError(false);
-          setGraph(data);
-        }
-      })
-      .catch(() => {
-        // A failed load is an error state, not an empty project.
-        if (!cancelled) setLoadError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceId, refreshToken]);
 
   const registerRef = (path: string, el: HTMLDivElement | null): void => {
     if (el) {

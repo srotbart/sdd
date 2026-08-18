@@ -31,24 +31,51 @@ interface Spec {
 // carry inline # comments. Free-text keys are deliberately absent.
 const STRUCTURAL_KEYS = new Set([
   "id", "component", "domain", "abbrev", "status", "version", "aliases",
-  "scope", "spec-item", "gap-id", "audit-spec-version", "closed-by",
+  "scope", "depends-on", "spec-item", "gap-id", "audit-spec-version", "closed-by",
   "contract-consumer", "contract-synced", "created", "discovered", "design",
 ]);
 
 function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
+  const { meta, body } = parseFrontmatterWithLists(content);
+  return { meta, body };
+}
+
+// The list-aware form of the frontmatter parser: manifests carry list values
+// (`depends-on`, `scope`) in both inline (`key: [a, b]`) and block (`- x`)
+// forms. Scalar callers use parseFrontmatter above and ignore `lists`. One
+// implementation serves both so comment/quote stripping cannot drift.
+export function parseFrontmatterWithLists(content: string): {
+  meta: Record<string, string>;
+  lists: Record<string, string[]>;
+  body: string;
+} {
   if (!content.startsWith("---")) {
-    return { meta: {}, body: content };
+    return { meta: {}, lists: {}, body: content };
   }
   const end = content.indexOf("---", 3);
   if (end === -1) {
-    return { meta: {}, body: content };
+    return { meta: {}, lists: {}, body: content };
   }
   const fmBlock = content.slice(3, end).trim();
   const body = content.slice(end + 3).trim();
   const meta: Record<string, string> = {};
+  const lists: Record<string, string[]> = {};
+  const cleanEntry = (s: string): string =>
+    s.replace(/\s+#.*$/, "").trim().replace(/^["']|["']$/g, "");
+  // The key whose block list the current `- entry` lines belong to, if any.
+  let openListKey: string | null = null;
   for (const line of fmBlock.split("\n")) {
+    const blockItem = /^\s*-\s*(.+)$/.exec(line);
+    if (blockItem && openListKey !== null) {
+      const entry = cleanEntry(blockItem[1]);
+      if (entry) lists[openListKey].push(entry);
+      continue;
+    }
     const colon = line.indexOf(":");
-    if (colon === -1) continue;
+    if (colon === -1) {
+      openListKey = null;
+      continue;
+    }
     const key = line.slice(0, colon).trim();
     // Strip inline comments ("component: hub/server  # note") on STRUCTURAL
     // keys only — the artifact templates show them there. Free-text fields
@@ -60,8 +87,19 @@ function parseFrontmatter(content: string): { meta: Record<string, string>; body
     }
     const val = raw.trim().replace(/^["']|["']$/g, "");
     meta[key] = val;
+    if (val.startsWith("[") && val.endsWith("]")) {
+      lists[key] = val.slice(1, -1).split(",").map(cleanEntry).filter(Boolean);
+      openListKey = null;
+    } else if (val === "") {
+      // A bare `key:` line (comment already stripped) opens a block list;
+      // following `- entry` lines fill it until any non-entry line.
+      lists[key] = [];
+      openListKey = key;
+    } else {
+      openListKey = null;
+    }
   }
-  return { meta, body };
+  return { meta, lists, body };
 }
 
 function parseRefs(text: string): Array<{ kind: "gap" | "wi"; id: string }> {
@@ -714,7 +752,8 @@ export function parseSpecs(sddPath: string, tree?: ReturnType<typeof collectSpec
       // Preserve skip state set by parseSpecItemFile — do not overwrite with computed status
       if (item.testStatus.status === "skipped") continue;
 
-      const meta = itemMeta.get(item);
+      // Set for every item pushed above — the WeakMap lookup cannot miss.
+      const meta = itemMeta.get(item)!;
       const idMatch = /^SPEC-([a-z0-9-]+)-[a-z0-9]+$/i.exec(item.id);
       const idAbbrev = idMatch ? idMatch[1].toLowerCase() : null;
       // Candidate mappings: the frontmatter abbrev is authoritative and may
@@ -724,21 +763,17 @@ export function parseSpecs(sddPath: string, tree?: ReturnType<typeof collectSpec
       // component whose abbrev happens to equal this item's ID shorthand
       // would capture the item and stamp it with a foreign report.
       const inOwnChain = (m: { filePath: string }): boolean =>
-        meta !== undefined && (meta.dir + path.sep).startsWith(path.dirname(m.filePath) + path.sep);
+        (meta.dir + path.sep).startsWith(path.dirname(m.filePath) + path.sep);
       const matches = mappingFiles.filter(
         (m) =>
-          (meta && m.abbrev === meta.abbrev) ||
+          m.abbrev === meta.abbrev ||
           (idAbbrev !== null && m.abbrev === idAbbrev && inOwnChain(m))
       );
       let best: { mapping: TestMapping; report: ParsedReport | null } | null = null;
-      if (matches.length > 0 && meta) {
-        matches.sort((a, b) => proximity(b.filePath, meta.dir) - proximity(a.filePath, meta.dir));
-        for (const m of matches) {
-          best = loadMappingWithReport(m.filePath);
-          if (best) break;
-        }
-      } else if (matches.length > 0) {
-        best = loadMappingWithReport(matches[0].filePath);
+      matches.sort((a, b) => proximity(b.filePath, meta.dir) - proximity(a.filePath, meta.dir));
+      for (const m of matches) {
+        best = loadMappingWithReport(m.filePath);
+        if (best) break;
       }
 
       item.testStatus = computeTestStatus(item.id, best?.mapping ?? null, best?.report ?? null);

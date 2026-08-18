@@ -233,6 +233,75 @@ describe("buildComponentGraph", () => {
     expect(edge?.status).toBe("unknown");
   });
 
+  it("parses the documented component.md template — inline comments do not empty block lists", () => {
+    const sddPath = makeSdd();
+    writeItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001");
+    writeItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001");
+    // Verbatim shape of the manifest template in plugin/references/artifacts/spec.md.
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "client", "screens", "component.md"),
+      [
+        "---",
+        "component: hub/client/screens    # full path — must match the directory",
+        "abbrev: scr                      # shorthand for NEW spec items minted here",
+        "scope:                           # path globs of the code this component owns",
+        "  - hub/client/src/screens/**",
+        "depends-on:                      # other components, full paths; may be empty",
+        "  - hub/server",
+        "---",
+        "",
+        "# hub/client/screens",
+        "",
+        "One paragraph: what this component is and where it lives in the codebase.",
+        "",
+      ].join("\n")
+    );
+
+    const graph = buildComponentGraph(sddPath);
+    const screens = graph.nodes.find((n) => n.path === "hub/client/screens");
+    expect(screens?.abbrev).toBe("scr");
+    expect(screens?.dependsOn).toEqual(["hub/server"]);
+    expect(graph.edges).toContainEqual({ from: "hub/client/screens", to: "hub/server", kind: "depends-on" });
+  });
+
+  it("an empty manifest field never captures the following frontmatter line as its value", () => {
+    const sddPath = makeSdd();
+    writeItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001");
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "server", "component.md"),
+      `---\ncomponent: hub/server\nabbrev:\ndepends-on: []\n---\n\n# hub/server\n\nDesc.\n`
+    );
+
+    const graph = buildComponentGraph(sddPath);
+    const server = graph.nodes.find((n) => n.path === "hub/server");
+    expect(server?.abbrev).toBeNull();
+    expect(server?.dependsOn).toEqual([]);
+  });
+
+  it("attributes drift to the more specific root when the contract lives at a common ancestor", () => {
+    const sddPath = makeSdd();
+    const dir = path.join(sddPath, "specs", "hub");
+    fs.mkdirSync(dir, { recursive: true });
+    const writeLcaContract = (id: string, synced: string) =>
+      fs.writeFileSync(
+        path.join(dir, `${id}.md`),
+        `---\nid: ${id}\ncomponent: hub\nabbrev: hub\nstatus: active\naliases: []\ncontract-consumer: hub/client\ncontract-synced: [${synced}]\nversion: "aaaaaaaa"\n---\n\n# ${id} — contract\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+      );
+    // Consumer subtree (hub/client ⊂ hub) drifts: the consumer claims it.
+    writeLcaContract("SPEC-hub-001", "SPEC-hcli-004@bbbbbbbb");
+    // Producer subtree outside the consumer (hub/server) drifts: producer's.
+    writeLcaContract("SPEC-hub-002", "SPEC-hsrv-001@ffffffff");
+    writeItem(sddPath, "hub/client", "hcli", "SPEC-hcli-004"); // version 00000000 ≠ bbbbbbbb
+    writeItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001"); // version 00000000 ≠ ffffffff
+
+    const graph = buildComponentGraph(sddPath);
+    const byItem = new globalThis.Map(
+      graph.edges.filter((e) => e.kind === "contract").map((e) => [e.contractItem, e.status])
+    );
+    expect(byItem.get("SPEC-HUB-001")).toBe("consumer-drifted");
+    expect(byItem.get("SPEC-HUB-002")).toBe("producer-drifted");
+  });
+
   it("returns an empty graph for a missing specs directory", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-graph-empty-"));
     const graph = buildComponentGraph(path.join(root, ".sdd"));
