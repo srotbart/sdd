@@ -31,7 +31,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { findSddRoot, collectSpecFiles, frontmatterBlock, field } = require('./lib/sdd-tree.js');
+const { findSddRoot, collectSpecFiles, frontmatterBlock, field, fieldList } = require('./lib/sdd-tree.js');
 
 function resolveProjectRoot() {
   if (process.argv[2]) return path.resolve(process.argv[2]);
@@ -45,29 +45,6 @@ function resolveProjectRoot() {
 
 const repoRoot = resolveProjectRoot();
 const specsDir = path.join(repoRoot, '.sdd', 'specs');
-
-/**
- * Parse the optional `scope:` list. Supports the inline form
- * `scope: [glob1, glob2]` and a multi-line block of `- glob` entries.
- * Returns an array of globs (possibly empty).
- */
-function parseScope(fm) {
-  const inline = fm.match(/^scope:\s*\[([^\]]*)\]\s*$/m);
-  if (inline) {
-    return inline[1]
-      .split(',')
-      .map((g) => g.trim().replace(/^["']|["']$/g, ''))
-      .filter(Boolean);
-  }
-  const block = fm.match(/^scope:\s*\n((?:\s*-\s*.+\n?)+)/m);
-  if (block) {
-    return block[1]
-      .split('\n')
-      .map((line) => line.replace(/^\s*-\s*/, '').trim().replace(/^["']|["']$/g, ''))
-      .filter(Boolean);
-  }
-  return [];
-}
 
 /**
  * Extract the one-line title: the first `#` heading with the leading `# ` and any
@@ -96,7 +73,9 @@ for (const file of files) {
   const id = field(fm, 'id') || '';
   const component = field(fm, 'component') || field(fm, 'domain') || '';
   const title = parseTitle(content, id);
-  const scope = parseScope(fm).join(',');
+  // Shared list parser (one source per repeated mechanism): inline and block
+  // forms, inline comments stripped — the documented templates carry them.
+  const scope = (fieldList(fm, 'scope') ?? []).join(',');
 
   lines.push(`${id}\t${component}\t${title}\t${scope}`);
 }

@@ -243,3 +243,27 @@ describe("stamp.js", () => {
     expect(result.stdout).toContain("self-stamp");
   });
 });
+
+describe("sdd-tree field()", () => {
+  it("an empty version: line reads as unstamped, never as the next frontmatter line", () => {
+    const root = makeProject();
+    const file = path.join(root, ".sdd", "specs", "hub", "server", "SPEC-hsrv-060.md");
+    // `version:` left empty mid-frontmatter — the next line must not be read
+    // as its value (the old `\s*` regex crossed the newline).
+    fs.writeFileSync(
+      file,
+      `---\nid: SPEC-hsrv-060\nversion:\ncomponent: hub/server\nabbrev: x\nstatus: active\naliases: []\n---\n\n# SPEC-hsrv-060 — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+
+    // check: unstamped is skipped — no nonsense mismatch built from the next line.
+    const check = run(["check", file], root);
+    expect(check.code).toBe(0);
+    expect(check.stdout).toBe("");
+
+    // version: treats it as missing and writes the real hash in place.
+    const stamp = run(["version", file], root);
+    expect(stamp.code).toBe(0);
+    expect(stamp.stdout).toContain("SPEC-hsrv-060 (none) →");
+    expect(fs.readFileSync(file, "utf8")).toMatch(/^version: "[0-9a-f]{8}"$/m);
+  });
+});

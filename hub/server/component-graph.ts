@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseSpecs, parseGaps, collectSpecsTree } from "./sdd-parser.js";
+import { parseSpecs, parseGaps, collectSpecsTree, parseFrontmatterWithLists } from "./sdd-parser.js";
 
 // The component graph powering the hub's Map screen: one node per component
 // (derived from item `component:` paths — legacy flat domains are one-level
@@ -53,60 +53,37 @@ interface Manifest {
   description: string;
 }
 
-// Minimal manifest frontmatter reader with list support (`key: [a, b]` and
-// block `- x` forms) — manifests carry lists, which the generic single-line
-// frontmatter parser doesn't handle.
+// Manifest frontmatter goes through the shared list-aware parser — one source
+// per repeated mechanism; manifests carry lists (`depends-on`, `scope`).
 function parseManifest(filePath: string, dirPath: string): Manifest | null {
   let content: string;
   try {
-    content = fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
+    content = fs.readFileSync(filePath, "utf8");
   } catch {
     // Unreadable manifest is treated as absent: the component still renders
     // from its items, just without manifest metadata.
     return null;
   }
-  const fmMatch = /^---\n([\s\S]*?)\n---/.exec(content);
-  const fm = fmMatch ? fmMatch[1] : "";
-  const body = fmMatch ? content.slice(fmMatch[0].length) : content;
+  const { meta, lists, body } = parseFrontmatterWithLists(content);
 
-  const line = (name: string): string | null => {
-    const m = new RegExp(`^${name}:\\s*(.+)$`, "m").exec(fm);
-    if (!m) return null;
-    // Strip inline comments — the documented templates carry them.
-    const v = m[1].replace(/\s+#.*$/, "").trim().replace(/^["']|["']$/g, "");
-    return v.startsWith("[") ? null : v || null;
-  };
-
-  const list = (name: string): string[] => {
-    const inline = new RegExp(`^${name}:\\s*\\[([^\\]]*)\\]\\s*$`, "m").exec(fm);
-    if (inline) {
-      return inline[1]
-        .split(",")
-        .map((s) => s.trim().replace(/^["']|["']$/g, ""))
-        .filter(Boolean);
-    }
-    const block = new RegExp(`^${name}:\\s*\\n((?:\\s+-\\s*.+\\n?)+)`, "m").exec(fm);
-    if (block) {
-      return block[1]
-        .split("\n")
-        .map((l) => l.replace(/^\s*-\s*/, "").replace(/\s+#.*$/, "").trim().replace(/^["']|["']$/g, ""))
-        .filter(Boolean);
-    }
-    return [];
+  // Empty and list-valued fields read as absent scalars.
+  const scalar = (name: string): string | null => {
+    const v = meta[name];
+    return v && !v.startsWith("[") ? v : null;
   };
 
   // First non-heading, non-empty paragraph of the body.
   const description =
     body
-      .split(/\n{2,}/)
+      .split(/(?:\r?\n){2,}/)
       .map((p) => p.trim())
       .find((p) => p && !p.startsWith("#")) ?? "";
 
   return {
     dirPath,
-    component: line("component"),
-    abbrev: line("abbrev"),
-    dependsOn: list("depends-on"),
+    component: scalar("component"),
+    abbrev: scalar("abbrev"),
+    dependsOn: lists["depends-on"] ?? [],
     description,
   };
 }
@@ -200,9 +177,21 @@ export function buildComponentGraph(sddPath: string): ComponentGraph {
         continue;
       }
       if (current.version.toLowerCase() !== entry.stamp.toLowerCase()) {
-        if (inSubtree(producer, current.component)) producerDrift = true;
-        else if (inSubtree(contract.consumer, current.component)) consumerDrift = true;
-        else sawUnknown = true;
+        const inProducer = inSubtree(producer, current.component);
+        const inConsumer = inSubtree(contract.consumer, current.component);
+        if (inProducer && inConsumer) {
+          // Nested roots — e.g. a symmetric contract living at the two
+          // components' common ancestor: the deeper, more specific root
+          // claims the drift, else every consumer drift reads as producer's.
+          if (contract.consumer.length > producer.length) consumerDrift = true;
+          else producerDrift = true;
+        } else if (inProducer) {
+          producerDrift = true;
+        } else if (inConsumer) {
+          consumerDrift = true;
+        } else {
+          sawUnknown = true;
+        }
       }
     }
     // Zero usable entries means the binding was never verified — fail closed.

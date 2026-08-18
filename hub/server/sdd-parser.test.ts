@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { parseTargets, parseGaps, parseWorkItems } from "./sdd-parser.js";
+import { parseTargets, parseGaps, parseWorkItems, parseFrontmatterWithLists } from "./sdd-parser.js";
 
 function makeSddDir(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-test-"));
@@ -502,5 +502,42 @@ describe("component: frontmatter compatibility (review fixes)", () => {
     const byId = new Map(gaps.map((g) => [g.id, g]));
     expect(byId.get("GAP-scr-b3a91f2")?.domain).toBe("hub/client/screens");
     expect(byId.get("GAP-arch-001")?.domain).toBe("architecture");
+  });
+});
+
+describe("parseFrontmatterWithLists", () => {
+  it("reads inline and block lists, stripping inline comments and quotes", () => {
+    const { meta, lists } = parseFrontmatterWithLists(
+      [
+        "---",
+        "component: hub/client    # full path",
+        "scope:                   # path globs",
+        '  - "hub/client/src/**"',
+        "  - hub/shared/**   # shared helpers",
+        "depends-on: [hub/server, 'hub/shared']",
+        "---",
+        "",
+        "Body.",
+      ].join("\n")
+    );
+    expect(meta["component"]).toBe("hub/client");
+    expect(lists["scope"]).toEqual(["hub/client/src/**", "hub/shared/**"]);
+    expect(lists["depends-on"]).toEqual(["hub/server", "hub/shared"]);
+  });
+
+  it("an empty structural key never captures the following line as its value", () => {
+    const { meta, lists } = parseFrontmatterWithLists(
+      "---\nabbrev:\ndepends-on: []\n---\n\nBody.\n"
+    );
+    expect(meta["abbrev"]).toBe("");
+    expect(lists["depends-on"]).toEqual([]);
+  });
+
+  it("a block list ends at the next key or blank line", () => {
+    const { meta, lists } = parseFrontmatterWithLists(
+      "---\ndepends-on:\n  - hub/server\nabbrev: scr\n---\n\nBody.\n"
+    );
+    expect(lists["depends-on"]).toEqual(["hub/server"]);
+    expect(meta["abbrev"]).toBe("scr");
   });
 });

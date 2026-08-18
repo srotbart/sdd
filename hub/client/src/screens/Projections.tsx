@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Markdown } from '../components/Markdown';
+import { useWorkspaceResource } from '../hooks/useWorkspaceResource';
 import './Projections.css';
 import type { Projection } from '../types';
 
@@ -146,7 +147,14 @@ function applyHighlights(container: HTMLElement, highlightMap: Map<string, Comme
 }
 
 export function Projections({ workspaceId, refreshToken }: ProjectionsProps) {
-  const [projections, setProjections] = useState<Projection[]>([]);
+  const { data: projectionsData } = useWorkspaceResource<Projection[]>(workspaceId, 'projections', refreshToken);
+  const projections = useMemo(
+    () =>
+      [...(projectionsData ?? [])].sort(
+        (a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+      ),
+    [projectionsData]
+  );
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [comments, setComments] = useState<CommentEntry[]>([]);
@@ -163,21 +171,12 @@ export function Projections({ workspaceId, refreshToken }: ProjectionsProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Load projections list
+  // Default-select the newest projection once the list loads
   useEffect(() => {
-    fetch(`/workspaces/${workspaceId}/projections`)
-      .then((r) => r.json())
-      .then((data: Projection[]) => {
-        const sorted = [...data].sort(
-          (a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
-        );
-        setProjections(sorted);
-        if (sorted.length > 0 && !selectedName) {
-          setSelectedName(sorted[0].name);
-        }
-      })
-      .catch(() => {});
-  }, [workspaceId, refreshToken]);
+    if (projections.length > 0 && !selectedName) {
+      setSelectedName(projections[0].name);
+    }
+  }, [projections, selectedName]);
 
   // Load projection content
   useEffect(() => {
