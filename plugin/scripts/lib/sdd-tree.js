@@ -66,4 +66,37 @@ function field(fm, name) {
   return m[1].replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
 }
 
-module.exports = { findSddRoot, collectSpecFiles, frontmatterBlock, field };
+/**
+ * A frontmatter list value: inline `key: [a, b]` or a block of `- entry`
+ * lines under a bare `key:` line. Inline `# comment`s and surrounding quotes
+ * are stripped per entry; a scalar value reads as a one-entry list (some
+ * fields, e.g. `gap-id`, accept either form). Returns null when the key is
+ * absent. A flow list without its closing `]` on the same line (wrapped or
+ * unterminated) reads as empty — fail closed, this helper is line-oriented.
+ */
+function fieldList(fm, name) {
+  if (fm === null) return null;
+  const clean = (s) => s.replace(/\s+#.*$/, '').trim().replace(/^["']|["']$/g, '');
+  const lines = fm.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = new RegExp(`^${name}:[ \\t]*(.*)$`).exec(lines[i]);
+    if (!m) continue;
+    const val = clean(m[1]);
+    if (val.startsWith('[') && val.endsWith(']')) {
+      return val.slice(1, -1).split(',').map(clean).filter(Boolean);
+    }
+    if (val.startsWith('[')) return [];
+    if (val !== '') return [val];
+    const entries = [];
+    for (let j = i + 1; j < lines.length; j++) {
+      const item = /^\s*-\s*(.+)$/.exec(lines[j]);
+      if (!item) break;
+      const entry = clean(item[1]);
+      if (entry) entries.push(entry);
+    }
+    return entries;
+  }
+  return null;
+}
+
+module.exports = { findSddRoot, collectSpecFiles, frontmatterBlock, field, fieldList };
