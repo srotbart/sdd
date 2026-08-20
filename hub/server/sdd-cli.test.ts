@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
-const SCRIPT = path.join(REPO_ROOT, "plugin", "scripts", "sdd.js");
+const SCRIPT = path.join(REPO_ROOT, "plugin", "cli", "sdd.js");
 
 function run(args: string[], cwd: string): { stdout: string; code: number } {
   try {
@@ -110,8 +110,23 @@ describe("sdd.js artifact CLI", () => {
         title: "Add the null check",
         archived: false,
         file: path.join(".sdd", "work-items", "WI-hsrv-a1b2c3d.md"),
+        gapIds: ["GAP-hsrv-a1b2c3d"],
       },
     ]);
+  });
+
+  it("JSON rows carry the per-type cross-reference and staleness fields", () => {
+    const root = makeProject();
+    const specs = JSON.parse(run(["list", "specs", "--json"], root).stdout);
+    const hsrv = specs.find((s: { id: string }) => s.id === "SPEC-hsrv-001");
+    expect(hsrv.version).toBe("00000000");
+    expect(hsrv.covered).toBe(true);
+    const auth = specs.find((s: { id: string }) => s.id === "SPEC-auth-001");
+    expect(auth.covered).toBe(false);
+
+    const gaps = JSON.parse(run(["list", "gaps", "--json"], root).stdout);
+    expect(gaps[0].specItem).toBe("SPEC-hsrv-001");
+    expect(gaps[0].auditSpecVersion).toBe("00000000");
   });
 
   it("state summarises counts by status and uncovered active specs", () => {

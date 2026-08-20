@@ -348,3 +348,11 @@ coordination. Targets and specs keep sequential IDs; the next `TGT-{seq}` derive
 from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history
 scan (full clone required, since target archives are local-only). Existing IDs are
 never renamed or recycled; retired spec IDs become aliases.
+
+**Minting is CLI-first.** `node plugin/cli/sdd.js mint <gap|work-item|issue|improvement> {abbrev}`
+prints a fresh hash ID (double-checked against the tree and archives), and
+`node plugin/cli/sdd.js mint target` derives the next `TGT-{seq}`. Resolve the
+script from the repo or the installed plugin cache
+(`$HOME/.claude/plugins/cache/sdd/sdd/*/cli/sdd.js`); the `openssl` recipe is
+the fallback when the script is unavailable. The same CLI answers lookups —
+`state`, `list`, `show`, `resolve` — instead of globbing `.sdd/` by hand.

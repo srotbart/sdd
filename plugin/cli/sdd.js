@@ -2,6 +2,10 @@
 /**
  * sdd.js — the SDD artifact CLI for agents.
  *
+ * Lives inside the plugin (`plugin/cli/`) so it ships with it and works
+ * from the installed plugin cache; this directory is where the CLI grows
+ * (see README.md — the legacy `plugin/scripts/` tools fold in over time).
+ *
  * One deterministic, testable surface for the mechanical artifact
  * conventions, so skills (and agents running them) query and mint through
  * this instead of globbing and grepping `.sdd/` by hand. Read-side commands
@@ -62,6 +66,13 @@ const USAGE = `usage: sdd.js <command>
   stamp  <version|contract|check> ...               delegates to stamp.js
 
 types: specs gaps work-items issues improvements targets`;
+
+// Piping into `head`/`grep -m` closes stdout early — exit quietly instead of
+// crashing with EPIPE; whatever was read before the close is the output.
+process.stdout.on('error', (e) => {
+  if (e.code === 'EPIPE') process.exit(0);
+  throw e;
+});
 
 function fail(msg, code = 2) {
   process.stderr.write(`sdd: ${msg}\n`);
@@ -136,6 +147,21 @@ function readArtifact(file, type) {
   if (fm === null) return null;
   const id = field(fm, 'id');
   if (!id) return null;
+  // Per-type extras: the cross-reference and staleness fields consumers
+  // (session-start, sdd-doctor) otherwise grep for one file at a time.
+  const extra = {};
+  if (type === 'specs') {
+    extra.version = field(fm, 'version') ?? '';
+    extra.covered = content.includes('**Tests:**');
+  } else if (type === 'gaps') {
+    extra.specItem = field(fm, 'spec-item') ?? '';
+    extra.auditSpecVersion = field(fm, 'audit-spec-version') ?? '';
+  } else if (type === 'work-items') {
+    extra.gapIds = fieldList(fm, 'gap-id') ?? [];
+  } else if (type === 'targets') {
+    extra.design = field(fm, 'design');
+  }
+
   return {
     id,
     type,
@@ -145,6 +171,7 @@ function readArtifact(file, type) {
     title: parseTitle(content, id),
     aliases: fieldList(fm, 'aliases') ?? [],
     archived: file.split(path.sep).includes('archive'),
+    extra,
     file,
     content,
   };
@@ -185,7 +212,7 @@ function cmdState(root, flags) {
     for (const a of collectArtifacts(root, [type], false)) {
       const status = a.status || '(none)';
       byStatus[status] = (byStatus[status] ?? 0) + 1;
-      if (type === 'specs' && a.status === 'active' && !a.content.includes('**Tests:**')) uncovered++;
+      if (type === 'specs' && a.status === 'active' && !a.extra.covered) uncovered++;
     }
     out[type] = type === 'specs' ? { byStatus, uncovered } : { byStatus };
   }
@@ -220,6 +247,7 @@ function cmdList(root, args, flags) {
           title: a.title,
           archived: a.archived,
           file: rel(root, a.file),
+          ...a.extra,
         })),
         null,
         2
@@ -300,7 +328,7 @@ function cmdMint(root, args) {
 }
 
 function cmdStamp(rest) {
-  const result = spawnSync(process.execPath, [path.join(__dirname, 'stamp.js'), ...rest], { stdio: 'inherit' });
+  const result = spawnSync(process.execPath, [path.join(__dirname, '..', 'scripts', 'stamp.js'), ...rest], { stdio: 'inherit' });
   process.exit(result.status ?? 2);
 }
 

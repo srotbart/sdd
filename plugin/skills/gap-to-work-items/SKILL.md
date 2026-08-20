@@ -24,13 +24,19 @@ Accept one of:
 
 ### 1. Load open gaps
 
-Read all active `.sdd/gaps/GAP-{abbrev}-*.md` for the target scope. Filter to
-`status: open`. Skip gaps that already have work items — check by scanning
-`.sdd/work-items/WI-{abbrev}-*.md` for entries referencing each gap ID.
+Read the active gaps for the target scope with the artifact CLI, resolving the
+script from the repo or the installed plugin cache:
 
-When resolving a gap's linked `spec-item` to read its title or invariant, scan the
-component tree recursively — `find .sdd/specs -name "SPEC-{abbrev}-{seq}.md"
-! -path "*/archive/*"` — components may nest to any depth.
+```bash
+sdd_cli=$(ls plugin/cli/sdd.js 2>/dev/null || ls "$HOME/.claude/plugins/cache/sdd/sdd/"*/cli/sdd.js 2>/dev/null | head -1)
+node "$sdd_cli" list gaps --status=open --component={component-path} --json
+node "$sdd_cli" list work-items --json    # each row's gapIds — skip gaps already referenced
+```
+
+When resolving a gap's linked `spec-item` to read its title or invariant, use
+`node "$sdd_cli" show SPEC-{abbrev}-{seq}` — depth-agnostic, archive-aware,
+alias-following. (Fallback: `find .sdd/specs -name "SPEC-{abbrev}-{seq}.md"
+! -path "*/archive/*"`.)
 
 ### 2. Determine decomposition strategy per gap
 
@@ -53,12 +59,19 @@ State the decomposition choice and reasoning before writing any files.
 
 ### 3. Write work-item files
 
-For each work item, create `.sdd/work-items/WI-{abbrev}-{7hex}.md`, minting the ID as
-`WI-{abbrev}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
-`openssl rand -hex 4 | cut -c1-7`). Minting requires no sequence scan and no archive
-lookup — hash IDs are collision-free by construction and safe to mint in parallel
-worktrees. Existing sequential `WI-{abbrev}-{seq}` IDs remain valid and
-are never renamed.
+For each work item, create `.sdd/work-items/WI-{abbrev}-{7hex}.md`, minting the ID
+with the artifact CLI:
+
+```bash
+sdd_cli=$(ls plugin/cli/sdd.js 2>/dev/null || ls "$HOME/.claude/plugins/cache/sdd/sdd/"*/cli/sdd.js 2>/dev/null | head -1)
+node "$sdd_cli" mint work-item {abbrev}     # prints WI-{abbrev}-{7hex}
+```
+
+(Fallback when the script is unavailable: `{7hex}` is 7 random lowercase hex
+characters, e.g. `openssl rand -hex 4 | cut -c1-7`.) Minting requires no sequence
+scan and no archive lookup — hash IDs are collision-free by construction and safe
+to mint in parallel worktrees. Existing sequential `WI-{abbrev}-{seq}` IDs remain
+valid and are never renamed.
 
 Use the schema in `references/schemas.md` (Work Items section). Set:
 - `gap-id` — the referenced gap ID (or an array for many-to-one)

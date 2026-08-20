@@ -11,8 +11,8 @@ before the item is considered done. Work items are produced exclusively by
 
 **File path:** `.sdd/work-items/WI-{abbrev}-{7hex}.md`
 **ID pattern:** `WI-{abbrev}-{7hex}` — abbreviation matches the referenced
-spec item's abbrev (e.g., `auth`, `wf`); the 7-hex suffix is generated at mint
-time (`openssl rand -hex 4 | cut -c1-7`);
+spec item's abbrev (e.g., `auth`, `wf`); the ID is minted with the artifact CLI
+(`node plugin/cli/sdd.js mint work-item {abbrev}`; fallback: `openssl rand -hex 4 | cut -c1-7`);
 no sequence scan and no archive lookup — collision-free by construction.
 
 **Required frontmatter:**
