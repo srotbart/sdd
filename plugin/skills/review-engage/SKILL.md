@@ -20,7 +20,7 @@ Accept one of:
 
 - **Issue ID**: `ISS-auth-001` — engage a specific issue
 - **Improvement ID**: `IMP-auth-001` — engage a specific improvement
-- **No argument**: list open issues and improvements grouped by domain; prompt
+- **No argument**: list open issues and improvements grouped by component; prompt
   the user to pick one
 
 ## Status-Based Branching
@@ -150,8 +150,8 @@ Next: Continue engaging the next open issue. Run `/sdd:review-engage ISS-auth-00
 
 ## Artifact Storage
 
-- Issues: `.sdd/issues/ISS-{domain}-{seq}.md` → archive: `.sdd/issues/archive/`
-- Improvements: `.sdd/improvements/IMP-{domain}-{seq}.md` → archive: `.sdd/improvements/archive/`
+- Issues: `.sdd/issues/ISS-{abbrev}-{7hex}.md` → archive: `.sdd/issues/archive/`
+- Improvements: `.sdd/improvements/IMP-{abbrev}-{7hex}.md` → archive: `.sdd/improvements/archive/`
 
 ## Schema Reference
 

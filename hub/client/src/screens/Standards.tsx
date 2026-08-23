@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Markdown } from '../components/Markdown';
+import { useWorkspaceResource } from '../hooks/useWorkspaceResource';
 import './Standards.css';
 
 interface StandardsFile {
@@ -30,26 +30,8 @@ function parseSections(content: string): Array<{ heading: string; body: string }
 }
 
 export function Standards({ workspaceId, refreshToken }: StandardsProps) {
-  const [files, setFiles] = useState<StandardsFile[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!workspaceId) {
-      setFiles([]);
-      return;
-    }
-    setLoading(true);
-    fetch(`/workspaces/${workspaceId}/standards`)
-      .then((r) => r.json())
-      .then((data: StandardsFile[]) => {
-        setFiles(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setFiles([]);
-        setLoading(false);
-      });
-  }, [workspaceId, refreshToken]);
+  const { data, loading } = useWorkspaceResource<StandardsFile[]>(workspaceId, 'standards', refreshToken);
+  const files = data ?? [];
 
   if (loading) {
     return <div className="standards-empty">loading…</div>;

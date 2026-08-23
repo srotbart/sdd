@@ -35,11 +35,19 @@ the working tree — is the permanent record; recovery is
 ├── targets/
 │   ├── TGT-007.md
 │   └── archive/
-├── specs/
-│   └── authentication/          ← one subdirectory per domain
-│       ├── SPEC-auth-001.md
-│       ├── SPEC-auth-002.md
-│       └── archive/             ← removed/obsolete items move here
+├── specs/                       ← component tree: areas contain components,
+│   └── hub/                     ←   components may nest to any depth
+│       ├── area.md              ← optional area manifest
+│       ├── server/              ← component
+│       │   ├── component.md     ← component manifest (identity, scope, depends-on)
+│       │   ├── SPEC-hsrv-001.md
+│       │   └── archive/         ← removed/obsolete items move here
+│       └── client/
+│           ├── component.md
+│           ├── SPEC-hcli-001.md ← items may sit at non-leaf components
+│           └── screens/         ← sub-component
+│               ├── component.md
+│               └── SPEC-scr-001.md
 ├── gaps/
 │   ├── GAP-auth-001.md
 │   └── archive/
@@ -59,7 +67,7 @@ One file per target. Created by the user; negotiated in-document with the agent.
 id: TGT-007
 status: awaiting-user   # draft | awaiting-agent | awaiting-user | ready | accepted | archived
 created: 2026-05-12
-domain: authentication
+component: authentication   # component path; legacy `domain:` is accepted
 ---
 
 # Target: Two-factor auth for admin actions
@@ -88,22 +96,28 @@ agent commits to a best-effort Current statement rather than infinite clarificat
 
 ---
 
-## Specs — `.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md`
+## Specs — `.sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md`
 
-One file per spec item, inside a domain subdirectory. Durable — active items are never
-archived, but removed or obsolete items move to `.sdd/specs/{domain}/archive/`. New
-targets fold into an existing domain subdirectory; a new subdirectory is created only
-when a target opens a genuinely new domain. There is no domain-level manifest file.
+One file per spec item, inside a **component** directory. Components form a
+recursive tree: the top-level components are called **areas**, and any component
+may contain sub-components. An item attaches to exactly one component (its
+directory); an item at a non-leaf component governs that component's whole
+subtree. Durable — active items are never archived, but removed or obsolete
+items move to their component's `archive/`. New targets fold into an existing
+component; a new component directory (with a `component.md` manifest) is created
+only when a target opens a genuinely new component. Depth discipline: start at
+two levels (`{area}/{component}`); split deeper only when a component earns it —
+`git mv` is cheap and IDs never change.
 
 ```markdown
 ---
 id: SPEC-auth-001
-domain: authentication
+component: core/authentication   # full path from the specs root — must match the directory
 abbrev: auth
 status: active        # active | deprecated | aliased
 aliases: []           # former spec IDs, populated by spec-collapse
 scope: []             # optional; path globs of the code this item governs
-version: "a3f9c812"  # SHA-256[:8] of this file's content; recompute on every write
+version: "a3f9c812"  # SHA-256[:8] of the file with the version line stripped; recompute on every write
 ---
 
 # SPEC-auth-001 — Admin actions require two-factor verification
@@ -125,9 +139,20 @@ is not permitted.
 - `tests/integration/test_admin.py::test_SPEC_auth_001_admin_proceeds_with_valid_mfa` — "admin action proceeds when second factor is verified in current session"
 ```
 
-**Item ID convention:** `SPEC-{abbrev}-{seq}` — sequential within domain, globally stable.
-All domain metadata (`domain`, `abbrev`) is in each item's own frontmatter; the domain
-name is also derivable from the subdirectory name.
+**Item ID convention:** `SPEC-{abbrev}-{seq}` — sequential within its component,
+globally stable. The `abbrev` comes from the owning component's manifest and must
+be unique across all components. Component metadata (`component`, `abbrev`) is in
+each item's own frontmatter; the component path is also derivable from the
+directory. **Legacy `domain:` + `abbrev:` frontmatter is read as
+`component: {domain}`** — flat domain layouts are one-level component trees.
+
+**Component manifest — `component.md`, one per component directory:** frontmatter
+`component:` (full path, must match the directory), `abbrev:` (shorthand for new
+items minted here), `scope:` (path globs of the code the component owns),
+`depends-on:` (other components, full paths); body is a one-paragraph
+description. Manifests never list member items — membership is the directory.
+`archive` is reserved and not a valid component name. An optional `area.md` at
+the top level holds a description and display order.
 
 **Tests block:** Optional per-item section linking the spec item to its verification
 tests in the project's regular test suite. Added by the `spec-test` skill; updated
@@ -146,7 +171,8 @@ spec→test coverage is grep-able without parsing the spec file.
 Items without a `**Tests:**` block are considered uncovered and surfaced by
 `session-start`.
 
-**Version field:** SHA-256 first 8 hex chars of the item file's own content. Recompute
+**Version field:** SHA-256 first 8 hex chars of the item file's content **with the
+`version:` line stripped before hashing** (avoids a circular dependency). Recompute
 and update on every write. Used for per-item stale-audit detection.
 
 **Scope field (optional):** `scope:` is an optional list of **path glob
@@ -166,31 +192,40 @@ emits scope globs comma-separated (empty field when absent).
 
 To compute:
 ```bash
-shasum -a 256 .sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md | cut -c1-8
+grep -v "^version:" .sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md | shasum -a 256 | cut -c1-8
 ```
 
 **Status values per item:** `active | deprecated | aliased`
 
+**Contract items (optional):** a spec item that binds two components carries a
+binding — `contract-consumer: {component-path}` plus
+`contract-synced: [{spec-item-id}@{version-hash}, …]`, the endpoint items'
+hashes at last verification. The item lives with the **producer** (its own
+`component:`). Binding status is derived at read time by comparing stamps to
+current versions: in-sync / producer-drifted / consumer-drifted / unknown.
+See `artifacts/spec.md` (Contract items and bindings) for the full rules.
+
 **Aliasing on spec-collapse:** when SPEC-auth-001 merges into SPEC-auth-core-001,
-the new item gains `Aliases: SPEC-auth-001` in its status line. Existing gap files
+the surviving item's `aliases:` frontmatter list gains `SPEC-auth-001` and the
+merged item's file moves to its component's `archive/`. Existing gap files
 pointing at `SPEC-auth-001` remain valid — resolution finds the alias at read time.
 No existing artifacts are migrated.
 
 ---
 
-## Gaps — `.sdd/gaps/GAP-{abbrev}-{seq}.md`
+## Gaps — `.sdd/gaps/GAP-{abbrev}-{7hex}.md`
 
 One file per gap. Generated by spec-audit; never human-written.
 
 ```markdown
 ---
-id: GAP-auth-001
+id: GAP-auth-3f9c2a1
 spec-item: SPEC-auth-001
-domain: authentication
+component: core/authentication   # the spec item's component path; legacy `domain:` accepted
 status: open          # open | closed | accepted | deferred
 discovered: "2026-05-12T14:30:00Z"
 audit-spec-version: "a3f9c812"
-closed-by: null       # WI-{abbrev}-{seq} when closed
+closed-by: null       # WI id when closed
 deferred-reason: null
 ---
 
@@ -203,21 +238,22 @@ deferred-reason: null
 **Terminal states → archive:** `closed`, `accepted`, `deferred`
 **Active states:** `open`
 
-**Stale detection:** compare `audit-spec-version` against the `version` field in the
-referenced spec item file (`.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md`). If they
-differ, the gap is stale and the audit should be re-run.
+**Stale detection:** compare `audit-spec-version` against the `version` field in
+the referenced spec item file (found by a recursive scan of `.sdd/specs/` for
+`SPEC-{abbrev}-{seq}.md`, excluding `archive/`). If they differ, the gap is stale
+and the audit should be re-run.
 
 ---
 
-## Work Items — `.sdd/work-items/WI-{abbrev}-{seq}.md`
+## Work Items — `.sdd/work-items/WI-{abbrev}-{7hex}.md`
 
 One file per work item. Generated by gap-to-work-items; never human-written.
 
 ```markdown
 ---
-id: WI-auth-001
-gap-id: GAP-auth-001
-domain: authentication
+id: WI-auth-3f9c2a1
+gap-id: GAP-auth-3f9c2a1
+component: core/authentication   # the gap's component path; legacy `domain:` accepted
 status: pending       # pending | in-progress | done | blocked | abandoned
 created: "2026-05-12T15:00:00Z"
 abandoned-reason: null
@@ -295,12 +331,13 @@ create one file per pair.
 | Artifact | Pattern | Example |
 |---|---|---|
 | Target | `TGT-{seq}` | `TGT-007` |
-| Spec domain dir | `specs/{domain}/` | `specs/authentication/` |
+| Component dir | `specs/{component-path}/` | `specs/hub/client/screens/` |
+| Component manifest | `specs/{component-path}/component.md` | `specs/hub/server/component.md` |
 | Spec item | `SPEC-{abbrev}-{seq}` | `SPEC-auth-001` |
 | Gap | `GAP-{abbrev}-{7hex}` | `GAP-auth-3f9c2a1` |
 | Work item | `WI-{abbrev}-{7hex}` | `WI-auth-3f9c2a1` |
-| Issue | `ISS-{domain}-{7hex}` | `ISS-auth-3f9c2a1` |
-| Improvement | `IMP-{domain}-{7hex}` | `IMP-auth-3f9c2a1` |
+| Issue | `ISS-{abbrev}-{7hex}` | `ISS-auth-3f9c2a1` |
+| Improvement | `IMP-{abbrev}-{7hex}` | `IMP-auth-3f9c2a1` |
 
 **Two suffix forms.** Sequential (`{seq}`) and 7-hex-hash (`{7hex}`)
 suffixes are both valid everywhere; every consumer — skills, hub ID auto-linking,
@@ -311,3 +348,11 @@ coordination. Targets and specs keep sequential IDs; the next `TGT-{seq}` derive
 from active target files plus a `git log --diff-filter=A -- .sdd/targets/` history
 scan (full clone required, since target archives are local-only). Existing IDs are
 never renamed or recycled; retired spec IDs become aliases.
+
+**Minting is CLI-first.** `node plugin/cli/sdd.js mint <gap|work-item|issue|improvement> {abbrev}`
+prints a fresh hash ID (double-checked against the tree and archives), and
+`node plugin/cli/sdd.js mint target` derives the next `TGT-{seq}`. Resolve the
+script from the repo or the installed plugin cache
+(`$HOME/.claude/plugins/cache/sdd/sdd/*/cli/sdd.js`); the `openssl` recipe is
+the fallback when the script is unavailable. The same CLI answers lookups —
+`state`, `list`, `show`, `resolve` — instead of globbing `.sdd/` by hand.

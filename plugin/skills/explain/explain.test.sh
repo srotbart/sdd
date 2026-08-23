@@ -2,7 +2,7 @@
 # Tests for explain SKILL.md — WI-wf-017: sdd:explain skill
 set -e
 
-SKILL=/Users/srotbart/development/workspaces/sdd-repo/plugin/skills/explain/SKILL.md
+SKILL="$(cd "$(dirname "$0")" && pwd)/SKILL.md"
 pass=0
 fail=0
 
@@ -37,20 +37,20 @@ check \
   "Frontmatter sets name: explain" \
   "^name: explain"
 
-# Test 2: Team name derivation uses basename "$PWD" pattern
+# Test 2: No team setup step — Agent tool sets up team context automatically
 check \
-  "Team name derived from basename \"\$PWD\"" \
-  'basename "\$PWD"'
+  "No team setup step is required" \
+  "No team setup step is required"
 
-# Test 3: Team name has sdd-explain- prefix
+# Test 3: TeamCreate/TeamDelete documented as no longer existing
 check \
-  "Team name uses sdd-explain-{project-slug} pattern" \
-  "sdd-explain-{project-slug}"
+  "TeamCreate/TeamDelete documented as gone" \
+  "tools no longer exist"
 
-# Test 4: TeamCreate is called with derived name
+# Test 4: team_name input is not passed
 check \
-  "TeamCreate called with team name" \
-  "TeamCreate"
+  "team_name input is not passed" \
+  "ignored, so it is not passed"
 
 # Test 5: Agent is named sdd-explainer
 check \

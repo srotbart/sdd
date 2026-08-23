@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { parseTargets, parseGaps, parseWorkItems } from "./sdd-parser.js";
+import { parseTargets, parseGaps, parseWorkItems, parseFrontmatterWithLists } from "./sdd-parser.js";
 
 function makeSddDir(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-test-"));
@@ -454,5 +454,90 @@ describe("parseTargets", () => {
 
     const targets = parseTargets(root);
     expect(targets[0]?.status).toBe("archived");
+  });
+});
+
+describe("frontmatter inline-comment handling", () => {
+  it("keeps ' #' in free-text fields while stripping it from structural ones", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-arch-777.md"),
+      `---\nid: GAP-arch-777\nspec-item: SPEC-arch-001\ncomponent: architecture   # structural comment\nstatus: deferred\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: blocked by upstream #123\n---\n\n# Gap: g\n\n**Location:** x:1\n**Reasoning:** r\n`
+    );
+
+    const gaps = parseGaps(root);
+    const gap = gaps.find((g) => g.id === "GAP-arch-777");
+    expect(gap?.domain).toBe("architecture");
+    expect(gap?.deferredReason).toBe("blocked by upstream #123");
+  });
+});
+
+describe("gap domain fallback from spec-item id", () => {
+  it("derives the domain from hyphenated abbrevs and hash suffixes", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-ui-screens-9f1c2a3.md"),
+      `---\nid: GAP-ui-screens-9f1c2a3\nspec-item: SPEC-ui-screens-004\nstatus: open\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: null\n---\n\n# Gap: g\n\n**Location:** x:1\n**Reasoning:** r\n`
+    );
+
+    const gaps = parseGaps(root);
+    const gap = gaps.find((g) => g.id === "GAP-ui-screens-9f1c2a3");
+    expect(gap?.domain).toBe("ui-screens");
+  });
+});
+
+describe("component: frontmatter compatibility (review fixes)", () => {
+  it("parseGaps reads component: as the domain, falling back to legacy domain:", () => {
+    const root = makeGapsSddDir();
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-scr-b3a91f2.md"),
+      `---\nid: GAP-scr-b3a91f2\nspec-item: SPEC-scr-001\ncomponent: hub/client/screens\nstatus: open\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: null\n---\n\n# Gap: New-format gap\n\n**Location:** \`x.ts:1\`\n**Reasoning:** r\n`
+    );
+    fs.writeFileSync(
+      path.join(root, "gaps", "GAP-arch-001.md"),
+      `---\nid: GAP-arch-001\nspec-item: SPEC-arch-001\ndomain: architecture\nstatus: open\ndiscovered: "2026-08-15T00:00:00Z"\naudit-spec-version: "00000000"\nclosed-by: null\ndeferred-reason: null\n---\n\n# Gap: Legacy gap\n\n**Location:** \`y.ts:1\`\n**Reasoning:** r\n`
+    );
+
+    const gaps = parseGaps(root);
+    const byId = new Map(gaps.map((g) => [g.id, g]));
+    expect(byId.get("GAP-scr-b3a91f2")?.domain).toBe("hub/client/screens");
+    expect(byId.get("GAP-arch-001")?.domain).toBe("architecture");
+  });
+});
+
+describe("parseFrontmatterWithLists", () => {
+  it("reads inline and block lists, stripping inline comments and quotes", () => {
+    const { meta, lists } = parseFrontmatterWithLists(
+      [
+        "---",
+        "component: hub/client    # full path",
+        "scope:                   # path globs",
+        '  - "hub/client/src/**"',
+        "  - hub/shared/**   # shared helpers",
+        "depends-on: [hub/server, 'hub/shared']",
+        "---",
+        "",
+        "Body.",
+      ].join("\n")
+    );
+    expect(meta["component"]).toBe("hub/client");
+    expect(lists["scope"]).toEqual(["hub/client/src/**", "hub/shared/**"]);
+    expect(lists["depends-on"]).toEqual(["hub/server", "hub/shared"]);
+  });
+
+  it("an empty structural key never captures the following line as its value", () => {
+    const { meta, lists } = parseFrontmatterWithLists(
+      "---\nabbrev:\ndepends-on: []\n---\n\nBody.\n"
+    );
+    expect(meta["abbrev"]).toBe("");
+    expect(lists["depends-on"]).toEqual([]);
+  });
+
+  it("a block list ends at the next key or blank line", () => {
+    const { meta, lists } = parseFrontmatterWithLists(
+      "---\ndepends-on:\n  - hub/server\nabbrev: scr\n---\n\nBody.\n"
+    );
+    expect(lists["depends-on"]).toEqual(["hub/server"]);
+    expect(meta["abbrev"]).toBe("scr");
   });
 });

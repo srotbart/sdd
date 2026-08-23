@@ -2,7 +2,7 @@
 # Tests for statusline.sh — WI-wf-018: add targets and specs counts
 set -e
 
-SCRIPT=/Users/srotbart/development/workspaces/sdd-repo/plugin/statusline.sh
+SCRIPT="$(cd "$(dirname "$0")" && pwd)/statusline.sh"
 pass=0
 fail=0
 

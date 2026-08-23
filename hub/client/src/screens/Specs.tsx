@@ -97,7 +97,7 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
         <span className="specs-title-bullet">▪</span>
         <span className="specs-title-word">specs</span>
         <span className="specs-title-sub">
-          — durable source of truth — {specs.length} domain{specs.length !== 1 ? 's' : ''}, {totalItems} item{totalItems !== 1 ? 's' : ''}
+          — durable source of truth — {specs.length} area{specs.length !== 1 ? 's' : ''}, {totalItems} item{totalItems !== 1 ? 's' : ''}
         </span>
       </div>
       <div className="specs-title-rule" />
@@ -120,7 +120,7 @@ export function Specs({ specs, gaps, workItems, initialSpecId, onNav }: SpecsPro
 
     <div className="specs-layout">
       <div className="specs-sidebar">
-        <div className="specs-sidebar__label">domains</div>
+        <div className="specs-sidebar__label">areas</div>
         {specs.map((spec) => {
           const cov = coverageRows.find((r) => r.id === spec.id)!;
           const rolledUp = domainRolledUpStatus(cov);

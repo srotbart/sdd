@@ -1,0 +1,291 @@
+.map-screen {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  font-family: 'Geist', sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.map-screen--empty {
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.map-screen--empty code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.map-canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px;
+}
+
+.map-edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  /* Above the cards: edges route through the gutter, so they only kiss the
+     cards at their anchor points. pointer-events stays off. */
+  z-index: 1;
+}
+
+.map-edges__line {
+  fill: none;
+  stroke: var(--accent-soft);
+  stroke-width: 1.5;
+  opacity: 0.75;
+  pointer-events: stroke;
+}
+
+/* Contract edges are colored by binding status; depends-on stays accent. */
+.map-edges__line--contract {
+  stroke-width: 2;
+}
+
+.map-edges__line--in-sync {
+  stroke: var(--dot-passing);
+}
+
+.map-edges__line--producer-drifted,
+.map-edges__line--consumer-drifted {
+  stroke: var(--dot-failing);
+}
+
+.map-edges__line--unknown {
+  stroke: var(--dot-not-run);
+  stroke-dasharray: 4 3;
+}
+
+.map-edges__arrow {
+  fill: var(--accent-soft);
+}
+
+.map-areas {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.map-area {
+  flex: 1 1 260px;
+  min-width: 240px;
+}
+
+.map-area__title {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+
+.map-node {
+  border: 1px solid var(--hair-2);
+  border-radius: 6px;
+  background: var(--paper-2);
+}
+
+.map-node--selected {
+  border-color: var(--accent);
+}
+
+.map-node__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+}
+
+.map-node__head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.map-node__name {
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.map-node__abbrev {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-3);
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.map-node__badges {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-badge {
+  font-size: 11px;
+  color: var(--ink-2);
+  background: var(--paper-3);
+  border-radius: 9px;
+  padding: 1px 7px;
+}
+
+.map-badge--gaps {
+  color: var(--paper);
+  background: var(--st-blocked);
+}
+
+.map-badge--failing {
+  color: var(--paper);
+  background: var(--dot-failing);
+}
+
+.map-badge--uncovered {
+  color: var(--ink);
+  background: var(--dot-missing);
+}
+
+.map-node__children {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px 18px;
+}
+
+.map-node__children .map-node {
+  background: var(--paper);
+}
+
+.map-hint {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.map-hint code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.map-detail {
+  width: 280px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--hair);
+  padding: 20px 16px;
+  overflow-y: auto;
+  background: var(--paper);
+}
+
+.map-detail__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.map-detail__path {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.map-detail__close {
+  border: none;
+  background: none;
+  color: var(--ink-3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.map-detail__close:hover {
+  color: var(--ink);
+}
+
+.map-detail__desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0 0 14px;
+}
+
+.map-detail__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.map-detail__facts dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+  margin-bottom: 2px;
+}
+
+.map-detail__facts dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.map-detail__contracts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+}
+
+.map-binding {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--dot-not-run);
+}
+
+.map-binding--in-sync {
+  background: var(--dot-passing);
+}
+
+.map-binding--producer-drifted,
+.map-binding--consumer-drifted {
+  background: var(--dot-failing);
+}
+
+.map-binding-status {
+  margin-left: 6px;
+  color: var(--ink-3);
+}

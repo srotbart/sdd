@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Markdown } from '../components/Markdown';
+import { useWorkspaceResource } from '../hooks/useWorkspaceResource';
 import './Designs.css';
 import type { Design } from '../types';
 
@@ -17,24 +18,22 @@ function fmtAgo(dateStr: string): string {
 }
 
 export function Designs({ workspaceId, refreshToken }: DesignsProps) {
-  const [designs, setDesigns] = useState<Design[]>([]);
+  const { data } = useWorkspaceResource<Design[]>(workspaceId, 'designs', refreshToken);
+  const designs = useMemo(
+    () =>
+      [...(data ?? [])].sort(
+        (a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+      ),
+    [data]
+  );
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/workspaces/${workspaceId}/designs`)
-      .then((r) => r.json())
-      .then((data: Design[]) => {
-        const sorted = [...data].sort(
-          (a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
-        );
-        setDesigns(sorted);
-        if (sorted.length > 0 && !selectedName) {
-          setSelectedName(sorted[0].name);
-        }
-      })
-      .catch(() => {});
-  }, [workspaceId, refreshToken]);
+    if (designs.length > 0 && !selectedName) {
+      setSelectedName(designs[0].name);
+    }
+  }, [designs, selectedName]);
 
   useEffect(() => {
     if (!selectedName) { setContent(null); return; }

@@ -25,7 +25,7 @@ All writes are atomic: dialog entry and status flip happen in a single edit.
 
 ### 1. Read the full target file
 
-Parse frontmatter (`id`, `status`, `domain`, `created`) and both body sections: Current statement and Dialog.
+Parse frontmatter (`id`, `status`, `component` — legacy `domain:` accepted — `created`) and both body sections: Current statement and Dialog.
 
 ### 2. Count prior agent rounds
 
@@ -78,11 +78,11 @@ This is the authoritative statement of intent. Ignore the Dialog for reconciliat
 
 ### 2. Identify the relevant spec file
 
-Use the target's `domain` frontmatter field to locate `.sdd/specs/{domain}/`. If no subdirectory exists for this domain, go to the **New domain** outcome below. Enumerate active spec items by globbing `.sdd/specs/{domain}/SPEC-*.md` and `.sdd/specs/{domain}/*/SPEC-*.md` (skip `archive/` at either level).
+Use the target's `component` frontmatter field (legacy `domain:` reads the same) to locate `.sdd/specs/{component-path}/`. If no directory exists for this component, go to the **New component** outcome below. Enumerate active spec items with the artifact CLI: `node plugin/cli/sdd.js list specs --component={component-path} --json` (resolve the script from the repo or the installed plugin cache; fallback: `find .sdd/specs/{component-path} -name "SPEC-*.md" ! -path "*/archive/*"`).
 
 ### 3. Reason about the relationship
 
-Compare the Current statement against every active spec item in the domain. Classify the outcome:
+Compare the Current statement against every active spec item in the component subtree. Classify the outcome:
 
 **No-op:** The Current statement is fully covered by existing spec items. Nothing to add or change.
 
@@ -92,7 +92,7 @@ Compare the Current statement against every active spec item in the domain. Clas
 
 **Ambiguous:** The Current statement partially overlaps with existing items in a way that could be extension or conflict depending on interpretation. Surface for review.
 
-**New domain:** No spec file exists for this domain. A new spec file is needed.
+**New component:** No spec directory exists for this component. A new component is needed.
 
 ### 4. Execute the outcome
 
@@ -110,11 +110,11 @@ content in history. Never stage files under `.sdd/targets/archive/`.
 - Report: which spec items already cover it
 
 ---
-Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
+Next: Run `/sdd:spec-audit {component}` to audit the updated spec.
 
 #### Extension
-- Create each new spec item as `.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md` using the schema in `references/schemas.md`
-- Assign the next available `SPEC-{abbrev}-{seq}` IDs by scanning existing files in the domain subdirectory
+- Create each new spec item as `.sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md` using the schema in `references/schemas.md`
+- Assign the next available `SPEC-{abbrev}-{seq}` IDs by scanning existing files in the component directory
 - Each spec item body must follow this structure in order: `# {id} — {title}` heading, then `## Invariant` (concise statement of the rule or behavior), then `## Acceptance criteria` (plain bullet list of verifiable conditions). The optional `**Tests:**` block follows `## Acceptance criteria` when present.
 - Compute and set `version` in each new item file's frontmatter using the hash command in `references/schemas.md` (Specs section)
 - Flip the target's status to `accepted` in frontmatter
@@ -122,7 +122,7 @@ Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
 - Report: which new spec items were added and their IDs
 
 ---
-Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
+Next: Run `/sdd:spec-audit {component}` to audit the updated spec.
 
 #### Conflict
 - Create a conflict file at `.sdd/targets/TGT-{id}.conflict.md` using the schema in `references/schemas.md` (Conflict Files section), with `conflict-type: contradiction`
@@ -135,17 +135,18 @@ Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
 - Leave the target as `ready`
 - Report: the overlap and why it needs a human decision
 
-#### New domain
-- Create `.sdd/specs/{domain}/` and `.sdd/specs/{domain}/archive/`
-- Choose a short `abbrev` (3–6 chars, lowercase) derived from the domain name
-- Write the initial spec items as individual files `.sdd/specs/{domain}/SPEC-{abbrev}-{seq}.md` using the schema in `references/schemas.md`
+#### New component
+- Create `.sdd/specs/{component-path}/` (nested under its area) and `.sdd/specs/{component-path}/archive/`
+- Choose a short `abbrev` (3–6 chars, lowercase, unique across all components) derived from the component name
+- Write the component's `component.md` manifest (identity, `abbrev`, `scope:` globs, `depends-on:`)
+- Write the initial spec items as individual files `.sdd/specs/{component-path}/SPEC-{abbrev}-{seq}.md` using the schema in `references/schemas.md`
 - Each spec item body must follow this structure: `# {id} — {title}` heading, then `## Invariant`, then `## Acceptance criteria` (bullet list), then optional `**Tests:**` block.
 - Compute and set `version` in each item file's frontmatter
 - Flip the target to `accepted` and archive it
-- Report: new domain subdirectory created, abbreviation chosen, items added
+- Report: new component directory created, abbreviation chosen, items added
 
 ---
-Next: Run `/sdd:spec-audit {domain}` to audit the updated spec.
+Next: Run `/sdd:spec-audit {component}` to audit the updated spec.
 
 ---
 

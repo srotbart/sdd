@@ -15,7 +15,7 @@ applied manually, with aliasing to preserve ID stability.
 
 Accept one of:
 
-- **Domain name or spec file**: `authentication` — analyse one domain
+- **Component path**: `hub/client` (or an area, or a legacy flat domain name) — analyse one component subtree
 - **No argument**: analyse all spec files
 - **Explicit merge/split instruction**: "merge SPEC-auth-001 and SPEC-auth-002" —
   skip analysis, go straight to producing a proposal for the named operation
@@ -24,7 +24,8 @@ Accept one of:
 
 ### 1. Read the spec file(s)
 
-Glob `.sdd/specs/{domain}/SPEC-*.md` (skip `archive/`) for each domain being analysed.
+Scan each analysed component subtree recursively — `find .sdd/specs/{component-path}
+-name "SPEC-*.md" ! -path "*/archive/*"` — components may nest to any depth.
 Load all active spec items — parse frontmatter `id`, `status`, `version`, and the body.
 
 ### 2. Identify consolidation candidates
@@ -48,11 +49,11 @@ State the evidence for each candidate — do not propose on intuition alone.
 
 ### 3. Write the consolidation proposal
 
-Create `.sdd/specs/COLLAPSE-{domain}-{date}.md`:
+Create `.sdd/specs/COLLAPSE-{component-dashed}-{date}.md` (component path with `/` replaced by `-`):
 
 ```markdown
 ---
-domain: authentication
+component: authentication
 created: 2026-05-12T14:30:00Z
 status: pending   # pending | applied | rejected
 ---
@@ -95,7 +96,7 @@ Split produces cleaner gap-to-spec traceability.
 **To apply:**
 1. Rewrite the body of `.sdd/specs/authentication/SPEC-auth-005.md` with item A; recompute and update its `version` field
 2. Create `.sdd/specs/authentication/SPEC-auth-007.md` as a new item file with its own frontmatter and computed `version`
-3. Update any open gaps referencing SPEC-auth-005 to reference the correct item
+3. Leave existing gaps untouched — gaps referencing SPEC-auth-005 stay valid (alias resolution happens at read time; never rewrite gap files in a collapse)
 
 ---
 
@@ -127,8 +128,8 @@ Review the proposal, make any edits, then apply manually following the
 When a merge is applied:
 
 - The surviving item keeps its original ID
-- The merged item's ID is added to the surviving item's `Aliases:` annotation
-- The merged item's `## SPEC-…` heading is deleted from the spec file
+- The merged item's ID is added to the surviving item's `aliases:` frontmatter list
+- The merged item's file is set `status: aliased` and moved to its component's `archive/`
 - Existing gaps referencing the merged ID remain valid — resolution finds the alias
 
 When a split is applied:
@@ -148,8 +149,8 @@ must be safely rejectable without touching any gaps or work items.
 - **Evidence required for every proposal.** "These seem similar" is not evidence.
   Co-citation in gap reports, textual overlap analysis, or explicit user instruction
   are evidence.
-- **One proposal file per invocation.** If multiple domains are analysed, all
-  proposals go into one file grouped by domain.
+- **One proposal file per invocation.** If multiple components are analysed, all
+  proposals go into one file grouped by component.
 - **Preserve all active gaps.** A collapse proposal must never change gap file
   contents, status, or IDs.
 

@@ -1,37 +1,26 @@
 import chokidar from "chokidar";
 import fs from "node:fs";
 import path from "node:path";
+import { collectSpecsTree } from "./sdd-parser.js";
 
 const DEBOUNCE_MS = 200;
 
 function readReportPaths(sddPath: string): Set<string> {
-  const specsDir = path.join(sddPath, "specs");
   const reportPaths = new Set<string>();
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(specsDir, { withFileTypes: true });
-  } catch {
-    return reportPaths;
-  }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const domainDir = path.join(specsDir, entry.name);
-    let files: string[];
+
+  // Mapping files live anywhere in the component tree (next to the items they
+  // map). collectSpecsTree is the single source for the specs-tree walk, so
+  // the watcher and parseSpecs always agree on what counts as a mapping file.
+  const { mappingFiles } = collectSpecsTree(path.join(sddPath, "specs"));
+  for (const { filePath } of mappingFiles) {
     try {
-      files = fs.readdirSync(domainDir).filter((f) => f.endsWith(".tests.json"));
-    } catch {
-      continue;
-    }
-    for (const file of files) {
-      try {
-        const raw = fs.readFileSync(path.join(domainDir, file), "utf8");
-        const mapping = JSON.parse(raw) as { report?: unknown };
-        if (typeof mapping.report === "string" && mapping.report) {
-          reportPaths.add(mapping.report);
-        }
-      } catch {
-        // skip malformed mapping files
+      const raw = fs.readFileSync(filePath, "utf8");
+      const mapping = JSON.parse(raw) as { report?: unknown };
+      if (typeof mapping.report === "string" && mapping.report) {
+        reportPaths.add(mapping.report);
       }
+    } catch {
+      // skip malformed mapping files
     }
   }
   return reportPaths;

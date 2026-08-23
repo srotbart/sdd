@@ -11,6 +11,13 @@ interface SpecItem {
   criteria: string[];
   refs: Array<{ kind: "gap" | "wi"; id: string }>;
   testStatus: TestStatus;
+  // Full component path (e.g. "hub/client/screens"). Legacy `domain:` items
+  // get a one-segment path equal to the domain name.
+  component?: string;
+  // Present on contract items: the binding to the consuming component, with
+  // endpoint-item version stamps from the last verification. Status is
+  // derived by comparing stamps to current versions — never stored.
+  contract?: { consumer: string; synced: Array<{ item: string; stamp: string }> };
 }
 
 interface Spec {
@@ -20,31 +27,89 @@ interface Spec {
   items: SpecItem[];
 }
 
+// Keys whose values are identifiers/enums/paths — safe (and documented) to
+// carry inline # comments. Free-text keys are deliberately absent.
+const STRUCTURAL_KEYS = new Set([
+  "id", "component", "domain", "abbrev", "status", "version", "aliases",
+  "scope", "depends-on", "spec-item", "gap-id", "audit-spec-version", "closed-by",
+  "contract-consumer", "contract-synced", "created", "discovered", "design",
+]);
+
 function parseFrontmatter(content: string): { meta: Record<string, string>; body: string } {
+  const { meta, body } = parseFrontmatterWithLists(content);
+  return { meta, body };
+}
+
+// The list-aware form of the frontmatter parser: manifests carry list values
+// (`depends-on`, `scope`) in both inline (`key: [a, b]`) and block (`- x`)
+// forms. Scalar callers use parseFrontmatter above and ignore `lists`. One
+// implementation serves both so comment/quote stripping cannot drift.
+export function parseFrontmatterWithLists(content: string): {
+  meta: Record<string, string>;
+  lists: Record<string, string[]>;
+  body: string;
+} {
   if (!content.startsWith("---")) {
-    return { meta: {}, body: content };
+    return { meta: {}, lists: {}, body: content };
   }
   const end = content.indexOf("---", 3);
   if (end === -1) {
-    return { meta: {}, body: content };
+    return { meta: {}, lists: {}, body: content };
   }
   const fmBlock = content.slice(3, end).trim();
   const body = content.slice(end + 3).trim();
   const meta: Record<string, string> = {};
+  const lists: Record<string, string[]> = {};
+  const cleanEntry = (s: string): string =>
+    s.replace(/\s+#.*$/, "").trim().replace(/^["']|["']$/g, "");
+  // The key whose block list the current `- entry` lines belong to, if any.
+  let openListKey: string | null = null;
   for (const line of fmBlock.split("\n")) {
+    const blockItem = /^\s*-\s*(.+)$/.exec(line);
+    if (blockItem && openListKey !== null) {
+      const entry = cleanEntry(blockItem[1]);
+      if (entry) lists[openListKey].push(entry);
+      continue;
+    }
     const colon = line.indexOf(":");
-    if (colon === -1) continue;
+    if (colon === -1) {
+      openListKey = null;
+      continue;
+    }
     const key = line.slice(0, colon).trim();
-    const val = line.slice(colon + 1).trim().replace(/^["']|["']$/g, "");
+    // Strip inline comments ("component: hub/server  # note") on STRUCTURAL
+    // keys only — the artifact templates show them there. Free-text fields
+    // (reasons, titles) may legitimately contain " #" (issue refs) and must
+    // never be truncated.
+    let raw = line.slice(colon + 1);
+    if (STRUCTURAL_KEYS.has(key)) {
+      raw = raw.replace(/\s+#.*$/, "");
+    }
+    const val = raw.trim().replace(/^["']|["']$/g, "");
     meta[key] = val;
+    if (val.startsWith("[") && val.endsWith("]")) {
+      lists[key] = val.slice(1, -1).split(",").map(cleanEntry).filter(Boolean);
+      openListKey = null;
+    } else if (val === "") {
+      // A bare `key:` line (comment already stripped) opens a block list;
+      // following `- entry` lines fill it until any non-entry line.
+      lists[key] = [];
+      openListKey = key;
+    } else {
+      openListKey = null;
+    }
   }
-  return { meta, body };
+  return { meta, lists, body };
 }
 
 function parseRefs(text: string): Array<{ kind: "gap" | "wi"; id: string }> {
   const refs: Array<{ kind: "gap" | "wi"; id: string }> = [];
-  const gapRe = /GAP-[a-z]+-\d+/gi;
-  const wiRe = /WI-[a-z]+-\d+/gi;
+  // Both suffix forms are valid (sequential and 7-hex hash), and abbrevs may
+  // contain hyphens: GAP-auth-001, GAP-auth-3f9c2a1, GAP-ui-screens-001.
+  // The suffix is anchored to digits or 7-hex so prose like
+  // "gap-to-work-items" never mints a ref.
+  const gapRe = /GAP-[a-z][a-z0-9-]*?-(?:\d+|[0-9a-f]{7})\b/gi;
+  const wiRe = /WI-[a-z][a-z0-9-]*?-(?:\d+|[0-9a-f]{7})\b/gi;
   for (const m of text.matchAll(gapRe)) {
     refs.push({ kind: "gap", id: m[0].toUpperCase() });
   }
@@ -63,7 +128,9 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
   }
 
   const { meta, body } = parseFrontmatter(content);
-  if (!meta["id"] || !meta["domain"] || !meta["abbrev"]) return null;
+  // `component:` (path form) supersedes legacy `domain:`; accept either.
+  const componentPath = meta["component"] ?? meta["domain"];
+  if (!meta["id"] || !componentPath || !meta["abbrev"]) return null;
 
   const titleMatch = /^# (SPEC-[^\s]+ — .+)$/m.exec(body);
   const title = titleMatch ? titleMatch[1].replace(/^SPEC-[^\s]+ — /, "").trim() : "";
@@ -94,6 +161,27 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     ? { status: "skipped", skipReason: skipMatch[1].trim() }
     : { status: "not-run" };
 
+  // Contract binding: `contract-consumer` + `contract-synced` flow list of
+  // `{spec-item-id}@{version-hash}` stamps. The list is matched against the
+  // raw frontmatter block so a wrapped multi-line list is read whole — the
+  // line-oriented meta would silently truncate it to the first line's
+  // entries, and a dropped drifted endpoint would read as in-sync. Malformed
+  // or unterminated lists yield zero entries → binding status "unknown"
+  // (fail-closed), never a false in-sync.
+  let contract: SpecItem["contract"];
+  if (meta["contract-consumer"]) {
+    const synced: Array<{ item: string; stamp: string }> = [];
+    const fmBlock = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content)?.[1] ?? "";
+    const listMatch = /^contract-synced:[ \t]*\[([^\]]*)\]/m.exec(fmBlock);
+    if (listMatch) {
+      for (const entry of listMatch[1].split(",")) {
+        const m = /^([A-Za-z0-9-]+)@([0-9a-fA-F]+)$/.exec(entry.trim());
+        if (m) synced.push({ item: m[1].toUpperCase(), stamp: m[2].toLowerCase() });
+      }
+    }
+    contract = { consumer: meta["contract-consumer"], synced };
+  }
+
   return {
     id: meta["id"].toUpperCase(),
     title,
@@ -104,7 +192,11 @@ function parseSpecItemFile(filePath: string): (SpecItem & { domain: string; abbr
     criteria,
     refs: parseRefs(bodyContent),
     testStatus,
-    domain: meta["domain"],
+    component: componentPath,
+    contract,
+    // Grouping key: the area (first path segment). For legacy `domain:` items
+    // the path has one segment, so this equals the old domain grouping.
+    domain: componentPath.split("/")[0],
     abbrev: meta["abbrev"],
   };
 }
@@ -126,10 +218,12 @@ interface Target {
   dialog: DialogTurn[];
 }
 
-// Derives a short abbreviation from a domain slug ("ui-screens" → "uisc").
+// Derives a short abbreviation from a domain slug ("ui-screens" → "uisc") or a
+// component path ("hub/client/screens" → the last segment's abbrev, "sc").
 // Intentionally mirrored in hub/client/src/App.tsx > mapApiTarget; keep in sync.
 function deriveDomainAbbrev(domain: string): string {
-  return domain.split("-").map((p) => p.slice(0, 2)).join("").slice(0, 6) || domain;
+  const leaf = domain.split("/").filter(Boolean).pop() ?? domain;
+  return leaf.split("-").map((p) => p.slice(0, 2)).join("").slice(0, 6) || leaf;
 }
 
 function parseTargetFile(filePath: string): Target | null {
@@ -165,7 +259,8 @@ function parseTargetFile(filePath: string): Target | null {
     });
   }
 
-  const domain = meta["domain"] ?? "";
+  // `component:` (path form) supersedes legacy `domain:`; accept either.
+  const domain = meta["component"] ?? meta["domain"] ?? "";
   // Intentionally mirrored in hub/client/src/App.tsx > mapApiTarget; keep in sync.
   const domainAbbrev = deriveDomainAbbrev(domain);
 
@@ -254,7 +349,9 @@ const ABBREV_TO_DOMAIN: Record<string, string> = {
 };
 
 function deriveDomainFromSpecItem(specItem: string): string {
-  const match = /^SPEC-([a-z]+)-\d+$/i.exec(specItem);
+  // Abbrevs may contain hyphens and suffixes may be sequential or 7-hex —
+  // same forms parseRefs accepts (SPEC-ui-screens-004, SPEC-auth-3f9c2a1).
+  const match = /^SPEC-([a-z][a-z0-9-]*)-(?:\d+|[0-9a-f]{7})$/i.exec(specItem);
   if (!match) return "";
   const abbrev = match[1].toLowerCase();
   return ABBREV_TO_DOMAIN[abbrev] ?? abbrev;
@@ -283,7 +380,7 @@ function parseGapFile(filePath: string): Gap | null {
   return {
     id: meta["id"],
     specItem: meta["spec-item"] ?? "",
-    domain: meta["domain"] || deriveDomainFromSpecItem(meta["spec-item"] ?? ""),
+    domain: meta["component"] || meta["domain"] || deriveDomainFromSpecItem(meta["spec-item"] ?? ""),
     status: meta["status"],
     discovered: meta["discovered"] ?? "",
     auditVersion: meta["audit-spec-version"] ?? "",
@@ -367,7 +464,7 @@ function parseWorkItemFile(filePath: string): WorkItem | null {
   return {
     id: meta["id"],
     gapId,
-    domain: meta["domain"] ?? "",
+    domain: meta["component"] ?? meta["domain"] ?? "",
     status: meta["status"],
     created: meta["created"] ?? "",
     abandonedReason: meta["abandoned-reason"] === "null" || !meta["abandoned-reason"] ? null : meta["abandoned-reason"],
@@ -414,7 +511,7 @@ function parseIssueFile(filePath: string): Issue | null {
   const title = titleMatch ? titleMatch[1].trim() : meta["id"];
   return {
     id: meta["id"],
-    domain: meta["domain"] ?? "",
+    domain: meta["component"] ?? meta["domain"] ?? "",
     severity: meta["severity"] ?? "medium",
     status: meta["status"],
     title,
@@ -458,7 +555,7 @@ function parseImprovementFile(filePath: string): Improvement | null {
   const title = titleMatch ? titleMatch[1].trim() : meta["id"];
   return {
     id: meta["id"],
-    domain: meta["domain"] ?? "",
+    domain: meta["component"] ?? meta["domain"] ?? "",
     effort: meta["effort"] ?? "medium",
     impact: meta["impact"] ?? "medium",
     status: meta["status"],
@@ -506,87 +603,180 @@ export function parseStandards(sddPath: string): StandardsFile[] {
 
 // ---------------------------------------------------------------------------
 
-export function parseSpecs(sddPath: string): Spec[] {
-  const specsDir = path.join(sddPath, "specs");
+/**
+ * Walk the `.sdd/specs/` component tree (any depth, skipping `archive/` at
+ * every level) and collect spec item files plus test-mapping files
+ * (`SPEC-{abbrev}.tests.json`, wherever they sit). Single source for the
+ * specs-tree walk — the watcher reuses this so the two never drift on what
+ * counts as a mapping file. Output is sorted for determinism.
+ */
+export function collectSpecsTree(specsDir: string): {
+  specFiles: string[];
+  mappingFiles: Array<{ abbrev: string; filePath: string }>;
+  manifestFiles: Array<{ componentPath: string; filePath: string }>;
+} {
+  const specFiles: string[] = [];
+  const mappingFiles: Array<{ abbrev: string; filePath: string }> = [];
+  const manifestFiles: Array<{ componentPath: string; filePath: string }> = [];
+
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(specsDir, { withFileTypes: true });
   } catch {
-    return [];
+    return { specFiles, mappingFiles, manifestFiles };
   }
 
+  const walk = (dir: string, rel: string): void => {
+    let dirEntries: fs.Dirent[];
+    try {
+      dirEntries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of dirEntries) {
+      if (e.isDirectory()) {
+        if (e.name !== "archive") walk(path.join(dir, e.name), rel ? `${rel}/${e.name}` : e.name);
+        continue;
+      }
+      if (e.name === "component.md" && rel) {
+        manifestFiles.push({ componentPath: rel, filePath: path.join(dir, e.name) });
+        continue;
+      }
+      const mappingMatch = /^SPEC-(.+)\.tests\.json$/i.exec(e.name);
+      if (mappingMatch) {
+        mappingFiles.push({ abbrev: mappingMatch[1].toLowerCase(), filePath: path.join(dir, e.name) });
+        continue;
+      }
+      if (e.name.startsWith("SPEC-") && e.name.endsWith(".md")) {
+        specFiles.push(path.join(dir, e.name));
+      }
+    }
+  };
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name === "archive") continue;
+    walk(path.join(specsDir, entry.name), entry.name);
+  }
+
+  specFiles.sort();
+  mappingFiles.sort((a, b) => a.filePath.localeCompare(b.filePath));
+  manifestFiles.sort((a, b) => a.componentPath.localeCompare(b.componentPath));
+  return { specFiles, mappingFiles, manifestFiles };
+}
+
+export function parseSpecs(sddPath: string, tree?: ReturnType<typeof collectSpecsTree>): Spec[] {
+  const specsDir = path.join(sddPath, "specs");
   const workspaceRoot = path.dirname(sddPath);
   const specsByDomain = new Map<string, Spec>();
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name === "archive") continue;
-    const domainDir = path.join(specsDir, entry.name);
+  // Components nest to any depth. Legacy flat/subject layouts are shallow
+  // trees and parse identically. Several mapping files may share an abbrev (a
+  // documented misconfiguration), so all candidates are kept and
+  // disambiguated by directory proximity to the item. Callers that already
+  // walked the tree (component-graph) pass it in to avoid a second walk.
+  const { specFiles: specFilePaths, mappingFiles } = tree ?? collectSpecsTree(specsDir);
 
-    const specFilePaths: string[] = [];
+  // Per-item metadata needed after grouping: the frontmatter abbrev (the
+  // authoritative mapping-file key — item IDs may use a different shorthand,
+  // e.g. `id: SPEC-scr-001` under `abbrev: ui-screens`) and the item's
+  // directory (for proximity disambiguation). Keyed by item object, not ID —
+  // duplicate IDs are a documented misconfiguration and must not make one
+  // item's metadata shadow another's.
+  const itemMeta = new WeakMap<SpecItem, { abbrev: string; dir: string }>();
 
-    let domainFiles: string[];
-    try {
-      domainFiles = fs.readdirSync(domainDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
-    } catch {
-      continue;
+  for (const filePath of specFilePaths) {
+    const parsed = parseSpecItemFile(filePath);
+    if (!parsed) continue;
+
+    let spec = specsByDomain.get(parsed.domain);
+    if (!spec) {
+      spec = { id: `SPEC-${parsed.abbrev}`, domain: parsed.domain, abbrev: parsed.abbrev, items: [] };
+      specsByDomain.set(parsed.domain, spec);
     }
-    for (const f of domainFiles) {
-      specFilePaths.push(path.join(domainDir, f));
-    }
+    const { domain: _d, abbrev: _a, ...item } = parsed;
+    itemMeta.set(item, { abbrev: parsed.abbrev.toLowerCase(), dir: path.dirname(filePath) });
+    spec.items.push(item);
+  }
 
-    let subEntries: fs.Dirent[];
-    try {
-      subEntries = fs.readdirSync(domainDir, { withFileTypes: true });
-    } catch {
-      subEntries = [];
-    }
-    for (const sub of subEntries) {
-      if (!sub.isDirectory() || sub.name === "archive") continue;
-      const subDir = path.join(domainDir, sub.name);
-      let subFiles: string[];
-      try {
-        subFiles = fs.readdirSync(subDir).filter((f) => f.startsWith("SPEC-") && f.endsWith(".md"));
-      } catch {
-        continue;
-      }
-      for (const f of subFiles) {
-        specFilePaths.push(path.join(subDir, f));
-      }
-    }
-
-    for (const filePath of specFilePaths) {
-      const parsed = parseSpecItemFile(filePath);
-      if (!parsed) continue;
-
-      let spec = specsByDomain.get(parsed.domain);
-      if (!spec) {
-        spec = { id: `SPEC-${parsed.abbrev}`, domain: parsed.domain, abbrev: parsed.abbrev, items: [] };
-        specsByDomain.set(parsed.domain, spec);
-      }
-      const { domain: _d, abbrev: _a, ...item } = parsed;
-      spec.items.push(item);
+  // A multi-component area holds items with several abbrevs; naming the group
+  // after whichever file parsed first would be arbitrary. When abbrevs are
+  // mixed, name the group after the area itself.
+  for (const spec of specsByDomain.values()) {
+    const abbrevs = new Set(spec.items.map((i) => itemMeta.get(i)?.abbrev ?? spec.abbrev.toLowerCase()));
+    if (abbrevs.size > 1) {
+      spec.abbrev = spec.domain;
+      spec.id = `SPEC-${spec.domain}`;
     }
   }
 
-  for (const spec of specsByDomain.values()) {
-    spec.items.sort((a, b) => a.id.localeCompare(b.id));
-
-    const mapping = readTestMapping(sddPath, spec.abbrev, spec.domain);
-    let report = null;
+  const mappingCache = new Map<string, { mapping: TestMapping; report: ParsedReport | null } | null>();
+  const loadMappingWithReport = (mappingPath: string): { mapping: TestMapping; report: ParsedReport | null } | null => {
+    if (mappingCache.has(mappingPath)) return mappingCache.get(mappingPath) ?? null;
+    let resolved: { mapping: TestMapping; report: ParsedReport | null } | null = null;
+    let raw: string | null = null;
+    try {
+      raw = fs.readFileSync(mappingPath, "utf8");
+    } catch {
+      // Unreadable mapping file is treated as absent: test status degrades
+      // to not-run rather than failing the whole parse.
+      raw = null;
+    }
+    const mapping = raw === null ? null : validateTestMapping(raw);
     if (mapping) {
       const absReport = path.isAbsolute(mapping.report)
         ? mapping.report
         : path.join(workspaceRoot, mapping.report);
-      report = mapping.runner === "vitest"
+      const report = mapping.runner === "vitest"
         ? parseVitestReport(absReport)
         : parseSurefireReports(absReport);
+      resolved = { mapping, report };
     }
+    mappingCache.set(mappingPath, resolved);
+    return resolved;
+  };
+
+  // Length of the shared leading path between a mapping file's directory and
+  // an item's directory — the mapping sitting next to (or above) the item wins.
+  const proximity = (mappingPath: string, itemDir: string): number => {
+    const a = path.dirname(mappingPath).split(path.sep);
+    const b = itemDir.split(path.sep);
+    let n = 0;
+    while (n < a.length && n < b.length && a[n] === b[n]) n++;
+    return n;
+  };
+
+  for (const spec of specsByDomain.values()) {
+    spec.items.sort((a, b) => a.id.localeCompare(b.id));
 
     for (const item of spec.items) {
       // Preserve skip state set by parseSpecItemFile — do not overwrite with computed status
       if (item.testStatus.status === "skipped") continue;
-      item.testStatus = computeTestStatus(item.id, mapping, report);
+
+      // Set for every item pushed above — the WeakMap lookup cannot miss.
+      const meta = itemMeta.get(item)!;
+      const idMatch = /^SPEC-([a-z0-9-]+)-[a-z0-9]+$/i.exec(item.id);
+      const idAbbrev = idMatch ? idMatch[1].toLowerCase() : null;
+      // Candidate mappings: the frontmatter abbrev is authoritative and may
+      // match a mapping anywhere in the tree. The ID-derived shorthand is a
+      // weaker signal (legacy filename convention), accepted only for mapping
+      // files in the item's own directory chain — otherwise an unrelated
+      // component whose abbrev happens to equal this item's ID shorthand
+      // would capture the item and stamp it with a foreign report.
+      const inOwnChain = (m: { filePath: string }): boolean =>
+        (meta.dir + path.sep).startsWith(path.dirname(m.filePath) + path.sep);
+      const matches = mappingFiles.filter(
+        (m) =>
+          m.abbrev === meta.abbrev ||
+          (idAbbrev !== null && m.abbrev === idAbbrev && inOwnChain(m))
+      );
+      let best: { mapping: TestMapping; report: ParsedReport | null } | null = null;
+      matches.sort((a, b) => proximity(b.filePath, meta.dir) - proximity(a.filePath, meta.dir));
+      for (const m of matches) {
+        best = loadMappingWithReport(m.filePath);
+        if (best) break;
+      }
+
+      item.testStatus = computeTestStatus(item.id, best?.mapping ?? null, best?.report ?? null);
     }
   }
 
@@ -624,6 +814,38 @@ export type TestStatus = {
   tests?: PerTestResult[];
 };
 
+// Shape-guard raw mapping JSON. A mapping file that parses as JSON but lacks
+// the required fields must yield null, not a TestMapping with undefined
+// members — `path.isAbsolute(undefined)` would throw deep in the request
+// path (and in the watcher) otherwise.
+function validateTestMapping(raw: string): TestMapping | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const m = parsed as Record<string, unknown>;
+  if (m["runner"] !== "vitest" && m["runner"] !== "maven") return null;
+  if (typeof m["report"] !== "string") return null;
+  if (typeof m["items"] !== "object" || m["items"] === null || Array.isArray(m["items"])) return null;
+  // Every items value must be an array of strings — computeTestStatus calls
+  // .map on it. Drop malformed entries rather than rejecting the whole file.
+  const items = m["items"] as Record<string, unknown>;
+  const cleaned: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(items)) {
+    if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+      cleaned[key] = value as string[];
+    }
+  }
+  return { runner: m["runner"], report: m["report"], items: cleaned } as TestMapping;
+}
+
+// Legacy fixed-depth lookup (`specs/{domain}/SPEC-{abbrev}.tests.json`).
+// parseSpecs no longer calls this — mapping files are discovered by
+// collectSpecsTree wherever they sit. Kept exported for the SPEC-arch-019
+// contract and its tests; do not add new callers.
 export function readTestMapping(sddPath: string, abbrev: string, domain: string): TestMapping | null {
   const mappingPath = path.join(sddPath, "specs", domain, `SPEC-${abbrev}.tests.json`);
   let raw: string;
@@ -632,11 +854,7 @@ export function readTestMapping(sddPath: string, abbrev: string, domain: string)
   } catch {
     return null;
   }
-  try {
-    return JSON.parse(raw) as TestMapping;
-  } catch {
-    return null;
-  }
+  return validateTestMapping(raw);
 }
 
 export function parseVitestReport(reportPath: string): ParsedReport | null {
@@ -725,7 +943,19 @@ export function computeTestStatus(
     return { status: "missing", lastRun: report.runAt, tests: [] };
   }
 
-  const substrings = mapping.items[specItemId];
+  // Mapping keys are matched case-insensitively: item IDs are normalized to
+  // uppercase at parse time, while mapping files are hand-authored and may use
+  // the natural "SPEC-abc-001" casing.
+  let substrings = mapping.items[specItemId];
+  if (!substrings) {
+    const wanted = specItemId.toUpperCase();
+    for (const key of Object.keys(mapping.items)) {
+      if (key.toUpperCase() === wanted) {
+        substrings = mapping.items[key];
+        break;
+      }
+    }
+  }
   if (!substrings || substrings.length === 0) {
     return { status: "missing", lastRun: report.runAt, tests: [] };
   }

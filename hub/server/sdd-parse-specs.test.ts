@@ -388,3 +388,228 @@ describe("parseSpecs — SPEC-wf-018: subject subdirectory glob", () => {
     expect(ids).toContain("SPEC-ARCH-001");
   });
 });
+
+describe("parseSpecs — recursive component tree", () => {
+  function writeComponentItem(
+    sddPath: string,
+    componentPath: string,
+    abbrev: string,
+    id: string,
+    title: string
+  ): void {
+    const dir = path.join(sddPath, "specs", componentPath);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, `${id}.md`),
+      `---\nid: ${id}\ncomponent: ${componentPath}\nabbrev: ${abbrev}\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# ${id} — ${title}\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+  }
+
+  it("finds items at any depth and groups them by area (first path segment)", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Server item");
+    writeComponentItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001", "Deep screen item");
+    writeComponentItem(sddPath, "pipeline/artifacts", "wfa", "SPEC-wfa-001", "Artifact rule");
+
+    const specs = parseSpecs(sddPath);
+    const byDomain = new Map(specs.map((s) => [s.domain, s]));
+    expect(byDomain.get("hub")?.items.map((i) => i.id).sort()).toEqual(["SPEC-HSRV-001", "SPEC-SCR-001"]);
+    expect(byDomain.get("pipeline")?.items.map((i) => i.id)).toEqual(["SPEC-WFA-001"]);
+  });
+
+  it("exposes the full component path on each item; legacy domain items get a one-segment path", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001", "Deep item");
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Legacy item", "## Invariant\nx\n\n## Acceptance criteria\n- x");
+
+    const specs = parseSpecs(sddPath);
+    const deep = specs.find((s) => s.domain === "hub")?.items[0] as { component?: string };
+    const legacy = specs.find((s) => s.domain === "architecture")?.items[0] as { component?: string };
+    expect(deep?.component).toBe("hub/client/screens");
+    expect(legacy?.component).toBe("architecture");
+  });
+
+  it("skips archive directories at every depth", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Live item");
+    writeComponentItem(sddPath, "hub/server/archive", "hsrv", "SPEC-hsrv-002", "Archived item");
+
+    const specs = parseSpecs(sddPath);
+    const hub = specs.find((s) => s.domain === "hub");
+    expect(hub?.items.map((i) => i.id)).toEqual(["SPEC-HSRV-001"]);
+  });
+
+  it("does not parse component.md manifests as spec items", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Item");
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "server", "component.md"),
+      "---\ncomponent: hub/server\nabbrev: hsrv\nscope: [hub/server/**]\ndepends-on: []\n---\n\n# hub/server\n"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const hub = specs.find((s) => s.domain === "hub");
+    expect(hub?.items).toHaveLength(1);
+  });
+
+  it("discovers a .tests.json mapping sitting next to nested component items", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/client/screens", "scr", "SPEC-scr-001", "Screen item");
+    const reportPath = path.join(workspaceRoot, "report.json");
+    fs.writeFileSync(reportPath, VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "client", "screens", "SPEC-scr.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-scr-001": ["Node.js server starts correctly"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "hub")?.items[0];
+    expect(item?.testStatus.status).toBe("passing");
+  });
+
+  it("treats a mapping file with missing report/items fields as absent instead of crashing", () => {
+    const { sddPath } = makeWorkspace();
+    writeComponentItem(sddPath, "hub/server", "hsrv", "SPEC-hsrv-001", "Item");
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "server", "SPEC-hsrv.tests.json"),
+      "{}"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "hub")?.items[0];
+    expect(item?.testStatus.status).toBe("not-run");
+  });
+});
+
+describe("parseSpecs — mapping resolution edge cases (review fixes)", () => {
+  it("resolves the mapping via the frontmatter abbrev when it differs from the ID shorthand", () => {
+    // Real-world shape from this repo: ui-screens items have id SPEC-scr-* but
+    // abbrev ui-screens, and the mapping file is SPEC-ui-screens.tests.json.
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    fs.mkdirSync(path.join(sddPath, "specs", "ui-screens"), { recursive: true });
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "ui-screens", "SPEC-scr-001.md"),
+      `---\nid: SPEC-scr-001\ndomain: ui-screens\nabbrev: ui-screens\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-scr-001 — Screen item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.writeFileSync(path.join(workspaceRoot, "report.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "ui-screens", "SPEC-ui-screens.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-scr-001": ["Node.js server starts correctly"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "ui-screens")?.items[0];
+    expect(item?.testStatus.status).toBe("passing");
+  });
+
+  it("disambiguates duplicate-abbrev mapping files by directory proximity", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    const mk = (component: string, id: string) => {
+      const dir = path.join(sddPath, "specs", component);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, `${id}.md`),
+        `---\nid: ${id}\ncomponent: ${component}\nabbrev: api\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# ${id} — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+      );
+    };
+    mk("hub/api", "SPEC-api-001");
+    mk("pipeline/api", "SPEC-api-002");
+    fs.writeFileSync(path.join(workspaceRoot, "pass.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(path.join(workspaceRoot, "fail.json"), VITEST_REPORT_WITH_FAILURE);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "hub", "api", "SPEC-api.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "pass.json", items: { "SPEC-api-001": ["Node.js server starts correctly"] } })
+    );
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "pipeline", "api", "SPEC-api.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "fail.json", items: { "SPEC-api-002": ["React frontend renders"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const hubItem = specs.find((s) => s.domain === "hub")?.items[0];
+    const pipeItem = specs.find((s) => s.domain === "pipeline")?.items[0];
+    expect(hubItem?.testStatus.status).toBe("passing");
+    expect(pipeItem?.testStatus.status).toBe("failing");
+  });
+
+  it("drops mapping entries whose value is not a string array instead of crashing", () => {
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    writeSpecItem(sddPath, "architecture", "arch", "SPEC-arch-001", "Item", "## Invariant\nx\n\n## Acceptance criteria\n- x");
+    fs.writeFileSync(path.join(workspaceRoot, "report.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "architecture", "SPEC-arch.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-arch-001": "not an array" } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const item = specs.find((s) => s.domain === "architecture")?.items[0];
+    // Malformed entry is dropped; the mapping itself survives, so the item is
+    // "missing" (report ran, no valid mapping entry) rather than a crash.
+    expect(item?.testStatus.status).toBe("missing");
+  });
+
+  it("names a mixed-abbrev area group after the area, deterministically", () => {
+    const { sddPath } = makeWorkspace();
+    const mk = (component: string, abbrev: string, id: string) => {
+      const dir = path.join(sddPath, "specs", component);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, `${id}.md`),
+        `---\nid: ${id}\ncomponent: ${component}\nabbrev: ${abbrev}\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# ${id} — item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+      );
+    };
+    mk("hub/server", "hsrv", "SPEC-hsrv-001");
+    mk("hub/client", "hcli", "SPEC-hcli-001");
+
+    const specs = parseSpecs(sddPath);
+    const hub = specs.find((s) => s.domain === "hub");
+    expect(hub?.abbrev).toBe("hub");
+    expect(hub?.id).toBe("SPEC-hub");
+  });
+});
+
+describe("parseSpecs — foreign-mapping and ref-regex fixes", () => {
+  it("does not bind a foreign component's mapping via the ID shorthand alone", () => {
+    // Item in ui-screens/ (abbrev ui-screens, id SPEC-scr-001) has no mapping.
+    // An unrelated component elsewhere has abbrev+mapping named "scr". The
+    // ID-shorthand match must not reach outside the item's directory chain.
+    const { workspaceRoot, sddPath } = makeWorkspace();
+    fs.mkdirSync(path.join(sddPath, "specs", "ui-screens"), { recursive: true });
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "ui-screens", "SPEC-scr-001.md"),
+      `---\nid: SPEC-scr-001\ndomain: ui-screens\nabbrev: ui-screens\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-scr-001 — Screen item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.mkdirSync(path.join(sddPath, "specs", "other", "scr"), { recursive: true });
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "other", "scr", "SPEC-scr-100.md"),
+      `---\nid: SPEC-scr-100\ncomponent: other/scr\nabbrev: scr\nstatus: active\naliases: []\nversion: "00000000"\n---\n\n# SPEC-scr-100 — Foreign item\n\n## Invariant\nx\n\n## Acceptance criteria\n- x\n`
+    );
+    fs.writeFileSync(path.join(workspaceRoot, "report.json"), VITEST_REPORT_ALL_PASSING);
+    fs.writeFileSync(
+      path.join(sddPath, "specs", "other", "scr", "SPEC-scr.tests.json"),
+      JSON.stringify({ runner: "vitest", report: "report.json", items: { "SPEC-scr-100": ["Node.js server starts correctly"] } })
+    );
+
+    const specs = parseSpecs(sddPath);
+    const uiItem = specs.find((s) => s.domain === "ui-screens")?.items[0];
+    const foreignItem = specs.find((s) => s.domain === "other")?.items[0];
+    // The ui-screens item must stay not-run (no report of its own), not get
+    // stamped "missing" by the foreign scr mapping's report.
+    expect(uiItem?.testStatus.status).toBe("not-run");
+    expect(foreignItem?.testStatus.status).toBe("passing");
+  });
+
+  it("parses hash-ID and hyphenated-abbrev GAP/WI references in item bodies", () => {
+    const { sddPath } = makeWorkspace();
+    writeSpecItem(
+      sddPath, "architecture", "arch", "SPEC-arch-001", "Item",
+      "## Invariant\nAddressed by GAP-auth-3f9c2a1 and WI-ui-screens-001.\n\n## Acceptance criteria\n- x"
+    );
+
+    const specs = parseSpecs(sddPath);
+    const refs = specs.find((s) => s.domain === "architecture")?.items[0]?.refs ?? [];
+    const ids = refs.map((r) => r.id);
+    expect(ids).toContain("GAP-AUTH-3F9C2A1");
+    expect(ids).toContain("WI-UI-SCREENS-001");
+  });
+});

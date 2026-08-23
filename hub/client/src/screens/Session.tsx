@@ -289,7 +289,7 @@ export function Session({
       <div className="session-cat">
         <div className="session-cat__head">
           <span className="session-cat__title">specs</span>
-          <span className="session-cat__count">{specs.length} domains</span>
+          <span className="session-cat__count">{specs.length} areas</span>
           <span className="session-cat__rule" />
         </div>
         <div className="row-table">

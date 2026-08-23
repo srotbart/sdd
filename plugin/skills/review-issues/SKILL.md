@@ -1,13 +1,13 @@
 ---
 name: review-issues
-description: This skill should be used when the user invokes `/sdd:review-issues`, says "run a code review", "find issues in the codebase", "sweep for problems", "review domain X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts. Never auto-fixes findings.
+description: This skill should be used when the user invokes `/sdd:review-issues`, says "run a code review", "find issues in the codebase", "sweep for problems", "review component X for issues", or wants a 3-agent team to flag code bugs, anti-patterns, smells, and spec problems and write them as issue artifacts. Never auto-fixes findings.
 version: 0.1.0
 ---
 
 # SDD Review Issues
 
 Spawn 3 agents via the Agent tool to sweep the codebase and specs for
-problems. Each reviewer flags distinct findings as `ISS-{domain}-{7hex}` artifacts
+problems. Each reviewer flags distinct findings as `ISS-{abbrev}-{7hex}` artifacts
 under `.sdd/issues/`. Findings are de-duplicated before archival. **Reviewers
 never auto-fix issues.**
 
@@ -15,9 +15,9 @@ never auto-fix issues.**
 
 Accept one of:
 
-- **Domain name**: `authentication` — review code and specs for this domain
+- **Component path**: `hub/client` (or an area, or a legacy flat domain name) — review code and specs for this component subtree
 - **Path or glob**: `src/auth/` — review a specific area
-- **No argument**: review the entire codebase and all spec domains
+- **No argument**: review the entire codebase and the whole component tree
 
 ## Procedure
 
@@ -52,18 +52,20 @@ de-duplicate across reviewers:
 
 ### 3. Write issue files
 
-For each distinct finding, create `.sdd/issues/ISS-{domain}-{7hex}.md`, minting the
-ID as `ISS-{domain}-{7hex}` where `{7hex}` is 7 random lowercase hex characters (e.g.
-`openssl rand -hex 4 | cut -c1-7`) — no sequence scan, collision-free by construction. Existing sequential
-`ISS-{domain}-{seq}` IDs remain valid and are never
-renamed.
+For each distinct finding, create `.sdd/issues/ISS-{abbrev}-{7hex}.md`, minting the
+ID with the artifact CLI (`node plugin/cli/sdd.js mint issue {abbrev}`,
+resolving the script from the repo or the installed plugin cache at
+`$HOME/.claude/plugins/cache/sdd/sdd/*/cli/sdd.js`; fallback: `{7hex}` is 7
+random lowercase hex characters, e.g. `openssl rand -hex 4 | cut -c1-7`) — no
+sequence scan, collision-free by construction. Existing sequential
+`ISS-{abbrev}-{seq}` IDs remain valid and are never renamed.
 
 **Required frontmatter:**
 
 ```markdown
 ---
 id: ISS-auth-001
-domain: authentication
+component: authentication   # component path; legacy `domain:` accepted
 status: open     # open | accepted | dismissed
 location: "src/auth/admin.py:142"
 severity: medium   # low | medium | high
@@ -129,12 +131,12 @@ Next: Engage findings with the user. Run `/sdd:review-engage ISS-auth-001` to pr
 
 ## Artifact Storage
 
-Issues live at `.sdd/issues/ISS-{domain}-{7hex}.md`.
+Issues live at `.sdd/issues/ISS-{abbrev}-{7hex}.md`.
 Archived issues (accepted/dismissed) move to `.sdd/issues/archive/` — a gitignored
 local-only cache.
 
-**ID convention:** `ISS-{domain}-{7hex}` — a 7-char lowercase hex hash minted at
-creation, no lookup required. Legacy sequential `ISS-{domain}-{seq}`
+**ID convention:** `ISS-{abbrev}-{7hex}` — a 7-char lowercase hex hash minted at
+creation, no lookup required. Legacy sequential `ISS-{abbrev}-{seq}`
 IDs remain valid and are never renamed or recycled.
 
 **Terminal states → archive:** `accepted`, `dismissed`
