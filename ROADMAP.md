@@ -27,8 +27,9 @@ scoped implementation with tests (`work-item-close`), and a state snapshot
 (`review-engage`) that turns findings into spec changes, gaps, or dismissals.
 
 **Spec test coverage** — `spec-test` links spec items to automated tests; 164 of 168
-active spec items are covered across five domains (architecture, ui-components,
-ui-layout, ui-screens, workflow).
+active spec items are covered across the five legacy domains (architecture,
+ui-components, ui-layout, ui-screens, workflow) — the flat grouping that predates
+the component tree.
 
 **The SDD Hub** — a local web app (Express + React, fixed port 22351, single-instance)
 that renders `.sdd/` live: dashboard, targets, specs with per-item detail and test
@@ -51,6 +52,10 @@ collide (design: `.sdd/design/archive-slimming/`, shipped in v0.1.6+).
 an autonomous agent; `next` ranks candidate actions; `explain` builds persistent
 projection documents; `projection-comments` processes feedback on them; an installable
 statusline shows SDD state in Claude Code.
+
+**Design→target linkage** — targets carry a `design:` frontmatter reference to the
+design doc that spawned them; the artifact CLI surfaces it (`list targets --json`)
+and session-start lists designs in progress that no target references yet.
 
 ## In Flight
 
@@ -82,8 +87,6 @@ Active targets, roughly ordered by how settled they are:
   A graph + semantic-search store the worker queries before searching the codebase and
   writes back what it learns. Opens a new domain; storage tech, access surface, and
   staleness handling are all open decisions.
-- **Design→target linkage** — targets carrying a `design:` frontmatter reference back
-  to the design doc that spawned them (deferred in `.sdd/later.md`).
 - **Feature-as-projection** — cross-cutting capability views over spec items whose
   domain axis doesn't match the capability axis (deferred in `.sdd/later.md`).
 - **Structured target directories** — targets carrying additional data as a directory,
