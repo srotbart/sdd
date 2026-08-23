@@ -2,7 +2,7 @@
 # Tests for session-start SKILL.md — WI-wf-016: design scanning and Designs in progress section
 set -e
 
-SKILL=/Users/srotbart/development/workspaces/sdd-repo/plugin/skills/session-start/SKILL.md
+SKILL="$(cd "$(dirname "$0")" && pwd)/SKILL.md"
 pass=0
 fail=0
 

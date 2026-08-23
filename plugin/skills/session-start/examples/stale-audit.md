@@ -8,7 +8,7 @@ The primary call to action is refreshing the gap report.
 ```
 ## SDD State — 2026-05-12
 
-### Specs (2 domains)
+### Specs (2 components)
 - SPEC-auth: Authentication — 4 items  [c4e1f205]
 - SPEC-api: API — 6 items  [b7d2e941]
 
@@ -29,4 +29,4 @@ Run `/sdd:spec-audit authentication` to refresh the gap report before closing wo
 
 - Authentication gaps are stale but still shown — they are still open.
 - The footer prioritises the stale audit warning over the pending work item.
-- API domain is not stale (b7d2e941 matches what the API gaps recorded).
+- The API component is not stale (b7d2e941 matches what the API gaps recorded).

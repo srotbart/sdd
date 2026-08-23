@@ -7,7 +7,7 @@ All artifacts are in terminal states or archived. Nothing active.
 ```
 ## SDD State — 2026-05-12
 
-### Specs (1 domain)
+### Specs (1 component)
 - SPEC-auth: Authentication — 4 items  [a3f9c812]
 
 ---

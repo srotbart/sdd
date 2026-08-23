@@ -1,6 +1,6 @@
 ---
 name: migrate-components
-description: This skill should be used when the user invokes `/sdd:migrate-components`, says "migrate to components", "convert domains to components", "restructure the spec tree", "adopt the component layout", or wants to convert an existing project's flat domain-based `.sdd/specs/` layout into the area/component tree. Produces a reviewed mapping proposal first; applies it only on approval, moving files without changing any IDs.
+description: This skill should be used when the user invokes `/sdd:migrate-components`, says "migrate to components", "convert domains to components", "restructure the spec tree", "adopt the component layout", or wants to convert an existing project's flat domain-based `.sdd/specs/` layout into the area/component tree. Negotiates the component tree with the user area by area, writes the agreed mapping proposal, and applies it only on approval, moving files without changing any IDs.
 version: 0.1.0
 ---
 
@@ -9,10 +9,17 @@ version: 0.1.0
 Convert a project's `.sdd/` from the legacy flat domain layout
 (`.sdd/specs/{domain}/SPEC-*.md`, `domain:` frontmatter everywhere) to the
 component tree (`.sdd/specs/{area}/{component}/.../SPEC-*.md`, `component:`
-frontmatter). The migration is two-phase: **propose** a mapping for user
-review, then **apply** it. Applying is file moves plus mechanical frontmatter
-updates — **no artifact ID ever changes**, so cross-references and aliases
-stay valid with zero content rewrites.
+frontmatter). The migration is two-phase: **propose** a mapping — built *with*
+the user, not for them — then **apply** it. Applying is file moves plus
+mechanical frontmatter updates — **no artifact ID ever changes**, so
+cross-references and aliases stay valid with zero content rewrites.
+
+The propose phase is a guided negotiation, not a report dump: the user is
+choosing the shape their spec tree will have from now on. Explain what is
+happening in plain language, present the tree area by area, ask about every
+judgement call, and only write the proposal file once the user has agreed to
+the shape. The user should never wonder what the migration is doing or why an
+item landed where it did.
 
 ## Compatibility — migration is optional
 
@@ -28,12 +35,12 @@ the new conventions — no half state.
 
 Accept one of:
 
-- **No argument**: propose mode — analyse the current layout and write a mapping
-  proposal for review
+- **No argument**: propose mode — analyse the current layout, negotiate the
+  component tree with the user, and write the agreed mapping proposal
 - **`apply`**: apply a previously reviewed mapping proposal
 - **`apply {mapping-file}`**: apply a specific proposal file
 
-## Phase 1 — Propose
+## Phase 1 — Propose (interactive)
 
 ### 1. Inventory the current layout
 
@@ -46,7 +53,25 @@ resolution keeps working.
 If every item already carries a `component:` path matching a nested directory,
 report "already migrated" and stop.
 
-### 2. Derive the component tree
+### 2. Orient the user
+
+Before proposing anything, tell the user — briefly, in plain language — what
+this migration is and is not:
+
+- What changes: spec files move into a directory tree shaped like the system
+  (`{area}/{component}/...`), `domain:` frontmatter becomes a `component:`
+  path, and each component gets a small manifest.
+- What never changes: artifact IDs, gap/work-item references, body content.
+  The move is reversible, and an unmigrated project would have kept working —
+  this is opt-in.
+- What happens next: a draft tree will be presented area by area for the user
+  to adjust, then written as a proposal file they review before anything is
+  applied.
+
+Then give the inventory summary: how many active and archived items, in which
+current domains.
+
+### 3. Derive a draft component tree
 
 Group items by what they actually govern, not by their current directory:
 
@@ -63,7 +88,39 @@ Group items by what they actually govern, not by their current directory:
   `core/conventions` component or the closest governing ancestor.
 - Existing subject subdirectories are natural sub-component candidates.
 
-### 3. Write the mapping proposal
+This is a **draft** — it is not shown as a finished answer. The next step
+negotiates it.
+
+### 4. Negotiate the mapping with the user
+
+Walk the user through the draft before writing anything, top-down:
+
+1. **Areas first.** Present the proposed areas with a one-line rationale each
+   ("`hub` — the web app; `pipeline` — the SDD workflow itself") and the item
+   count that would land in each. Ask the user to confirm, rename, merge, or
+   split them (via `AskUserQuestion` where available, plain questions
+   otherwise). Do not proceed to the components until the area set is agreed.
+2. **Then each area's components.** For each agreed area, show the proposed
+   components and where each current domain's items map — summarised, not a
+   raw table: "`architecture` splits: 6 items about routes/watchers →
+   `hub/server`, 3 repo-wide runtime facts → `core/conventions`", with the
+   item IDs listed compactly. Ask for adjustments before moving to the next
+   area.
+3. **Ambiguities are questions, never guesses.** Any item whose placement is a
+   judgement call (could belong to two components, unclear what it governs) is
+   put to the user explicitly with the candidate components and a
+   recommendation. The same goes for each **new** component's `abbrev` when
+   the natural choice is taken or unclear.
+4. **Iterate until agreed.** Fold the user's answers back into the tree and
+   re-present what changed. Only when the user says the shape is right does
+   the proposal get written.
+
+Keep the conversation proportionate: a five-domain project needs a handful of
+questions, not an interrogation per item. Batch related decisions into single
+questions; the goal is that the user understands and owns the tree, not that
+they click through every row.
+
+### 5. Write the mapping proposal
 
 Create `.sdd/specs/MIGRATE-components-{date}.md`:
 
@@ -95,26 +152,30 @@ status: proposed      # proposed | applied
 
 ## Notes
 
-- {per-item judgement calls worth flagging}
+- {the decisions made during the negotiation, and any per-item judgement
+  calls worth a record — this is the migration's provenance}
 ```
 
 Every item — active and archived — must appear in exactly one row. Existing
 `abbrev` values stay on existing items (IDs are never renamed); each **new**
 component picks its abbrev here, unique across the whole tree.
 
-### 4. Report and stop
+### 6. Report and stop
 
 ```
 ## Component Migration Proposal — {date}
 
 Proposal written to: .sdd/specs/MIGRATE-components-{date}.md
-{N} items mapped into {M} components across {K} areas.
+{N} items mapped into {M} components across {K} areas, as agreed.
 
-Review the mapping (edit rows freely), then run:
+The file is the durable record of what we agreed — review or edit rows
+freely, then run:
   /sdd:migrate-components apply
 ```
 
-**Never apply in the same invocation as proposing.** The user reviews first.
+**Never apply in the same invocation as proposing.** Even a fully negotiated
+proposal gets a final document review — the file, not the conversation, is
+what apply executes.
 
 ## Phase 2 — Apply
 
@@ -199,6 +260,10 @@ Next: Run `/sdd:sdd-doctor` to verify the migrated tree is healthy.
   body content, and never touches archived files.
 - **Propose and apply are separate invocations.** Never apply an unreviewed
   mapping.
+- **The proposal is negotiated, never delivered.** Areas are confirmed with
+  the user before components, ambiguous placements and abbrevs are asked —
+  with candidates and a recommendation — never silently decided, and the
+  proposal file is written only after the user agrees to the shape.
 - **Every item maps exactly once.** A proposal that drops or duplicates an item
   is invalid — fix it before applying.
 - **Archived items move with their component.** Alias resolution depends on the

@@ -53,7 +53,8 @@ improvements) archives locally when done, preserving provenance via frontmatter 
 Steps 4–6 are the execution loop. Run them by hand, or drive all three in one loop
 with `/sdd:close-domain authentication` (orient → audit → decompose → close →
 guardian audit) — the same loop the autonomous `/sdd:spawn-sdd-worker authentication`
-runs for you.
+runs for you. The argument is a component path at any depth: `authentication` here
+is a one-level tree; in a nested tree you'd pass `hub`, `hub/client`, or deeper.
 
 Terminal state: no open gaps, no pending work items.
 

@@ -24,8 +24,8 @@ close-domain: drive the whole loop — the worker's entire job
   Phase 1  audit      — spec-audit → gap report (file:line + one-line reasoning)
   Phase 2  decompose  — gap-to-work-items → scoped tasks
   Phase 3  close      — per work item: work-item-close (implement + tests),
-                        with cross-domain spec self-check      ⟳ loops per work item
-  Phase 4  guardian   — cross-domain audit of all changed files; own-run
+                        with cross-component spec self-check   ⟳ loops per work item
+  Phase 4  guardian   — cross-component audit of all changed files; own-run
                         violations fixed inline and re-audited
        ↓
 Terminal: guardian audit clean, no open gaps, no pending work items
