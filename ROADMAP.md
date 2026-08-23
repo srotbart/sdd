@@ -26,7 +26,7 @@ scoped implementation with tests (`work-item-close`), and a state snapshot
 (`review-issues`, `review-improvements`) and an interactive decision flow
 (`review-engage`) that turns findings into spec changes, gaps, or dismissals.
 
-**Spec test coverage** — `spec-test` links spec items to automated tests; 164 of 168
+**Spec test coverage** — `spec-test` links spec items to automated tests; 162 of 174
 active spec items are covered across the five legacy domains (architecture,
 ui-components, ui-layout, ui-screens, workflow) — the flat grouping that predates
 the component tree.

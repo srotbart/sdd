@@ -86,12 +86,17 @@ phases. Budget one review sitting; the mechanical part is fast.
 1. **(Recommended) health check first:** `/sdd:sdd-doctor` — fix or note
    anything structural before moving files.
 2. **Propose:** `/sdd:migrate-components` — the agent inventories every spec
-   item (active *and* archived), derives an area/component tree from what the
-   items actually govern, and writes `.sdd/specs/MIGRATE-components-{date}.md`:
-   the proposed tree plus one mapping row per item.
-3. **Review the mapping** — this is the judgement step and it is yours. Edit
-   rows freely: rename areas, merge or split components, re-home items. The
-   tree should reflect *your* system's shape; the proposal is a starting point.
+   item (active *and* archived), derives a draft area/component tree from what
+   the items actually govern, and negotiates it with you area by area:
+   explaining the plan in plain language, confirming the area set, summarising
+   where each domain's items land, and asking about every ambiguous placement
+   instead of guessing. Once you agree to the shape, it writes
+   `.sdd/specs/MIGRATE-components-{date}.md`: the agreed tree plus one mapping
+   row per item.
+3. **Review the mapping file** — the file, not the conversation, is what apply
+   executes, so it gets a final read. Edit rows freely: rename areas, merge or
+   split components, re-home items. The tree should reflect *your* system's
+   shape.
 4. **Apply:** `/sdd:migrate-components apply` — per item: `git mv` to the new
    directory, set `component:`, drop `domain:`, recompute `version`;
    `component.md` manifests written; **active** gaps/work-items/targets/
